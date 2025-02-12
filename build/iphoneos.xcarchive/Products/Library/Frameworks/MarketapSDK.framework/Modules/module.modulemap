@@ -1,0 +1,6 @@
+framework module MarketapSDK {
+  umbrella header "MarketapSDK.h"
+  export *
+
+  module * { export * }
+}
