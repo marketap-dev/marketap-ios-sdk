@@ -4,7 +4,7 @@ import PackageDescription
 let package = Package(
     name: "MarketapSDK",
     platforms: [
-        .iOS(.v14)  // 최소 지원 iOS 버전 설정
+        .iOS(.v14)
     ],
     products: [
         .library(
