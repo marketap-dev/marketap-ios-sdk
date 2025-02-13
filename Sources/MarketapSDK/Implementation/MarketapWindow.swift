@@ -43,6 +43,7 @@ class MarketapWindow: UIWindow {
         MarketapJSMessage.allCases.forEach { message in
             contentController.add(scriptMessageHandler, name: message.name)
         }
+        contentController.add(scriptMessageHandler, name: "print")
         
         webConfig.websiteDataStore = WKWebsiteDataStore.default()
         webConfig.userContentController = contentController
