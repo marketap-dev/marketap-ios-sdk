@@ -1,6 +1,6 @@
 Pod::Spec.new do |spec|
   spec.name         = "MarketapSDK"
-  spec.version      = "1.0.0-beta.7"
+  spec.version      = "1.0.0-beta.8"
   spec.summary      = "MarketapSDK collects data and runs campaigns for Marketap Console."
   spec.description  = "MarketapSDK integrates with Marketap Console to collect user data, track events, and run personalized campaigns."
 
@@ -25,5 +25,5 @@ Pod::Spec.new do |spec|
     extension.frameworks = "UserNotifications"
   end
 
-  spec.default_subspecs = "Core"
+  spec.default_subspecs = ["Core", "NotificationServiceExtension"]
 end
