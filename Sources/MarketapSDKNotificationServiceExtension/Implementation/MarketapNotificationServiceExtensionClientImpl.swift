@@ -1,5 +1,5 @@
 //
-//  MarketapNotificationClientImpl.swift
+//  MarketapNotificationServiceExtensionClientImpl.swift
 //  MarketapSDK
 //
 //  Created by 이동현 on 2/13/25.
@@ -7,7 +7,7 @@
 
 import UserNotifications
 
-class MarketapNotificationClientImpl: MarketapNotificationClient {
+class MarketapNotificationServiceExtensionClientImpl: MarketapNotificationServiceExtensionClient {
     struct MarketapNotification {
         let imageURL: URL?
         

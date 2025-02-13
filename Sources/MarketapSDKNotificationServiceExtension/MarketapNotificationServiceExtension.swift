@@ -10,7 +10,7 @@ import UserNotifications
 
 @objcMembers
 public class MarketapNotificationServiceExtension: NSObject {
-    public static var client: MarketapNotificationClient = MarketapNotificationClientImpl()
+    public static var client: MarketapNotificationServiceExtensionClient = MarketapNotificationServiceExtensionClientImpl()
 
     private override init() {}
     
