@@ -9,7 +9,7 @@ import UserNotifications
 import UIKit
 
 extension MarketapClientImpl {
-    struct MarketapNotificationInfo {
+    struct MarketapNotification {
         let deepLink: URL?
         
         init(deepLink: URL?) {
@@ -17,10 +17,10 @@ extension MarketapClientImpl {
         }
     }
     
-    private func getMarketapNotification(request: UNNotificationRequest) -> MarketapNotificationInfo? {
+    private func getMarketapNotification(request: UNNotificationRequest) -> MarketapNotification? {
         guard let info = request.content.userInfo["marketap"] as? [String: Any] else { return nil }
         
-        return MarketapNotificationInfo(
+        return MarketapNotification(
             deepLink: (info["deepLink"] as? String).map { URL(string: $0) } ?? nil
         )
     }
@@ -31,15 +31,16 @@ extension MarketapClientImpl {
     }
     
     func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) -> Bool {
-        print("📢 포어그라운드에서 푸시 수신: \(notification.request.content.userInfo)")
         
         if getMarketapNotification(request: notification.request) == nil {
-            print("📢 마켓탭 푸시가 아님")
             return false
         }
-        print("📢 마켓탭 푸시도착")
                 
-        completionHandler([.sound, .badge])
+        if #available(iOS 14.0, *) {
+            completionHandler([.banner, .sound, .badge])
+        } else {
+            completionHandler([.alert, .sound, .badge])
+        }
         
         return true
     }
@@ -49,15 +50,11 @@ extension MarketapClientImpl {
         didReceive response: UNNotificationResponse,
         withCompletionHandler completionHandler: @escaping () -> Void
     ) -> Bool {
-        print("✅ 사용자가 푸시를 눌렀습니다")
-        
-        guard let info = getMarketapNotification(request: response.notification.request) else {
-            print("📢 마켓탭 푸시가 아님")
+        guard let notification = getMarketapNotification(request: response.notification.request) else {
             return false
         }
         
-        if let deepLink = info.deepLink {
-            print("📢 딥링크 오픈", deepLink.absoluteString)
+        if let deepLink = notification.deepLink {
             UIApplication.shared.open(deepLink, options: [:], completionHandler: nil)
         }
         completionHandler()

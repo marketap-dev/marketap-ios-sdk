@@ -13,7 +13,7 @@ class MarketapWindow: UIWindow {
     static let sdkURL = URL(string: "https://static.marketap.io/sdk/test-ios.html")!
     
     // MARK: - Properties
-    private(set) var webView: WKWebView!
+    private(set) var webView: WKWebView?
     
     // MARK: - Initialization
     init() {

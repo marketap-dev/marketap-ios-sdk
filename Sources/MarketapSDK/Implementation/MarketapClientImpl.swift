@@ -33,7 +33,7 @@ class MarketapClientImpl: NSObject, MarketapClient, WKNavigationDelegate, WKScri
         
     // MARK: - Properties
     let window = MarketapWindow()
-    var webView: WKWebView! {
+    var webView: WKWebView? {
         window.webView
     }
     
@@ -78,25 +78,21 @@ class MarketapClientImpl: NSObject, MarketapClient, WKNavigationDelegate, WKScri
           bottomSafeArea: \(bottomSafeArea)
         };
         """
-        print("### registerMarketapNative", jsScript)
 
-        webView.evaluateJavaScript(jsScript)
+        webView?.evaluateJavaScript(jsScript)
         Marketap.initialize(config: ["projectId": "xziewjm"])
     }
     
     // MARK: - JavaScript Message Handling
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
-        print("### didReceive", message.name, message.body)
         guard let jsEvent = MarketapJSMessage(rawValue: message.name) else {
             return
         }
         
         switch jsEvent {
         case .onInAppMessageShow:
-            print("### onInAppMessageShow")
             presentViewController()
         case .onInAppMessageHide:
-            print("### onInAppMessageShow")
             dismissViewController()
         }
     }
@@ -119,7 +115,6 @@ class MarketapClientImpl: NSObject, MarketapClient, WKNavigationDelegate, WKScri
         guard webViewLoaded else { return }
         
         for (function, args) in pendingJSExecutions {
-            print("### executePendingJSFunction", function)
             executeJSFunction(function, withArguments: args)
         }
         pendingJSExecutions.removeAll()
