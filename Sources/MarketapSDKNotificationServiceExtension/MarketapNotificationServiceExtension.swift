@@ -9,7 +9,7 @@ import Foundation
 import UserNotifications
 
 @objcMembers
-public class MarketapNotificationServiceExtension: NSObject {
+public class MarketapNotificationService: NSObject {
     public static var client: MarketapNotificationServiceExtensionClient = MarketapNotificationServiceExtensionClientImpl()
 
     private override init() {}

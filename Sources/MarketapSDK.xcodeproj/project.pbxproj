@@ -6,11 +6,6 @@
 	objectVersion = 77;
 	objects = {
 
-/* Begin PBXBuildFile section */
-		B4D69E892D5DCCB700557EAC /* MarketapSDKCore.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = B4D69E882D5DCCB700557EAC /* MarketapSDKCore.xcframework */; };
-		B4D69E8A2D5DCCB700557EAC /* MarketapSDKCore.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = B4D69E882D5DCCB700557EAC /* MarketapSDKCore.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
-/* End PBXBuildFile section */
-
 /* Begin PBXCopyFilesBuildPhase section */
 		B4D69E8B2D5DCCB700557EAC /* Embed Frameworks */ = {
 			isa = PBXCopyFilesBuildPhase;
@@ -18,7 +13,6 @@
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
-				B4D69E8A2D5DCCB700557EAC /* MarketapSDKCore.xcframework in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -28,7 +22,6 @@
 /* Begin PBXFileReference section */
 		B47948B02D5B3F4E00A76A65 /* MarketapSDK.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = MarketapSDK.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		B4D69E472D5DBE4000557EAC /* MarketapSDKNotificationServiceExtension.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = MarketapSDKNotificationServiceExtension.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		B4D69E882D5DCCB700557EAC /* MarketapSDKCore.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = MarketapSDKCore.xcframework; path = ../MarketapSDKCore.xcframework; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -85,7 +78,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				B4D69E892D5DCCB700557EAC /* MarketapSDKCore.xcframework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -103,7 +95,6 @@
 			isa = PBXGroup;
 			children = (
 				B47948B22D5B3F4E00A76A65 /* MarketapSDK */,
-				B4D69D552D5C7E5100557EAC /* Frameworks */,
 				B47948B12D5B3F4E00A76A65 /* Products */,
 				B4D69E732D5DBF3400557EAC /* MarketapSDKNotificationServiceExtension */,
 			);
@@ -116,14 +107,6 @@
 				B4D69E472D5DBE4000557EAC /* MarketapSDKNotificationServiceExtension.framework */,
 			);
 			name = Products;
-			sourceTree = "<group>";
-		};
-		B4D69D552D5C7E5100557EAC /* Frameworks */ = {
-			isa = PBXGroup;
-			children = (
-				B4D69E882D5DCCB700557EAC /* MarketapSDKCore.xcframework */,
-			);
-			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */

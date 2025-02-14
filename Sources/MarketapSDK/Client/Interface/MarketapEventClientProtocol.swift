@@ -1,0 +1,61 @@
+//
+//  MarketapEventClientProtocol.swift
+//  MarketapSDK
+//
+//  Created by 이동현 on 2/13/25.
+//
+
+import Foundation
+
+public protocol MarketapEventClientProtocol {
+    // MARK: - User Authentication
+    
+    /// Logs in the user and associates them with their properties.
+    /// - Parameters:
+    ///   - userId: The unique identifier of the user.
+    ///   - userProperties: Additional properties related to the user.
+    ///   - eventProperties: Event-specific properties (optional).
+    func login(userId: String, userProperties: [String: Any]?, eventProperties: [String: Any]?)
+
+    /// Logs out the user and optionally tracks logout properties.
+    /// - Parameter properties: Additional properties to track upon logout (optional).
+    func logout(eventProperties: [String: Any]?)
+
+    // MARK: - Event Tracking
+    
+    /// Tracks a custom event.
+    /// - Parameters:
+    ///   - name: The event name.
+    ///   - properties: Additional properties associated with the event.
+    ///   - id: Optional unique identifier for the event.
+    ///   - timestamp: Optional timestamp for the event.
+    func track(eventName: String, eventProperties: [String: Any]?, id: String?, timestamp: Date?)
+
+    /// Tracks a purchase event.
+    /// - Parameters:
+    ///   - revenue: The revenue amount for the purchase.
+    ///   - properties: Additional properties related to the purchase (optional).
+    func trackPurchase(revenue: Double, eventProperties: [String: Any]?)
+
+    /// Tracks general revenue-related events.
+    /// - Parameters:
+    ///   - name: The name of the revenue event.
+    ///   - revenue: The revenue amount.
+    ///   - properties: Additional properties associated with the event (optional).
+    func trackRevenue(eventName: String, revenue: Double, eventProperties: [String: Any]?)
+
+    /// Tracks a page view event.
+    /// - Parameter properties: Additional properties related to the page view (optional).
+    func trackPageView(eventProperties: [String: Any]?)
+
+    // MARK: - User Profile Management
+    
+    /// Updates the user's profile with new properties.
+    /// - Parameters:
+    ///   - userId: The unique identifier of the user.
+    ///   - properties: The properties to update.
+    func identify(userId: String, userProperties: [String: Any]?)
+
+    /// Resets the user's profile, either logging them out or anonymizing their data.
+    func resetIdentity()
+}

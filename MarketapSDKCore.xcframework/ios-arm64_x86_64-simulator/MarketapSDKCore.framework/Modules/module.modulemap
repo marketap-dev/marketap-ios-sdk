@@ -1,5 +1,0 @@
-framework module "MarketapSDKCore" {
-    umbrella header "MarketapSDKCore.h"
-    export *
-    module * { export * }
-}
