@@ -5,6 +5,8 @@
 //  Created by 이동현 on 2/14/25.
 //
 
+import Foundation
+
 extension InAppMessageService {
     func isEventTriggered(condition: EventTriggerCondition, event: IngestEventRequest) -> Bool {
         guard condition.condition.eventFilter.eventName == event.name else {

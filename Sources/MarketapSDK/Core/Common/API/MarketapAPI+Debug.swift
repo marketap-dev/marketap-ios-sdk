@@ -5,6 +5,8 @@
 //  Created by 이동현 on 2/18/25.
 //
 
+import Foundation
+
 extension MarketapAPI {
     private func logJSON(_ title: String, _ data: Data?) {
         guard let data = data else {

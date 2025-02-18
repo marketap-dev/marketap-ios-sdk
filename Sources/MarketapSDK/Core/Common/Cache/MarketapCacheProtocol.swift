@@ -5,6 +5,8 @@
 //  Created by 이동현 on 2/17/25.
 //
 
+import Foundation
+
 protocol MarketapCacheProtocol {
     var device: Device { get }
     var userId: String? { get }

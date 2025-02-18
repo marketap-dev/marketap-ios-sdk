@@ -5,13 +5,6 @@
 //  Created by 이동현 on 2/17/25.
 //
 
-//
-//  InAppMessageViewHandler.swift
-//  MarketapSDK
-//
-//  Created by 이동현 on 2/14/25.
-//
-
 import Foundation
 import UIKit
 import WebKit

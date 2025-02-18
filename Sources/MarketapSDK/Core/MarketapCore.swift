@@ -5,6 +5,8 @@
 //  Created by 이동현 on 2/14/25.
 //
 
+import Foundation
+
 class MarketapCore: MarketapCoreProtocol {
     private let eventService: EventServiceProtocol
     private let inAppMessageService: InAppMessageServiceProtocol

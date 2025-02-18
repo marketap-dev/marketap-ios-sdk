@@ -5,6 +5,8 @@
 //  Created by 이동현 on 2/18/25.
 //
 
+import Foundation
+
 struct ServerResponse<T: Decodable>: Decodable {
     let code: Int
     let message: String

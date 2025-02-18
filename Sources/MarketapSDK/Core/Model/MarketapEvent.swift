@@ -5,6 +5,8 @@
 //  Created by 이동현 on 2/14/25.
 //
 
+import Foundation
+
 enum MarketapEvent: String {
     case login = "mkt_login"
     case logout = "mkt_logout"
