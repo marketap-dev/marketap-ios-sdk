@@ -1,5 +1,5 @@
 //
-//  Untitled.swift
+//  MarketapNotificationService.swift
 //  MarketapSDK
 //
 //  Created by 이동현 on 2/13/25.
@@ -10,7 +10,7 @@ import UserNotifications
 
 @objcMembers
 public class MarketapNotificationService: NSObject {
-    public static var client: MarketapNotificationServiceExtensionClient = MarketapNotificationServiceExtensionClientImpl()
+    public static var client: MarketapNotificationServiceClientProtocol = MarketapNotificationServiceClient()
 
     private override init() {}
     

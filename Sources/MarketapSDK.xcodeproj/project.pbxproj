@@ -6,6 +6,46 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		B4D6A0722D61FDDD00557EAC /* MarketapSDKExampleNotificationServiceExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = B4D6A06B2D61FDDD00557EAC /* MarketapSDKExampleNotificationServiceExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		B4D6A0A62D631EDD00557EAC /* MarketapSDK.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B47948B02D5B3F4E00A76A65 /* MarketapSDK.framework */; };
+		B4D6A0DC2D64616D00557EAC /* MarketapSDK.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B47948B02D5B3F4E00A76A65 /* MarketapSDK.framework */; };
+		B4D6A0DD2D64616D00557EAC /* MarketapSDK.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = B47948B02D5B3F4E00A76A65 /* MarketapSDK.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		B4D6A0E12D64618100557EAC /* MarketapSDKNotificationServiceExtension.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B4D69E472D5DBE4000557EAC /* MarketapSDKNotificationServiceExtension.framework */; };
+		B4D6A0E22D64618100557EAC /* MarketapSDKNotificationServiceExtension.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = B4D69E472D5DBE4000557EAC /* MarketapSDKNotificationServiceExtension.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		B4D6A0702D61FDDD00557EAC /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B47948A72D5B3F4E00A76A65 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B4D6A06A2D61FDDD00557EAC;
+			remoteInfo = MarketapSDKExampleNotificationServiceExtension;
+		};
+		B4D6A0A72D631EDD00557EAC /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B47948A72D5B3F4E00A76A65 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B47948AF2D5B3F4E00A76A65;
+			remoteInfo = MarketapSDK;
+		};
+		B4D6A0DE2D64616D00557EAC /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B47948A72D5B3F4E00A76A65 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B47948AF2D5B3F4E00A76A65;
+			remoteInfo = MarketapSDK;
+		};
+		B4D6A0E32D64618100557EAC /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B47948A72D5B3F4E00A76A65 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B4D69E462D5DBE4000557EAC;
+			remoteInfo = MarketapSDKNotificationServiceExtension;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXCopyFilesBuildPhase section */
 		B4D69E8B2D5DCCB700557EAC /* Embed Frameworks */ = {
 			isa = PBXCopyFilesBuildPhase;
@@ -17,11 +57,47 @@
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		B4D6A0772D61FDDD00557EAC /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				B4D6A0722D61FDDD00557EAC /* MarketapSDKExampleNotificationServiceExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B4D6A0E02D64616D00557EAC /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				B4D6A0DD2D64616D00557EAC /* MarketapSDK.framework in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B4D6A0E52D64618100557EAC /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				B4D6A0E22D64618100557EAC /* MarketapSDKNotificationServiceExtension.framework in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		B47948B02D5B3F4E00A76A65 /* MarketapSDK.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = MarketapSDK.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		B4D69E472D5DBE4000557EAC /* MarketapSDKNotificationServiceExtension.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = MarketapSDKNotificationServiceExtension.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		B4D6A02C2D61F5DB00557EAC /* MarketapSDKExample.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MarketapSDKExample.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B4D6A06B2D61FDDD00557EAC /* MarketapSDKExampleNotificationServiceExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = MarketapSDKExampleNotificationServiceExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		B4D6A0A22D631EDD00557EAC /* MarketapSDKTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MarketapSDKTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -35,7 +111,9 @@
 		B4D69E772D5DBF3400557EAC /* Exceptions for "MarketapSDKNotificationServiceExtension" folder in "MarketapSDK" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				MarketapNotificationServiceExtension.swift,
+				MarketapNotificationService.swift,
+				MarketapNotificationServiceClient.swift,
+				MarketapNotificationServiceClientProtocol.swift,
 				MarketapSDKNotificationServiceExtension.h,
 			);
 			target = B47948AF2D5B3F4E00A76A65 /* MarketapSDK */;
@@ -43,13 +121,29 @@
 		B4D69E782D5DBF3400557EAC /* Exceptions for "MarketapSDKNotificationServiceExtension" folder in "MarketapSDKNotificationServiceExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				MarketapNotificationServiceExtension.swift,
+				MarketapNotificationService.swift,
+				MarketapNotificationServiceClient.swift,
+				MarketapNotificationServiceClientProtocol.swift,
 				MarketapSDKNotificationServiceExtension.h,
 			);
 			publicHeaders = (
 				MarketapSDKNotificationServiceExtension.h,
 			);
 			target = B4D69E462D5DBE4000557EAC /* MarketapSDKNotificationServiceExtension */;
+		};
+		B4D6A0732D61FDDD00557EAC /* Exceptions for "MarketapSDKExampleNotificationServiceExtension" folder in "MarketapSDKExampleNotificationServiceExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = B4D6A06A2D61FDDD00557EAC /* MarketapSDKExampleNotificationServiceExtension */;
+		};
+		B4D6A0992D6314DB00557EAC /* Exceptions for "MarketapSDKExample" folder in "MarketapSDKExample" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = B4D6A02B2D61F5DB00557EAC /* MarketapSDKExample */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -71,6 +165,27 @@
 			path = MarketapSDKNotificationServiceExtension;
 			sourceTree = "<group>";
 		};
+		B4D6A02D2D61F5DB00557EAC /* MarketapSDKExample */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				B4D6A0992D6314DB00557EAC /* Exceptions for "MarketapSDKExample" folder in "MarketapSDKExample" target */,
+			);
+			path = MarketapSDKExample;
+			sourceTree = "<group>";
+		};
+		B4D6A06C2D61FDDD00557EAC /* MarketapSDKExampleNotificationServiceExtension */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				B4D6A0732D61FDDD00557EAC /* Exceptions for "MarketapSDKExampleNotificationServiceExtension" folder in "MarketapSDKExampleNotificationServiceExtension" target */,
+			);
+			path = MarketapSDKExampleNotificationServiceExtension;
+			sourceTree = "<group>";
+		};
+		B4D6A0A32D631EDD00557EAC /* MarketapSDKTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = MarketapSDKTests;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -88,6 +203,30 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		B4D6A0292D61F5DB00557EAC /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B4D6A0DC2D64616D00557EAC /* MarketapSDK.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B4D6A0682D61FDDD00557EAC /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B4D6A0E12D64618100557EAC /* MarketapSDKNotificationServiceExtension.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B4D6A09F2D631EDD00557EAC /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B4D6A0A62D631EDD00557EAC /* MarketapSDK.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -95,8 +234,12 @@
 			isa = PBXGroup;
 			children = (
 				B47948B22D5B3F4E00A76A65 /* MarketapSDK */,
+				B4D6A02D2D61F5DB00557EAC /* MarketapSDKExample */,
+				B4D6A06C2D61FDDD00557EAC /* MarketapSDKExampleNotificationServiceExtension */,
+				B4D6A0A32D631EDD00557EAC /* MarketapSDKTests */,
 				B47948B12D5B3F4E00A76A65 /* Products */,
 				B4D69E732D5DBF3400557EAC /* MarketapSDKNotificationServiceExtension */,
+				B4D6A0DB2D64616D00557EAC /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -105,8 +248,18 @@
 			children = (
 				B47948B02D5B3F4E00A76A65 /* MarketapSDK.framework */,
 				B4D69E472D5DBE4000557EAC /* MarketapSDKNotificationServiceExtension.framework */,
+				B4D6A02C2D61F5DB00557EAC /* MarketapSDKExample.app */,
+				B4D6A06B2D61FDDD00557EAC /* MarketapSDKExampleNotificationServiceExtension.appex */,
+				B4D6A0A22D631EDD00557EAC /* MarketapSDKTests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		B4D6A0DB2D64616D00557EAC /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -174,6 +327,79 @@
 			productReference = B4D69E472D5DBE4000557EAC /* MarketapSDKNotificationServiceExtension.framework */;
 			productType = "com.apple.product-type.framework";
 		};
+		B4D6A02B2D61F5DB00557EAC /* MarketapSDKExample */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B4D6A0372D61F5DD00557EAC /* Build configuration list for PBXNativeTarget "MarketapSDKExample" */;
+			buildPhases = (
+				B4D6A0282D61F5DB00557EAC /* Sources */,
+				B4D6A0292D61F5DB00557EAC /* Frameworks */,
+				B4D6A02A2D61F5DB00557EAC /* Resources */,
+				B4D6A0772D61FDDD00557EAC /* Embed Foundation Extensions */,
+				B4D6A0E02D64616D00557EAC /* Embed Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				B4D6A0712D61FDDD00557EAC /* PBXTargetDependency */,
+				B4D6A0DF2D64616D00557EAC /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				B4D6A02D2D61F5DB00557EAC /* MarketapSDKExample */,
+			);
+			name = MarketapSDKExample;
+			packageProductDependencies = (
+			);
+			productName = MarketapSDKExample;
+			productReference = B4D6A02C2D61F5DB00557EAC /* MarketapSDKExample.app */;
+			productType = "com.apple.product-type.application";
+		};
+		B4D6A06A2D61FDDD00557EAC /* MarketapSDKExampleNotificationServiceExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B4D6A0742D61FDDD00557EAC /* Build configuration list for PBXNativeTarget "MarketapSDKExampleNotificationServiceExtension" */;
+			buildPhases = (
+				B4D6A0672D61FDDD00557EAC /* Sources */,
+				B4D6A0682D61FDDD00557EAC /* Frameworks */,
+				B4D6A0692D61FDDD00557EAC /* Resources */,
+				B4D6A0E52D64618100557EAC /* Embed Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				B4D6A0E42D64618100557EAC /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				B4D6A06C2D61FDDD00557EAC /* MarketapSDKExampleNotificationServiceExtension */,
+			);
+			name = MarketapSDKExampleNotificationServiceExtension;
+			packageProductDependencies = (
+			);
+			productName = MarketapSDKExampleNotificationServiceExtension;
+			productReference = B4D6A06B2D61FDDD00557EAC /* MarketapSDKExampleNotificationServiceExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		B4D6A0A12D631EDD00557EAC /* MarketapSDKTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B4D6A0A92D631EDD00557EAC /* Build configuration list for PBXNativeTarget "MarketapSDKTests" */;
+			buildPhases = (
+				B4D6A09E2D631EDD00557EAC /* Sources */,
+				B4D6A09F2D631EDD00557EAC /* Frameworks */,
+				B4D6A0A02D631EDD00557EAC /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				B4D6A0A82D631EDD00557EAC /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				B4D6A0A32D631EDD00557EAC /* MarketapSDKTests */,
+			);
+			name = MarketapSDKTests;
+			packageProductDependencies = (
+			);
+			productName = MarketapSDKTests;
+			productReference = B4D6A0A22D631EDD00557EAC /* MarketapSDKTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -181,6 +407,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1610;
 				LastUpgradeCheck = 1610;
 				TargetAttributes = {
 					B47948AF2D5B3F4E00A76A65 = {
@@ -189,6 +416,15 @@
 					B4D69E462D5DBE4000557EAC = {
 						CreatedOnToolsVersion = 16.1;
 						LastSwiftMigration = 1610;
+					};
+					B4D6A02B2D61F5DB00557EAC = {
+						CreatedOnToolsVersion = 16.1;
+					};
+					B4D6A06A2D61FDDD00557EAC = {
+						CreatedOnToolsVersion = 16.1;
+					};
+					B4D6A0A12D631EDD00557EAC = {
+						CreatedOnToolsVersion = 16.1;
 					};
 				};
 			};
@@ -208,6 +444,9 @@
 			targets = (
 				B47948AF2D5B3F4E00A76A65 /* MarketapSDK */,
 				B4D69E462D5DBE4000557EAC /* MarketapSDKNotificationServiceExtension */,
+				B4D6A02B2D61F5DB00557EAC /* MarketapSDKExample */,
+				B4D6A06A2D61FDDD00557EAC /* MarketapSDKExampleNotificationServiceExtension */,
+				B4D6A0A12D631EDD00557EAC /* MarketapSDKTests */,
 			);
 		};
 /* End PBXProject section */
@@ -221,6 +460,27 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		B4D69E452D5DBE4000557EAC /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B4D6A02A2D61F5DB00557EAC /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B4D6A0692D61FDDD00557EAC /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B4D6A0A02D631EDD00557EAC /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -244,7 +504,51 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		B4D6A0282D61F5DB00557EAC /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B4D6A0672D61FDDD00557EAC /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B4D6A09E2D631EDD00557EAC /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		B4D6A0712D61FDDD00557EAC /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B4D6A06A2D61FDDD00557EAC /* MarketapSDKExampleNotificationServiceExtension */;
+			targetProxy = B4D6A0702D61FDDD00557EAC /* PBXContainerItemProxy */;
+		};
+		B4D6A0A82D631EDD00557EAC /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B47948AF2D5B3F4E00A76A65 /* MarketapSDK */;
+			targetProxy = B4D6A0A72D631EDD00557EAC /* PBXContainerItemProxy */;
+		};
+		B4D6A0DF2D64616D00557EAC /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B47948AF2D5B3F4E00A76A65 /* MarketapSDK */;
+			targetProxy = B4D6A0DE2D64616D00557EAC /* PBXContainerItemProxy */;
+		};
+		B4D6A0E42D64618100557EAC /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B4D69E462D5DBE4000557EAC /* MarketapSDKNotificationServiceExtension */;
+			targetProxy = B4D6A0E32D64618100557EAC /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		B47948B92D5B3F4E00A76A65 /* Debug */ = {
@@ -507,6 +811,150 @@
 			};
 			name = Release;
 		};
+		B4D6A0382D61F5DD00557EAC /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = MarketapSDKExample/MarketapSDKExample.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"MarketapSDKExample/Preview Content\"";
+				DEVELOPMENT_TEAM = QY56ZW92FY;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = MarketapSDKExample/Info.plist;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "marketap.Marketap-test.MarketapSDKExample";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		B4D6A0392D61F5DD00557EAC /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = MarketapSDKExample/MarketapSDKExample.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"MarketapSDKExample/Preview Content\"";
+				DEVELOPMENT_TEAM = QY56ZW92FY;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = MarketapSDKExample/Info.plist;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "marketap.Marketap-test.MarketapSDKExample";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		B4D6A0752D61FDDD00557EAC /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = QY56ZW92FY;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = MarketapSDKExampleNotificationServiceExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = MarketapSDKExampleNotificationServiceExtension;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "marketap.Marketap-test.MarketapSDKExample.MarketapSDKExampleNotificationServiceExtension";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		B4D6A0762D61FDDD00557EAC /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = QY56ZW92FY;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = MarketapSDKExampleNotificationServiceExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = MarketapSDKExampleNotificationServiceExtension;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "marketap.Marketap-test.MarketapSDKExample.MarketapSDKExampleNotificationServiceExtension";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		B4D6A0AA2D631EDD00557EAC /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = QY56ZW92FY;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "marketap.Marketap-test.MarketapSDKExample.MarketapSDKTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		B4D6A0AB2D631EDD00557EAC /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = QY56ZW92FY;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "marketap.Marketap-test.MarketapSDKExample.MarketapSDKTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -533,6 +981,33 @@
 			buildConfigurations = (
 				B4D69E4D2D5DBE4000557EAC /* Debug */,
 				B4D69E4E2D5DBE4000557EAC /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		B4D6A0372D61F5DD00557EAC /* Build configuration list for PBXNativeTarget "MarketapSDKExample" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B4D6A0382D61F5DD00557EAC /* Debug */,
+				B4D6A0392D61F5DD00557EAC /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		B4D6A0742D61FDDD00557EAC /* Build configuration list for PBXNativeTarget "MarketapSDKExampleNotificationServiceExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B4D6A0752D61FDDD00557EAC /* Debug */,
+				B4D6A0762D61FDDD00557EAC /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		B4D6A0A92D631EDD00557EAC /* Build configuration list for PBXNativeTarget "MarketapSDKTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B4D6A0AA2D631EDD00557EAC /* Debug */,
+				B4D6A0AB2D631EDD00557EAC /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
