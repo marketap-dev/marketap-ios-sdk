@@ -7,11 +7,12 @@
 
 import Foundation
 
-class MarketapAPI {
+class MarketapAPI: MarketapAPIProtocol {
     enum BaseURL: String {
         case event = "https://event.marketap.io"
         case crm = "https://crm.marketap.io"
     }
+    var shouldLogRequests: Bool = true
 
     func request<T: Decodable, U: Encodable>(
         baseURL: BaseURL = .event,
@@ -25,32 +26,36 @@ class MarketapAPI {
             completion?(.failure(.invalidURL))
             return
         }
-        
+
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        
+
         do {
             request.httpBody = try JSONEncoder().encode(body)
         } catch {
             completion?(.failure(.encodingError(error)))
             return
         }
-        
+
+        logRequest(request, body: body)
+
         let task = URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
                 completion?(.failure(.networkError(error)))
                 return
             }
-            
+
+            self.logResponse(response, data: data)
+
             guard let data = data else {
                 completion?(.failure(.noData))
                 return
             }
-            
+
             do {
-                let decodedResponse = try JSONDecoder().decode(responseType, from: data)
-                completion?(.success(decodedResponse))
+                let wrappedResponse = try JSONDecoder().decode(ServerResponse<T>.self, from: data)
+                completion?(.success(wrappedResponse.data))
             } catch {
                 completion?(.failure(.decodingError(error)))
             }
@@ -58,7 +63,6 @@ class MarketapAPI {
         task.resume()
     }
 
-    /// ✅ 응답 형식과 관계없이 `Result<Void, MarketapError>` 반환
     func requestWithoutResponse<U: Encodable>(
         baseURL: BaseURL = .event,
         path: String,
@@ -70,31 +74,35 @@ class MarketapAPI {
             completion?(.failure(.invalidURL))
             return
         }
-        
+
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        
+
         do {
             request.httpBody = try JSONEncoder().encode(body)
         } catch {
             completion?(.failure(.encodingError(error)))
             return
         }
-        
+
+        logRequest(request, body: body)
+
         let task = URLSession.shared.dataTask(with: request) { _, response, error in
             if let error = error {
                 completion?(.failure(.networkError(error)))
                 return
             }
-            
+
+            self.logResponse(response, data: nil)
+
             guard let httpResponse = response as? HTTPURLResponse else {
                 completion?(.failure(.noData))
                 return
             }
-            
+
             if (200...299).contains(httpResponse.statusCode) {
-                completion?(.success(())) // ✅ 응답 없이 성공 처리
+                completion?(.failure(.serverError(statusCode: httpResponse.statusCode)))
             } else {
                 completion?(.failure(.serverError(statusCode: httpResponse.statusCode)))
             }

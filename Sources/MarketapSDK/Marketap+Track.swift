@@ -9,86 +9,69 @@ import Foundation
 import UIKit
 
 extension Marketap {
-         
-    // MARK: - SDK 초기화
-    
+
     /// 디바이스의 푸시 토큰을 설정합니다.
-    /// - Parameter token: 디바이스의 푸시 알림 토큰
+    /// - Parameter token: 디바이스의 푸시 알림 토큰 (APNs 토큰)
     @objc public static func setPushToken(token: Data) {
         client?.setPushToken(token: token)
     }
-    
-    /// SDK를 설정값과 함께 초기화합니다.
-    /// - Parameter config: SDK 설정 정보를 담은 딕셔너리
-    @objc public static func initialize(config: [String: Any]) {
-        client?.initialize(config: config)
-    }
 
-    // MARK: - 유저 인증
-    
-    /// 유저 로그인 및 유저/이벤트 속성을 설정합니다.
+    /// 유저를 로그인 처리하고, 유저 및 이벤트 속성을 설정합니다.
     /// - Parameters:
-    ///   - userId: 유저의 고유 ID
-    ///   - userProperties: 유저 속성
-    ///   - eventProperties: 이벤트 속성 (선택)
+    ///   - userId: 유저의 고유 식별자 (ID)
+    ///   - userProperties: 유저 속성 (선택)
+    ///   - eventProperties: 로그인과 함께 기록할 이벤트 속성 (선택)
     @objc public static func login(userId: String, userProperties: [String: Any]?, eventProperties: [String: Any]?) {
         client?.login(userId: userId, userProperties: userProperties, eventProperties: eventProperties)
     }
 
-    /// 유저 로그아웃을 수행하며, 이벤트 속성을 설정할 수 있습니다.
-    /// - Parameter properties: 로그아웃 시 기록할 이벤트 속성 (선택)
+    /// 유저를 로그아웃 처리합니다.
+    /// - Parameter eventProperties: 로그아웃과 함께 기록할 이벤트 속성 (선택)
     @objc public static func logout(eventProperties: [String: Any]?) {
         client?.logout(eventProperties: eventProperties)
     }
 
-    // MARK: - 이벤트 트래킹
-    
-    /// 커스텀 이벤트를 트래킹합니다.
+    /// 커스텀 이벤트를 추적합니다.
     /// - Parameters:
-    ///   - name: 이벤트 이름.
-    ///   - properties: 이벤트 속성 (선택)
-    ///   - id: 이벤트의 고유 ID (선택)
-    ///   - timestamp: 이벤트 발생 시간 (선택)
+    ///   - eventName: 추적할 이벤트 이름
+    ///   - eventProperties: 이벤트 속성 (선택)
     @objc public static func track(eventName: String, eventProperties: [String: Any]?) {
         client?.track(eventName: eventName, eventProperties: eventProperties, id: nil, timestamp: Date())
     }
 
-    /// 구매 이벤트를 트래킹합니다.
+    /// 구매 이벤트를 추적합니다.
     /// - Parameters:
     ///   - revenue: 구매 금액
-    ///   - properties: 구매 관련 이벤트 속성 (선택)
+    ///   - eventProperties: 구매 관련 속성 (선택)
     @objc public static func trackPurchase(revenue: Double, eventProperties: [String: Any]?) {
         client?.trackPurchase(revenue: revenue, eventProperties: eventProperties)
     }
 
-    /// 구매 외 일반 매출 관련 이벤트를 트래킹합니다.
+    /// 특정 매출 이벤트를 추적합니다.
     /// - Parameters:
-    ///   - name: 매출 이벤트 이름
+    ///   - eventName: 매출과 관련된 이벤트 이름 (예: "구독 시작", "아이템 구매")
     ///   - revenue: 매출 금액
-    ///   - properties: 이벤트 속성 (선택)
+    ///   - eventProperties: 이벤트 속성 (선택)
     @objc public static func trackRevenue(eventName: String, revenue: Double, eventProperties: [String: Any]?) {
         client?.trackRevenue(eventName: eventName, revenue: revenue, eventProperties: eventProperties)
     }
 
-    /// 페이지뷰 이벤트를 트래킹합니다.
-    /// - Parameter properties: 페이지뷰 관련 이벤트 속성 (선택)
+    /// 페이지 방문 이벤트를 추적합니다.
+    /// - Parameter eventProperties: 페이지 방문과 관련된 추가 속성 (선택)
     @objc public static func trackPageView(eventProperties: [String: Any]?) {
         client?.trackPageView(eventProperties: eventProperties)
     }
 
-    // MARK: - 유저 프로필 관리
-    
-    /// 유저 프로필을 업데이트합니다.
+    /// 유저의 프로필을 업데이트합니다.
     /// - Parameters:
-    ///   - userId: 유저의 고유 ID
-    ///   - properties: 업데이트할 유저 속성
+    ///   - userId: 유저의 고유 식별자 (ID)
+    ///   - userProperties: 유저 속성
     @objc public static func identify(userId: String, userProperties: [String: Any]?) {
         client?.identify(userId: userId, userProperties: userProperties)
     }
 
-    /// 유저 프로필을 초기화합니다 (로그아웃 또는 익명화)
+    /// 유저 프로필을 초기화하여 로그아웃 상태로 만들거나 익명 유저로 전환합니다.
     @objc public static func resetIdentity() {
         client?.resetIdentity()
     }
-
 }

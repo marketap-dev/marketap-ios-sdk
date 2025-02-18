@@ -12,7 +12,7 @@ struct IngestEventRequest: Encodable {
     let name: String
     let userId: String?
     let device: UpdateDeviceRequest
-    let properties: [String: AnyEncodable]?
+    let properties: [String: AnyCodable]?
     let timestamp: Date?
 
     enum CodingKeys: String, CodingKey {
@@ -24,7 +24,6 @@ struct IngestEventRequest: Encodable {
         case timestamp
     }
     
-    /// ✅ `timestamp`를 `ISO 8601` 형식으로 변환
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         

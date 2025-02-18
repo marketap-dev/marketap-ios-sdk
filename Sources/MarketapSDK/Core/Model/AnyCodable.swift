@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct AnyCodable: Codable {
+struct AnyCodable: Codable, Equatable {
     let value: Any?
 
     init(_ value: Any?) {
@@ -32,7 +32,12 @@ struct AnyCodable: Codable {
         case let v as Bool:
             try container.encode(v)
         default:
-            throw EncodingError.invalidValue(value, EncodingError.Context(codingPath: encoder.codingPath, debugDescription: "Unsupported type"))
+            throw MarketapError.encodingError(
+                EncodingError.invalidValue(
+                    value,
+                    EncodingError.Context(codingPath: encoder.codingPath, debugDescription: "Unsupported type")
+                )
+            )
         }
     }
 
@@ -53,10 +58,29 @@ struct AnyCodable: Codable {
             throw DecodingError.dataCorruptedError(in: container, debugDescription: "Unsupported type")
         }
     }
+
+    static func == (lhs: AnyCodable, rhs: AnyCodable) -> Bool {
+        let lhsValue = lhs.value as? NSNull == nil ? lhs.value : nil
+        let rhsValue = rhs.value as? NSNull == nil ? rhs.value : nil
+
+        switch (lhsValue, rhsValue) {
+        case (nil, nil):
+            return true
+        case let (lhs as String, rhs as String):
+            return lhs == rhs
+        case let (lhs as Int, rhs as Int):
+            return lhs == rhs
+        case let (lhs as Double, rhs as Double):
+            return lhs == rhs
+        case let (lhs as Bool, rhs as Bool):
+            return lhs == rhs
+        default:
+            return false
+        }
+    }
 }
 
 extension Dictionary where Key == String, Value == Any {
-    /// ✅ `[String: Any]`을 `[String: AnyEncodable]`로 변환하는 확장 메서드
     func toAnyCodable() -> [String: AnyCodable] {
         return self.mapValues { AnyCodable($0) }
     }

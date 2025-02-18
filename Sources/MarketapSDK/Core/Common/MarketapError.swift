@@ -18,17 +18,17 @@ enum MarketapError: Error {
     var localizedDescription: String {
         switch self {
         case .invalidURL:
-            return "🚨 Invalid URL provided."
+            return "Invalid URL provided."
         case .noData:
-            return "🚨 No data received from server."
+            return "No data received from server."
         case .encodingError(let error):
-            return "🚨 Encoding failed: \(error.localizedDescription)"
+            return "Encoding failed: \(error.localizedDescription)"
         case .decodingError(let error):
-            return "🚨 Decoding failed: \(error.localizedDescription)"
+            return "Decoding failed: \(error.localizedDescription)"
         case .networkError(let error):
-            return "🚨 Network error: \(error.localizedDescription)"
+            return "Network error: \(error.localizedDescription)"
         case .serverError(let statusCode):
-            return "🚨 Server error with status code: \(statusCode)"
+            return "Server error with status code: \(statusCode)"
         }
     }
 }

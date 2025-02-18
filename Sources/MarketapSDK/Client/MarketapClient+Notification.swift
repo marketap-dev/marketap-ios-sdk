@@ -27,7 +27,7 @@ extension MarketapClient {
     
     func setPushToken(token: Data) {
         let tokenString = token.map { String(format: "%02x", $0) }.joined()
-        setDevice(additionalInfo: ["token": tokenString])
+        core.setPushToken(token: tokenString)
     }
     
     func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) -> Bool {

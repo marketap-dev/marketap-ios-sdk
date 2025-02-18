@@ -8,27 +8,18 @@
 import Foundation
 
 struct Device: Codable {
-    let cookieId: String?
     let idfa: String?
     let idfv: String?
-    let gaid: String?
-    let appSetId: String?
-    let appLocalId: String?
     let platform: String
     let os: String
     let osVersion: String?
     let libraryVersion: String?
     let model: String?
     let manufacturer: String?
-    let brand: String?
-    let token: String?
-    
+    var token: String?
+
     let appVersion: String?
     let appBuildNumber: String?
-    
-    let browserName: String?
-    let browserVersion: String?
-    let userAgent: String?
     
     let timezone: String
     let locale: String
@@ -51,19 +42,13 @@ struct Device: Codable {
     let sessionId: String?
     
     enum CodingKeys: String, CodingKey {
-        case cookieId = "cookie_id"
-        case idfa, idfv, gaid
-        case appSetId = "app_set_id"
-        case appLocalId = "app_local_id"
+        case idfa, idfv
         case platform, os
         case osVersion = "os_version"
         case libraryVersion = "library_version"
-        case model, manufacturer, brand, token
+        case model, manufacturer, token
         case appVersion = "app_version"
         case appBuildNumber = "app_build_number"
-        case browserName = "browser_name"
-        case browserVersion = "browser_version"
-        case userAgent = "user_agent"
         case timezone, locale
         case screen
         case cpuArch = "cpu_arch"
@@ -83,12 +68,10 @@ struct Device: Codable {
 struct ScreenInfo: Codable {
     let width: Double
     let height: Double
-    let colorDepth: Int?
     let pixelRatio: Double?
 
     enum CodingKeys: String, CodingKey {
         case width, height
-        case colorDepth = "color_depth"
         case pixelRatio = "pixel_ratio"
     }
 }

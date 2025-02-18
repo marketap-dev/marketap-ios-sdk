@@ -8,7 +8,6 @@
 import Foundation
 
 extension MarketapClient {
-    // MARK: - User Authentication
     func login(userId: String, userProperties: [String: Any]?, eventProperties: [String: Any]?) {
         core.login(userId: userId, userProperties: userProperties, eventProperties: eventProperties)
     }
@@ -17,7 +16,6 @@ extension MarketapClient {
         core.logout(eventProperties: eventProperties)
     }
 
-    // MARK: - Event Tracking
     func track(eventName: String, eventProperties: [String: Any]?, id: String?, timestamp: Date?) {
         core.track(eventName: eventName, eventProperties: eventProperties, id: id, timestamp: timestamp)
     }
@@ -34,7 +32,6 @@ extension MarketapClient {
         core.trackPageView(eventProperties: eventProperties)
     }
 
-    // MARK: - User Profile Management
     func identify(userId: String, userProperties: [String: Any]?) {
         core.identify(userId: userId, userProperties: userProperties)
     }

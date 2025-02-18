@@ -1,38 +1,42 @@
 //
-//  UpdateProfileRequest.swift
+//  CreateBulkClientEventRequest.swift
 //  MarketapSDK
 //
-//  Created by 이동현 on 2/14/25.
+//  Created by 이동현 on 2/17/25.
 //
 
 import Foundation
 
-struct UpdateProfileRequest: Codable {
-    let userId: String
-    let properties: [String: AnyCodable]?
-    let device: UpdateDeviceRequest?
+struct BulkEvent: Codable, Equatable {
+    let id: String?
+    let userId: String?
+    let name: String
     let timestamp: Date?
-
-    init(userId: String, properties: [String: AnyCodable]?, device: UpdateDeviceRequest?, timestamp: Date?) {
-        self.userId = userId
-        self.properties = properties
-        self.device = device
-        self.timestamp = timestamp
-    }
+    let properties: [String: AnyCodable]?
 
     enum CodingKeys: String, CodingKey {
+        case id
         case userId = "user_id"
-        case properties
-        case device
+        case name
         case timestamp
+        case properties
+    }
+
+    init(id: String? = nil, userId: String? = nil, name: String, timestamp: Date? = nil, properties: [String: AnyCodable]? = nil) {
+        self.id = id
+        self.userId = userId
+        self.name = name
+        self.timestamp = timestamp ?? Date()
+        self.properties = properties
     }
 
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
 
+        try container.encodeIfPresent(id, forKey: .id)
+        try container.encode(name, forKey: .name)
         try container.encodeIfPresent(userId, forKey: .userId)
         try container.encodeIfPresent(properties, forKey: .properties)
-        try container.encodeIfPresent(device, forKey: .device)
 
         if let timestamp = timestamp {
             let dateFormatter = ISO8601DateFormatter()
@@ -44,9 +48,10 @@ struct UpdateProfileRequest: Codable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
 
-        userId = try container.decode(String.self, forKey: .userId)
+        id = try container.decodeIfPresent(String.self, forKey: .id)
+        userId = try container.decodeIfPresent(String.self, forKey: .userId)
+        name = try container.decode(String.self, forKey: .name)
         properties = try container.decodeIfPresent([String: AnyCodable].self, forKey: .properties)
-        device = try container.decodeIfPresent(UpdateDeviceRequest.self, forKey: .device)
 
         if let timestampString = try container.decodeIfPresent(String.self, forKey: .timestamp) {
             let dateFormatter = ISO8601DateFormatter()
@@ -54,5 +59,16 @@ struct UpdateProfileRequest: Codable {
         } else {
             timestamp = nil
         }
+    }
+}
+
+
+struct CreateBulkClientEventRequest: Codable {
+    let device: UpdateDeviceRequest
+    let events: [BulkEvent]
+
+    enum CodingKeys: String, CodingKey {
+        case device
+        case events
     }
 }

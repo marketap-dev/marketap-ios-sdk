@@ -32,7 +32,7 @@ enum DataType: String, Codable {
     case boolean = "BOOLEAN"
     case datetime = "DATETIME"
     case object = "OBJECT"
-    case array = "ARRAY"
+    case arrayString = "ARRAY_STRING"
     case date = "DATE"
 }
 
@@ -42,10 +42,10 @@ enum Path: String, Codable {
     case item = "ITEM"
 }
 
-struct EventPropertyCondition: Codable {
+struct EventPropertyCondition: Codable, Equatable {
     let extractionStrategy: ExtractionStrategy
     let operatorType: TaxonomyOperator
-    let targetValues: [AnyCodable] // ✅ `Any`를 Codable로 변환하기 위해 AnyCodable 사용
+    let targetValues: [AnyCodable]
 
     enum CodingKeys: String, CodingKey {
         case extractionStrategy
@@ -54,47 +54,46 @@ struct EventPropertyCondition: Codable {
     }
 }
 
-struct ExtractionStrategy: Codable {
+struct ExtractionStrategy: Codable, Equatable {
     let propertySchema: PropertySchema
 }
 
-struct PropertySchema: Codable {
+struct PropertySchema: Codable, Equatable {
     let id: String
     let name: String
     let dataType: DataType
     let path: Path?
 }
 
-struct EventFilter: Codable {
+struct EventFilter: Codable, Equatable {
     let eventName: String
 }
 
-struct EventTriggerCondition: Codable {
+struct EventTriggerCondition: Codable, Equatable {
     let condition: Condition
     let frequencyCap: FrequencyCap?
     let delayMinutes: Int?
 }
 
-struct Condition: Codable {
+struct Condition: Codable, Equatable {
     let eventFilter: EventFilter
     let propertyConditions: [[EventPropertyCondition]]?
 }
 
-struct FrequencyCap: Codable {
+struct FrequencyCap: Codable, Equatable {
     let limit: Int
     let durationMinutes: Int
 }
 
-struct Layout: Codable {
+struct Layout: Codable, Equatable {
     let layoutType: String
     let layoutSubType: String
     let orientations: [String]
 }
 
-struct InAppCampaign: Codable {
+struct InAppCampaign: Codable, Equatable {
     let id: String
     let layout: Layout
     let triggerEventCondition: EventTriggerCondition
-    let priority: String
     let html: String
 }
