@@ -20,19 +20,13 @@ let package = Package(
     targets: [
         .target(
             name: "MarketapSDK",
-            dependencies: [
-                .target(name: "MarketapSDKCore")
-            ],
+            dependencies: [],
             path: "Sources/MarketapSDK"
         ),
         .target(
             name: "MarketapSDKNotificationServiceExtension",
             dependencies: [],
             path: "Sources/MarketapSDKNotificationServiceExtension"
-        ),
-        .binaryTarget(
-            name: "MarketapSDKCore",
-            path: "MarketapSDKCore.xcframework"
         )
     ]
 )
