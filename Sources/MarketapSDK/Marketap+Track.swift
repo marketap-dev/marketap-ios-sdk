@@ -21,13 +21,13 @@ extension Marketap {
     ///   - userId: 유저의 고유 식별자 (ID)
     ///   - userProperties: 유저 속성 (선택)
     ///   - eventProperties: 로그인과 함께 기록할 이벤트 속성 (선택)
-    @objc public static func login(userId: String, userProperties: [String: Any]?, eventProperties: [String: Any]?) {
+    @objc public static func login(userId: String, userProperties: [String: Any]? = nil, eventProperties: [String: Any]? = nil) {
         client?.login(userId: userId, userProperties: userProperties, eventProperties: eventProperties)
     }
 
     /// 유저를 로그아웃 처리합니다.
     /// - Parameter eventProperties: 로그아웃과 함께 기록할 이벤트 속성 (선택)
-    @objc public static func logout(eventProperties: [String: Any]?) {
+    @objc public static func logout(eventProperties: [String: Any]? = nil) {
         client?.logout(eventProperties: eventProperties)
     }
 
@@ -35,7 +35,7 @@ extension Marketap {
     /// - Parameters:
     ///   - eventName: 추적할 이벤트 이름
     ///   - eventProperties: 이벤트 속성 (선택)
-    @objc public static func track(eventName: String, eventProperties: [String: Any]?) {
+    @objc public static func track(eventName: String, eventProperties: [String: Any]? = nil) {
         client?.track(eventName: eventName, eventProperties: eventProperties, id: nil, timestamp: Date())
     }
 
@@ -43,7 +43,7 @@ extension Marketap {
     /// - Parameters:
     ///   - revenue: 구매 금액
     ///   - eventProperties: 구매 관련 속성 (선택)
-    @objc public static func trackPurchase(revenue: Double, eventProperties: [String: Any]?) {
+    @objc public static func trackPurchase(revenue: Double, eventProperties: [String: Any]? = nil) {
         client?.trackPurchase(revenue: revenue, eventProperties: eventProperties)
     }
 
@@ -52,13 +52,13 @@ extension Marketap {
     ///   - eventName: 매출과 관련된 이벤트 이름 (예: "구독 시작", "아이템 구매")
     ///   - revenue: 매출 금액
     ///   - eventProperties: 이벤트 속성 (선택)
-    @objc public static func trackRevenue(eventName: String, revenue: Double, eventProperties: [String: Any]?) {
+    @objc public static func trackRevenue(eventName: String, revenue: Double, eventProperties: [String: Any]? = nil) {
         client?.trackRevenue(eventName: eventName, revenue: revenue, eventProperties: eventProperties)
     }
 
     /// 페이지 방문 이벤트를 추적합니다.
     /// - Parameter eventProperties: 페이지 방문과 관련된 추가 속성 (선택)
-    @objc public static func trackPageView(eventProperties: [String: Any]?) {
+    @objc public static func trackPageView(eventProperties: [String: Any]? = nil) {
         client?.trackPageView(eventProperties: eventProperties)
     }
 
@@ -66,7 +66,7 @@ extension Marketap {
     /// - Parameters:
     ///   - userId: 유저의 고유 식별자 (ID)
     ///   - userProperties: 유저 속성
-    @objc public static func identify(userId: String, userProperties: [String: Any]?) {
+    @objc public static func identify(userId: String, userProperties: [String: Any]? = nil) {
         client?.identify(userId: userId, userProperties: userProperties)
     }
 
