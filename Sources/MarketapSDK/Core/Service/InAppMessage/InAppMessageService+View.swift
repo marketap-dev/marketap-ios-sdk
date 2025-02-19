@@ -12,9 +12,8 @@ import WebKit
 extension InAppMessageService: InAppMessageWebViewControllerDelegate {
 
     func isCampaignHiden(campaign: InAppCampaign) -> Bool {
-        if let hideUntil = UserDefaults.standard.object(forKey: "hide_campaign_\(campaign.id)") as? TimeInterval,
-           hideUntil > Date().timeIntervalSince1970 {
-            return false
+        if UserDefaults.standard.double(forKey: "hide_campaign_\(campaign.id)") > Date().timeIntervalSince1970 {
+            return true
         }
 
         if let frequencyCap = campaign.triggerEventCondition.frequencyCap {
