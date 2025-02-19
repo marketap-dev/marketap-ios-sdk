@@ -12,7 +12,7 @@ class MarketapAPI: MarketapAPIProtocol {
         case event = "https://event.marketap.io"
         case crm = "https://crm.marketap.io"
     }
-    var shouldLogRequests: Bool = true
+    var shouldLogRequests: Bool = false
 
     func request<T: Decodable, U: Encodable>(
         baseURL: BaseURL = .event,

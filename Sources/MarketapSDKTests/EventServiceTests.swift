@@ -96,7 +96,6 @@ class EventServiceTests: XCTestCase {
         mockCache = nil
         mockDelegate = nil
         super.tearDown()
-        print("###tearDOwn")
     }
 
     func testLogin() {
