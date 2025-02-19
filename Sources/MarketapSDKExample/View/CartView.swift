@@ -90,6 +90,7 @@ struct CartView: View {
             }
             .onAppear {
                 Marketap.trackPageView(eventProperties: ["mkt_page_title": "장바구니"])
+                Marketap.track(eventName: "mkt_cart_view")
             }
         }
     }
