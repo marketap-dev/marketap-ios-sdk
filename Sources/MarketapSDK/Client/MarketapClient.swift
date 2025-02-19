@@ -14,9 +14,10 @@ class MarketapClient: NSObject, MarketapClientProtocol {
         let api = MarketapAPI()
         let cache = MarketapCache(config: config)
         let eventService = EventService(api: api, cache: cache)
-        let inAppMessageService = InAppMessageService(api: api, cache: cache, eventService: eventService)
+        let inAppMessageService = InAppMessageService(api: api, cache: cache)
         let core = MarketapCore(eventService: eventService, inAppMessageService: inAppMessageService)
         eventService.delegate = core
+        inAppMessageService.delegate = core
         self.core = core
         super.init()
     }

@@ -18,9 +18,7 @@ class InAppMessageWebViewController: UIViewController {
     var campaign: InAppCampaign? {
         didSet {
             if let campaign {
-                DispatchQueue.main.async {
-                    self.updateCampaignContent(campaignHTML: campaign.html)
-                }
+                self.updateCampaignContent(campaignHTML: campaign.html)
             }
         }
     }

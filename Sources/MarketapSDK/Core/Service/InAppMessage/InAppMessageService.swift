@@ -7,6 +7,10 @@
 
 import WebKit
 
+protocol InAppMessageServiceDelegate: AnyObject {
+    func trackEvent(eventName: String, eventProperties: [String: Any]?)
+}
+
 class InAppMessageService: NSObject, InAppMessageServiceProtocol {
     static let cacheExpiration = Double(60 * 5)
     static let campaignCacheKey = "InAppMessageService_campaigns"
@@ -14,7 +18,7 @@ class InAppMessageService: NSObject, InAppMessageServiceProtocol {
 
     private let api: MarketapAPIProtocol
     private let cache: MarketapCacheProtocol
-    let eventService: EventServiceProtocol
+    weak var delegate: InAppMessageServiceDelegate?
 
     var isModalShown: Bool = false
     var didFinishLoad = false
@@ -28,10 +32,9 @@ class InAppMessageService: NSObject, InAppMessageServiceProtocol {
     var lastFetch: Date?
     let campaignViewController = InAppMessageWebViewController()
 
-    init(api: MarketapAPIProtocol, cache: MarketapCacheProtocol, eventService: EventServiceProtocol) {
+    init(api: MarketapAPIProtocol, cache: MarketapCacheProtocol) {
         self.cache = cache
         self.api = api
-        self.eventService = eventService
 
         super.init()
 

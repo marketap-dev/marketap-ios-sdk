@@ -38,22 +38,19 @@ class InAppMessageServiceTests: XCTestCase {
     var service: InAppMessageService!
     var mockAPI: MockMarketapAPIForIAM!
     var mockCache: MockMarketapCache!
-    var mockEventService: EventService!
 
     override func setUp() {
         super.setUp()
         mockAPI = MockMarketapAPIForIAM()
         mockCache = MockMarketapCache()
-        mockEventService = EventService(api: mockAPI, cache: mockCache)
 
-        service = InAppMessageService(api: mockAPI, cache: mockCache, eventService: mockEventService)
+        service = InAppMessageService(api: mockAPI, cache: mockCache)
     }
 
     override func tearDown() {
         service = nil
         mockAPI = nil
         mockCache = nil
-        mockEventService = nil
         super.tearDown()
     }
 
@@ -128,28 +125,5 @@ class InAppMessageServiceTests: XCTestCase {
         }
 
         waitForExpectations(timeout: 1)
-    }
-
-    func testEventServiceIntegration() {
-        class MockDelegate: EventServiceDelegate {
-            var userIdChangedCalled = false
-            var eventTracked: IngestEventRequest?
-
-            func handleUserIdChanged() {
-                userIdChangedCalled = true
-            }
-
-            func onEvent(eventRequest: IngestEventRequest, device: Device) {
-                eventTracked = eventRequest
-            }
-        }
-
-        let mockDelegate = MockDelegate()
-        mockEventService.delegate = mockDelegate
-
-        mockEventService.trackEvent(eventName: "test_event", eventProperties: ["key": "value"])
-
-        XCTAssertNotNil(mockDelegate.eventTracked)
-        XCTAssertEqual(mockDelegate.eventTracked?.name, "test_event")
     }
 }

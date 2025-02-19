@@ -73,8 +73,8 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
             pendingCampaign = campaign
             return
         }
-        campaignViewController.campaign = campaign
         DispatchQueue.main.async {
+            self.campaignViewController.campaign = campaign
             if let topViewController = self.getTopViewController() {
                 self.isModalShown = true
                 topViewController.present(self.campaignViewController, animated: false)
@@ -114,7 +114,7 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
     }
 
     func onImpression(campaign: InAppCampaign, messageId: String) {
-        eventService.trackEvent(
+        delegate?.trackEvent(
             eventName: "mkt_delivery_message",
             eventProperties: [
                 "mkt_campaign_id": campaign.id,
@@ -130,7 +130,7 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
     }
 
     func onClick(campaign: InAppCampaign, locationId: String, messageId: String) {
-        eventService.trackEvent(
+        delegate?.trackEvent(
             eventName: "mkt_click_message",
             eventProperties: [
                 "mkt_campaign_id": campaign.id,

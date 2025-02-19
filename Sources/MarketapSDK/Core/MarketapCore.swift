@@ -96,3 +96,9 @@ extension MarketapCore: EventServiceDelegate {
         }
     }
 }
+
+extension MarketapCore: InAppMessageServiceDelegate {
+    func trackEvent(eventName: String, eventProperties: [String : Any]?) {
+        track(eventName: eventName, eventProperties: eventProperties, id: nil, timestamp: nil)
+    }
+}

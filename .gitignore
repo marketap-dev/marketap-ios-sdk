@@ -1,5 +1,3 @@
 .swiftpm/
-*.xcworkspace/xcuserdata/
-*.xcodeproj/xcuserdata/
-Sources/MarketapSDK.xcodeproj/xcuserdata/
+**/xcuserdata/
 

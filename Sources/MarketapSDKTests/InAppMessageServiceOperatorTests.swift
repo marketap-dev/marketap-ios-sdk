@@ -17,8 +17,7 @@ class InAppMessageServiceOperatorTests: XCTestCase {
         let cache = MockMarketapCache()
         inAppMessageService = InAppMessageService(
             api: api,
-            cache: cache,
-            eventService: EventService(api: api, cache: cache)
+            cache: cache
         )
     }
 
