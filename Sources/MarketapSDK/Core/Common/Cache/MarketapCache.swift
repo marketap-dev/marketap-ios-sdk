@@ -91,7 +91,7 @@ class MarketapCache: MarketapCacheProtocol {
     func updateDevice(pushToken: String? = nil) -> Device {
         deviceQueue.sync {
             var updatedDevice = getDeviceInfo(pushToken: pushToken)
-            if let pushToken, updatedDevice.token != pushToken {
+            if let pushToken {
                 updatedDevice.token = pushToken
                 saveCodableObject(pushToken, key: CacheKey.pushTokenKey)
             }
