@@ -15,7 +15,7 @@ struct CartItem: Codable, Identifiable {
 }
 
 struct CartView: View {
-    @Binding var cartItems: [CartItem] // ✅ 장바구니 데이터
+    @Binding var cartItems: [CartItem]
     @Binding var isPresented: Bool
 
     @State private var showAlert = false
@@ -34,16 +34,15 @@ struct CartView: View {
                         ForEach(cartItems) { item in
                             HStack {
                                 VStack(alignment: .leading) {
-                                    Text(item.name) // ✅ 상품명
+                                    Text(item.name)
                                         .font(.headline)
 
-                                    Text(formatPrice(item.price)) // ✅ 가격
+                                    Text(formatPrice(item.price))
                                         .font(.subheadline)
                                         .foregroundColor(.gray)
                                 }
                                 Spacer()
 
-                                // ✅ 개별 삭제 버튼
                                 Button(action: {
                                     selectedItem = item
                                     showAlert = true
@@ -54,12 +53,12 @@ struct CartView: View {
                                 }
                             }
                         }
-                        .onDelete(perform: removeItem) // ✅ 삭제 기능
+                        .onDelete(perform: removeItem)
                     }
                 }
 
                 Button(action: {
-                    isPresented = false // 장바구니 닫기
+                    isPresented = false
                 }) {
                     Text("닫기")
                         .frame(maxWidth: .infinity)
@@ -73,7 +72,7 @@ struct CartView: View {
             .navigationTitle("장바구니")
             .toolbar {
                 if !cartItems.isEmpty {
-                    EditButton() // ✅ 편집 버튼 추가
+                    EditButton()
                 }
             }
             .alert(isPresented: $showAlert) {
@@ -95,7 +94,6 @@ struct CartView: View {
         }
     }
 
-    /// ✅ 선택한 아이템을 삭제하는 함수
     private func removeSpecificItem(_ item: CartItem) {
         if let index = cartItems.firstIndex(where: { $0.id == item.id }) {
             cartItems.remove(at: index)
@@ -103,25 +101,22 @@ struct CartView: View {
         }
     }
 
-    /// ✅ 장바구니에서 아이템 삭제 후 저장 (기존 기능)
     private func removeItem(at offsets: IndexSet) {
         cartItems.remove(atOffsets: offsets)
         saveCartItems()
     }
 
-    /// ✅ 장바구니 데이터를 UserDefaults에 저장
     private func saveCartItems() {
         if let encoded = try? JSONEncoder().encode(cartItems) {
             UserDefaults.standard.set(encoded, forKey: "cartItems")
         }
     }
 
-    /// ✅ 가격을 ₩ (원화) 형식으로 변환
     private func formatPrice(_ price: Double) -> String {
         let formatter = NumberFormatter()
         formatter.numberStyle = .currency
         formatter.currencySymbol = "₩"
-        formatter.maximumFractionDigits = 0 // 소수점 제거
+        formatter.maximumFractionDigits = 0
         return formatter.string(from: NSNumber(value: price)) ?? "₩\(Int(price))"
     }
 }

@@ -12,7 +12,7 @@ import MarketapSDK
 struct ShoppingHomeView: View {
     @State private var selectedCategory: String = "전체"
     @State private var isShowingPurchase = false
-    @State private var selectedProduct: (String, Double, String)? = nil // ✅ 가격을 Double로 변경
+    @State private var selectedProduct: (String, Double, String)? = nil
 
     @State private var isShowingCart = false
     @State private var isShowingUserInfo = false
@@ -46,7 +46,6 @@ struct ShoppingHomeView: View {
         ("초콜릿", 5500, "음식")
     ]
 
-    /// 🔹 선택한 카테고리에 맞게 상품 필터링
     var filteredProducts: [(String, Double, String)] {
         if selectedCategory == "전체" {
             return products
@@ -58,7 +57,6 @@ struct ShoppingHomeView: View {
     var body: some View {
         NavigationView {
             VStack {
-                // 🔹 카테고리 선택
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack {
                         ForEach(categories, id: \.self) { category in
@@ -76,7 +74,6 @@ struct ShoppingHomeView: View {
                     .padding(.horizontal)
                 }
 
-                // 🔹 상품 목록
                 ScrollView {
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
                         ForEach(filteredProducts, id: \.0) { product in
@@ -118,16 +115,14 @@ struct ShoppingHomeView: View {
         }
     }
 
-    /// ✅ 가격을 ₩ (원화) 형식으로 변환
     private func formatPrice(_ price: Double) -> String {
         let formatter = NumberFormatter()
         formatter.numberStyle = .currency
         formatter.currencySymbol = "₩"
-        formatter.maximumFractionDigits = 0 // 소수점 제거
+        formatter.maximumFractionDigits = 0
         return formatter.string(from: NSNumber(value: price)) ?? "₩\(Int(price))"
     }
 
-    /// ✅ 앱 실행 시 UserDefaults에서 장바구니 데이터 불러오기
     private func loadCartItems() {
         if let savedData = UserDefaults.standard.data(forKey: "cartItems"),
            let decoded = try? JSONDecoder().decode([CartItem].self, from: savedData) {
@@ -136,8 +131,6 @@ struct ShoppingHomeView: View {
     }
 }
 
-
-// 🔹 상품 카드 UI
 struct ProductCard: View {
     let name: String
     let price: String
@@ -172,7 +165,6 @@ struct ProductCard: View {
     }
 }
 
-// 🔹 미리보기
 struct ShoppingHomeView_Previews: PreviewProvider {
     static var previews: some View {
         ShoppingHomeView()

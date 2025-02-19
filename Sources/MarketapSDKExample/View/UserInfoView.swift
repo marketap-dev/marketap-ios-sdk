@@ -21,14 +21,12 @@ struct UserInfoView: View {
         NavigationView {
             Form {
                 if isLoggedIn {
-                    // ✅ 유저 정보 표시 (읽기 전용)
                     Section(header: Text("내 정보")) {
                         Text("이름: \(name)")
                         Text("이메일: \(email)")
                         Text("전화번호: \(phone)")
                     }
 
-                    // ✅ 로그아웃 버튼
                     Button(action: logout) {
                         Text("로그아웃")
                             .frame(maxWidth: .infinity)
@@ -38,7 +36,6 @@ struct UserInfoView: View {
                             .cornerRadius(10)
                     }
                 } else {
-                    // ✅ 로그인 입력 폼
                     Section(header: Text("로그인")) {
                         TextField("이름", text: $name)
                             .textContentType(.name)
@@ -50,7 +47,6 @@ struct UserInfoView: View {
                             .textContentType(.telephoneNumber)
                     }
 
-                    // ✅ 로그인 버튼
                     Button(action: login) {
                         Text("로그인")
                             .frame(maxWidth: .infinity)
@@ -59,7 +55,7 @@ struct UserInfoView: View {
                             .foregroundColor(.white)
                             .cornerRadius(10)
                     }
-                    .disabled(name.isEmpty || email.isEmpty) // 입력값 없으면 버튼 비활성화
+                    .disabled(name.isEmpty || email.isEmpty)
                 }
             }
             .navigationTitle("내 정보")
@@ -76,7 +72,6 @@ struct UserInfoView: View {
         }
     }
 
-    // ✅ 로그인 처리 (UserDefaults 저장)
     private func login() {
         Marketap.login(
             userId: phone,
@@ -94,7 +89,6 @@ struct UserInfoView: View {
         isLoggedIn = true
     }
 
-    // ✅ 로그아웃 처리 (UserDefaults 삭제)
     private func logout() {
         Marketap.logout(eventProperties: nil)
 

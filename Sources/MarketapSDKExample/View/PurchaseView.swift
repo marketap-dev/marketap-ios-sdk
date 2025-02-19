@@ -41,9 +41,9 @@ struct PurchaseView: View {
                         )
 
                     let newItem = CartItem(name: name, price: priceDouble)
-                    cartItems.append(newItem) // ✅ 장바구니에 추가
+                    cartItems.append(newItem)
                     saveCartItems()
-                    isPresented = false // ✅ 구매 화면 닫기
+                    isPresented = false
                 }) {
                     Text("🛒 장바구니에 추가")
                         .frame(maxWidth: .infinity)
