@@ -84,7 +84,7 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
 
     private func getTopViewController() -> UIViewController? {
         guard let windowScene = UIApplication.shared.connectedScenes
-                .first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene,
+                .first(where: { [.foregroundActive, .foregroundInactive].contains($0.activationState) }) as? UIWindowScene,
               let keyWindow = windowScene.windows.first(where: { $0.isKeyWindow }) else {
             return nil
         }
