@@ -111,6 +111,7 @@
 		B4D69E772D5DBF3400557EAC /* Exceptions for "MarketapSDKNotificationServiceExtension" folder in "MarketapSDK" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				ImpressionRequest.swift,
 				MarketapNotificationService.swift,
 				MarketapNotificationServiceClient.swift,
 				MarketapNotificationServiceClientProtocol.swift,
@@ -121,6 +122,7 @@
 		B4D69E782D5DBF3400557EAC /* Exceptions for "MarketapSDKNotificationServiceExtension" folder in "MarketapSDKNotificationServiceExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				ImpressionRequest.swift,
 				MarketapNotificationService.swift,
 				MarketapNotificationServiceClient.swift,
 				MarketapNotificationServiceClientProtocol.swift,

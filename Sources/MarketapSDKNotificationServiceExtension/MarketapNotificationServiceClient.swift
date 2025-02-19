@@ -6,14 +6,16 @@
 //
 
 import UserNotifications
+import Foundation
 
 class MarketapNotificationServiceClient: MarketapNotificationServiceClientProtocol {
     struct MarketapNotification {
-        let imageURL: URL?
-        
-        init(imageURL: URL?) {
-            self.imageURL = imageURL
-        }
+        let userId: String?
+        let deviceId: String?
+        let projectId: String?
+        let campaignId: String?
+
+        let imageUrl: URL?
     }
     
     var contentHandler: ((UNNotificationContent) -> Void)?
@@ -23,7 +25,11 @@ class MarketapNotificationServiceClient: MarketapNotificationServiceClientProtoc
         guard let info = request.content.userInfo["marketap"] as? [String: Any] else { return nil }
         
         return MarketapNotification(
-            imageURL: (info["imageUrl"] as? String).map { URL(string: $0) } ?? nil
+            userId: info["userId"] as? String,
+            deviceId: info["deviceId"] as? String,
+            projectId: info["projectId"] as? String,
+            campaignId: info["campaignId"] as? String,
+            imageUrl: (info["imageUrl"] as? String).map { URL(string: $0) } ?? nil
         )
     }
     
@@ -34,9 +40,9 @@ class MarketapNotificationServiceClient: MarketapNotificationServiceClientProtoc
                 return
             }
             let tempDirectory = FileManager.default.temporaryDirectory
-            let localURL = tempDirectory.appendingPathComponent(url.lastPathComponent)
-            try? FileManager.default.moveItem(at: location, to: localURL)
-            completion(localURL)
+            let localUrl = tempDirectory.appendingPathComponent(url.lastPathComponent)
+            try? FileManager.default.moveItem(at: location, to: localUrl)
+            completion(localUrl)
         }
         task.resume()
     }
@@ -54,13 +60,12 @@ class MarketapNotificationServiceClient: MarketapNotificationServiceClientProtoc
             return false
         }
 
-        if let imageURL = notification.imageURL {
-            downloadMedia(url: imageURL) { localURL in
-                if let localURL = localURL {
-                    let attachment = try? UNNotificationAttachment(identifier: "image", url: localURL, options: nil)
+        if let imageUrl = notification.imageUrl {
+            downloadMedia(url: imageUrl) { localUrl in
+                if let localUrl = localUrl {
+                    let attachment = try? UNNotificationAttachment(identifier: "marketap_attachment", url: localUrl, options: nil)
                     if let attachment = attachment {
                         bestAttemptContent.attachments = [attachment]
-                        bestAttemptContent.categoryIdentifier = "MESSAGE_CATEGORY"
                     }
                 }
                 contentHandler(bestAttemptContent)
@@ -68,6 +73,8 @@ class MarketapNotificationServiceClient: MarketapNotificationServiceClientProtoc
         } else {
             contentHandler(bestAttemptContent)
         }
+        handleImpression(notification)
+
         return true
     }
 
@@ -77,5 +84,37 @@ class MarketapNotificationServiceClient: MarketapNotificationServiceClientProtoc
             return true
         }
         return false
+    }
+}
+
+extension MarketapNotificationServiceClient {
+    func handleImpression(_ notification: MarketapNotification) {
+        guard let userId = notification.userId,
+              let projectId = notification.projectId,
+              let deviceId = notification.deviceId,
+              let campaignId = notification.campaignId else {
+            return
+        }
+
+        let urlString = "https://event.marketap.io/v1/client/events?project_id=\(projectId)"
+        guard let url = URL(string: urlString) else {
+            return
+        }
+
+        let request = ImpressionRequest(
+            name: "mkt_delivery_message",
+            userId: userId,
+            device: Device(deviceId: deviceId),
+            properties: ImpressionRequestProperties(campaignId: campaignId),
+            timestamp: Date()
+        )
+
+        var urlRequest = URLRequest(url: url)
+        urlRequest.httpMethod = "POST"
+        urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        urlRequest.httpBody = try? JSONEncoder().encode(request)
+
+        let task = URLSession.shared.dataTask(with: urlRequest)
+        task.resume()
     }
 }
