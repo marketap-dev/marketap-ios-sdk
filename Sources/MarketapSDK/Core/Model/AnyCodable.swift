@@ -31,6 +31,12 @@ struct AnyCodable: Codable, Equatable {
             try container.encode(v)
         case let v as Bool:
             try container.encode(v)
+        case let v as [Any]:
+            let encodedArray = v.map { AnyCodable($0) }
+            try container.encode(encodedArray)
+        case let v as [String: Any]:
+            let encodedDict = v.mapValues { AnyCodable($0) }
+            try container.encode(encodedDict)
         default:
             throw MarketapError.encodingError(
                 EncodingError.invalidValue(
@@ -52,6 +58,10 @@ struct AnyCodable: Codable, Equatable {
             self.value = value
         } else if let value = try? container.decode(Bool.self) {
             self.value = value
+        } else if let value = try? container.decode([AnyCodable].self) {
+            self.value = value.map { $0.value }
+        } else if let value = try? container.decode([String: AnyCodable].self) {
+            self.value = value.mapValues { $0.value }
         } else if container.decodeNil() {
             self.value = NSNull()
         } else {
@@ -74,6 +84,10 @@ struct AnyCodable: Codable, Equatable {
             return lhs == rhs
         case let (lhs as Bool, rhs as Bool):
             return lhs == rhs
+        case let (lhs as [Any], rhs as [Any]):
+            return NSArray(array: lhs).isEqual(to: rhs)
+        case let (lhs as [String: Any], rhs as [String: Any]):
+            return NSDictionary(dictionary: lhs).isEqual(to: rhs)
         default:
             return false
         }

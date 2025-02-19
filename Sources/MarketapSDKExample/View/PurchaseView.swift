@@ -31,13 +31,13 @@ struct PurchaseView: View {
                     action: {
                         Marketap.track(
                             eventName: "mkt_add_to_cart",
-                            eventProperties: [
+                            eventProperties: ["mkt_items": [[
                                 "mkt_product_id": name,
                                 "mkt_product_name": name,
                                 "mkt_product_price": priceDouble,
                                 "mkt_quantity": 1,
                                 "mkt_category1": product?.2 ?? "카테고리"
-                            ]
+                            ]]]
                         )
 
                     let newItem = CartItem(name: name, price: priceDouble)
@@ -55,7 +55,13 @@ struct PurchaseView: View {
                 .padding(.horizontal)
 
                 Button(action: {
-                    Marketap.trackPurchase(revenue: priceDouble, eventProperties: nil)
+                    Marketap.trackPurchase(revenue: priceDouble, eventProperties: ["mkt_items": [[
+                        "mkt_product_id": name,
+                        "mkt_product_name": name,
+                        "mkt_product_price": priceDouble,
+                        "mkt_quantity": 1,
+                        "mkt_category1": product?.2 ?? "카테고리"
+                    ]]])
                     isPresented = false
                 }) {
                     Text("구매")
