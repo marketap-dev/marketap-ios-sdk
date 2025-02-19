@@ -13,7 +13,16 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         UNUserNotificationCenter.current().delegate = self
         requestNotificationPermissions()
 
-        Marketap.initialize(projectId: "xziewjm")
+        Marketap.initialize(projectId: "kx43pz7")
+        if let name: String = UserDefaults.standard.string(forKey: "userName"),
+           let email: String = UserDefaults.standard.string(forKey: "userEmail"),
+           let phone: String = UserDefaults.standard.string(forKey: "userPhone") {
+            Marketap.identify(userId: phone, userProperties: [
+                "mkt_name": name,
+                "mkt_email": email,
+                "mkt+mkt_phone_number": phone
+            ])
+        }
 
         return true
     }

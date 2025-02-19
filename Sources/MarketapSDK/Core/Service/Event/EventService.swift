@@ -131,7 +131,7 @@ class EventService: EventServiceProtocol {
 
     private func updateProfile(request: UpdateProfileRequest) {
         api.requestWithoutResponse(
-            baseURL: .crm,
+            baseURL: .event,
             path: "/v1/client/profile/user?project_id=\(projectId)",
             body: request
         ) { [weak self] result in

@@ -102,7 +102,7 @@ class MarketapAPI: MarketapAPIProtocol {
             }
 
             if (200...299).contains(httpResponse.statusCode) {
-                completion?(.failure(.serverError(statusCode: httpResponse.statusCode)))
+                completion?(.success(()))
             } else {
                 completion?(.failure(.serverError(statusCode: httpResponse.statusCode)))
             }
