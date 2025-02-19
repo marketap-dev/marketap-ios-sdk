@@ -112,6 +112,7 @@ class InAppMessageWebViewController: UIViewController {
         """
 
         webView.loadHTMLString(htmlContent, baseURL: nil)
+        webView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
 
         return webView
     }

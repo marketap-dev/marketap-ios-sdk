@@ -7,7 +7,7 @@
 import WebKit
 
 class MarketapClient: NSObject, MarketapClientProtocol {
-    let core: MarketapCore
+    let core: MarketapCoreProtocol
 
     init(projectId: String) {
         let config = MarketapConfig(projectId: projectId)

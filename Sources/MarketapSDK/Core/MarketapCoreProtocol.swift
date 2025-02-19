@@ -8,6 +8,7 @@
 import Foundation
 
 protocol MarketapCoreProtocol {
+    func setPushToken(token: String)
     func login(userId: String, userProperties: [String: Any]?, eventProperties: [String: Any]?)
     func logout(eventProperties: [String: Any]?)
     func track(eventName: String, eventProperties: [String: Any]?, id: String?, timestamp: Date?)
