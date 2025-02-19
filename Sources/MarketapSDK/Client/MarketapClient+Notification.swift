@@ -11,9 +11,11 @@ import UIKit
 extension MarketapClient {
     struct MarketapNotification {
         let deepLink: URL?
-        
-        init(deepLink: URL?) {
+        let campaignId: String?
+
+        init(deepLink: URL?, campaignId: String?) {
             self.deepLink = deepLink
+            self.campaignId = campaignId
         }
     }
     
@@ -21,7 +23,8 @@ extension MarketapClient {
         guard let info = request.content.userInfo["marketap"] as? [String: Any] else { return nil }
         
         return MarketapNotification(
-            deepLink: (info["deepLink"] as? String).map { URL(string: $0) } ?? nil
+            deepLink: (info["deepLink"] as? String).map { URL(string: $0) } ?? nil,
+            campaignId: info["campaignId"] as? String
         )
     }
     
@@ -56,6 +59,25 @@ extension MarketapClient {
         
         if let deepLink = notification.deepLink {
             UIApplication.shared.open(deepLink, options: [:], completionHandler: nil)
+        }
+
+        if let campaignId = notification.campaignId {
+            core.track(
+                eventName: "mkt_click_message",
+                eventProperties: [
+                    "mkt_campaign_id": campaignId,
+                    "mkt_campaign_category": "OFF_SITE",
+                    "mkt_channel_type": "PUSH",
+                    "mkt_sub_channel_type": "IOS",
+                    "mkt_result_status": 200,
+                    "mkt_result_message": "SUCCESS",
+                    "mkt_location_id": "push",
+                    "mkt_is_success": true,
+                    "mkt_message_id": UUID().uuidString
+                ],
+                id: nil,
+                timestamp: nil
+            )
         }
         completionHandler()
         
