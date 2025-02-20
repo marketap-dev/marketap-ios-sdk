@@ -102,7 +102,7 @@ extension MarketapNotificationServiceClient {
         }
 
         let request = ImpressionRequest(
-            name: "mkt_delivery_message",
+            name: "mkt_push_impression",
             userId: userId,
             device: Device(deviceId: deviceId),
             properties: ImpressionRequestProperties(campaignId: campaignId),
