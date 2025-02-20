@@ -13,7 +13,7 @@ protocol MarketapCacheProtocol {
     var projectId: String { get }
 
     func saveUserId(_ userId: String?)
-    func updateDevice(pushToken: String?) -> Device
+    func updateDevice(pushToken: String?)
     func saveCodableObject<T: Codable>(_ object: T, key: String)
     func loadCodableObject<T: Codable>(forKey key: String) -> T?
     func clearObject(forKey key: String)

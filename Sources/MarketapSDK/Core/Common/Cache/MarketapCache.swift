@@ -27,37 +27,28 @@ class MarketapCache: MarketapCacheProtocol {
 
     private let userIdQueue = DispatchQueue(label: "com.marketap.userIdQueue", attributes: .concurrent)
     private let deviceQueue = DispatchQueue(label: "com.marketap.deviceQueue", attributes: .concurrent)
-    private let localIdQueue = DispatchQueue(label: "com.marketap.localIdQueue", attributes: .concurrent)
-
-    private var _device: Device?
 
     init(config: MarketapConfig, userDefaults: UserDefaults = .standard) {
         self.config = config
         self.userDefaults = userDefaults
+
+        self._device = getDeviceInfo()
+        self._userId = loadCodableObject(forKey: CacheKey.userIdKey)
+        self.localId = {
+            if let id: String = loadCodableObject(forKey: CacheKey.localIdKey) { return id }
+            let newLocalID = UUID().uuidString
+            saveCodableObject(newLocalID, key: CacheKey.localIdKey)
+            return newLocalID
+        }()
     }
 
-    var localId: String {
-        get {
-            localIdQueue.sync {
-                if let savedLocalID: String = loadCodableObject(forKey: CacheKey.localIdKey) {
-                    return savedLocalID
-                }
-                let newLocalID = UUID().uuidString
-                saveCodableObject(newLocalID, key: CacheKey.localIdKey)
-                return newLocalID
-            }
-        }
-    }
+    var localId: String!
 
+    private var _device: Device!
     var device: Device {
         get {
             deviceQueue.sync {
-                if let existingDevice = _device {
-                    return existingDevice
-                }
-                let newDevice = getDeviceInfo()
-                _device = newDevice
-                return newDevice
+                return _device
             }
         }
         set {
@@ -67,14 +58,16 @@ class MarketapCache: MarketapCacheProtocol {
         }
     }
 
+    private var _userId: String?
     var userId: String? {
         get {
             userIdQueue.sync {
-                loadCodableObject(forKey: CacheKey.userIdKey)
+                return _userId
             }
         }
         set {
             userIdQueue.async(flags: .barrier) {
+                self._userId = newValue
                 if let newValue {
                     self.saveCodableObject(newValue, key: CacheKey.userIdKey)
                 } else {
@@ -88,15 +81,14 @@ class MarketapCache: MarketapCacheProtocol {
         self.userId = userId
     }
 
-    func updateDevice(pushToken: String? = nil) -> Device {
-        deviceQueue.sync {
-            var updatedDevice = getDeviceInfo(pushToken: pushToken)
+    func updateDevice(pushToken: String? = nil) {
+        deviceQueue.async(flags: .barrier){
+            var updatedDevice = self.getDeviceInfo(pushToken: pushToken)
             if let pushToken {
                 updatedDevice.token = pushToken
-                saveCodableObject(pushToken, key: CacheKey.pushTokenKey)
+                self.saveCodableObject(pushToken, key: CacheKey.pushTokenKey)
             }
-            self.device = updatedDevice
-            return updatedDevice
+            self._device = updatedDevice
         }
     }
 

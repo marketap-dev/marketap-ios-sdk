@@ -10,9 +10,9 @@ import Foundation
 class EventService: EventServiceProtocol {
     static let deviceRequestKey = "EventService_deviceRequest"
     static let failedEventsKey = "EventService_failedEvents"
-    static let failedUserKey = "EventService_failedUser"
+    static let failedUsersKey = "EventService_failedUsers"
 
-    static let failedEventsSize = 100
+    static let failedDataSize = 100
 
     private let api: MarketapAPIProtocol
     private let cache: MarketapCacheProtocol
@@ -25,38 +25,28 @@ class EventService: EventServiceProtocol {
     let eventQueue = DispatchQueue(label: "com.marketap.events", attributes: .concurrent)
     let userQueue = DispatchQueue(label: "com.marketap.user", attributes: .concurrent)
 
-    var _failedEvents: [BulkEvent] {
-        didSet {
-            cache.saveCodableObject(_failedEvents, key: Self.failedEventsKey)
-        }
-    }
-    var failedEvents: [BulkEvent] {
-        get {
-            eventQueue.sync { _failedEvents }
-        }
-    }
-
-    var _failedUser: UpdateProfileRequest?
-    var failedUser: UpdateProfileRequest? {
-        get {
-            userQueue.sync { _failedUser }
-        }
-        set {
-            userQueue.async(flags: .barrier) {
-                self._failedUser = newValue
-                self.cache.saveCodableObject(newValue, key: Self.failedUserKey)
-            }
-        }
-    }
+    let failedEventsStorage: DataStorageManager<BulkEvent>
+    let failedUsersStorage: DataStorageManager<BulkProfile>
 
     init(api: MarketapAPIProtocol, cache: MarketapCacheProtocol) {
         self.api = api
         self.cache = cache
-        self._failedEvents = cache.loadCodableObject(forKey: Self.failedEventsKey) ?? []
-        self._failedUser = cache.loadCodableObject(forKey: Self.failedUserKey)
+
+        self.failedEventsStorage = DataStorageManager<BulkEvent>(
+            cache: cache,
+            storageKey: Self.failedEventsKey,
+            queueLabel: "com.marketap.events",
+            maxStorageSize: Self.failedDataSize
+        )
+        self.failedUsersStorage = DataStorageManager<BulkProfile>(
+            cache: cache,
+            storageKey: Self.failedUsersKey,
+            queueLabel: "com.marketap.users",
+            maxStorageSize: Self.failedDataSize
+        )
 
         sendFailedEventsIfNeeded()
-        sendFailedUserIfNeeded()
+        sendFailedUsersIfNeeded()
     }
 
     func setPushToken(token: String) {
@@ -116,7 +106,8 @@ class EventService: EventServiceProtocol {
     }
 
     func updateDevice(pushToken: String? = nil, removeUserId: Bool = false) {
-        let updatedDevice = cache.updateDevice(pushToken: pushToken).makeRequest(removeUserId: removeUserId)
+        cache.updateDevice(pushToken: pushToken)
+        let updatedDevice = cache.device.makeRequest()
         let cachedRequest: UpdateDeviceRequest? = cache.loadCodableObject(forKey: Self.deviceRequestKey)
 
         guard updatedDevice != cachedRequest else { return }
@@ -126,28 +117,28 @@ class EventService: EventServiceProtocol {
             baseURL: .event,
             path: "/v1/client/profile/device?project_id=\(projectId)",
             body: updatedDevice
-        )
+        )  { [weak self] result in
+            switch result {
+            case .success:
+                self?.requestDidSuccess()
+            case .failure:
+                break
+            }
+        }
     }
 
     private func updateProfile(request: UpdateProfileRequest) {
-        var newRequest = request
-
-        if let prevFailedUser = self.failedUser, prevFailedUser.userId == request.userId {
-            let mergedProperties = newRequest.properties?.merging(prevFailedUser.properties ?? [:]) { _, new in new }
-            newRequest.properties = mergedProperties
-        }
-
         self.api.requestWithoutResponse(
             baseURL: .event,
             path: "/v1/client/profile/user?project_id=\(self.projectId)",
-            body: newRequest
+            body: request
         ) { [weak self] result in
             switch result {
             case .success:
-                self?.failedUser = nil
+                self?.requestDidSuccess()
             case .failure(let error):
                 if case MarketapError.serverError = error {
-                    self?.saveFailedUser(newRequest)
+                    self?.saveFailedUser(request)
                 }
             }
         }
@@ -162,9 +153,7 @@ class EventService: EventServiceProtocol {
         ) { [weak self] result in
             switch result {
             case .success:
-                self?.sendFailedEventsIfNeeded()
-                // 유저도 함께 재시도함
-                self?.sendFailedUserIfNeeded()
+                self?.requestDidSuccess()
             case .failure(let error):
                 if case MarketapError.serverError = error {
                     self?.saveFailedEvent(request)
@@ -172,70 +161,73 @@ class EventService: EventServiceProtocol {
             }
         }
     }
+
+    private func requestDidSuccess() {
+        sendFailedEventsIfNeeded()
+        sendFailedUsersIfNeeded()
+    }
 }
 
 extension EventService {
     private func saveFailedEvent(_ event: IngestEventRequest) {
-        eventQueue.async(flags: .barrier) {
-            var newFailedEvents = self._failedEvents
-            newFailedEvents.append(
-                BulkEvent(
-                    id: event.id,
-                    name: event.name,
-                    timestamp: event.timestamp,
-                    properties: event.properties
-                )
-            )
-
-            if newFailedEvents.count > Self.failedEventsSize {
-                newFailedEvents.removeFirst(newFailedEvents.count - Self.failedEventsSize)
-            }
-
-            self._failedEvents = newFailedEvents
-        }
+        let failedEvent = BulkEvent(
+            id: event.id,
+            userId: self.cache.userId,
+            name: event.name,
+            timestamp: event.timestamp,
+            properties: event.properties
+        )
+        failedEventsStorage.saveData(failedEvent)
     }
 
     func sendFailedEventsIfNeeded() {
-        let failedEventsSnapshot = self.failedEvents
-
+        let failedEventsSnapshot = failedEventsStorage.getAndClearData()
         guard !failedEventsSnapshot.isEmpty else { return }
 
         let bulkRequest = CreateBulkClientEventRequest(
-            device: self.cache.device.makeRequest(),
+            device: cache.device.makeRequest(),
             events: failedEventsSnapshot
         )
 
-        self.api.requestWithoutResponse(
+        api.requestWithoutResponse(
             baseURL: .event,
-            path: "/v1/client/events/bulk?project_id=\(self.projectId)",
+            path: "/v1/client/events/bulk?project_id=\(projectId)",
             body: bulkRequest
         ) { [weak self] result in
-            if case .success = result {
-                self?.eventQueue.async(flags: .barrier) {
-                    self?._failedEvents = []
-                }
+            if case .failure(let error) = result, case MarketapError.serverError = error {
+                self?.failedEventsStorage.restoreFailedData(failedEventsSnapshot)
             }
         }
     }
 
     private func saveFailedUser(_ user: UpdateProfileRequest) {
-        userQueue.async(flags: .barrier) {
-            let prevUser = self._failedUser
-            var newUser = user
-
-            if let properties = prevUser?.properties {
-                let properties = newUser.properties?.merging(properties) { _, new in new } ?? properties
-                newUser.properties = properties
-            }
-
-            self._failedUser = newUser
-        }
+        let failedUser = BulkProfile(
+            userId: user.userId,
+            properties: user.properties,
+            device: user.device,
+            timestamp: user.timestamp
+        )
+        failedUsersStorage.saveData(failedUser)
     }
 
 
-    func sendFailedUserIfNeeded() {
-        if let user = failedUser {
-            updateProfile(request: user)
+    func sendFailedUsersIfNeeded() {
+        let failedUsersSnapshot = failedUsersStorage.getAndClearData()
+        guard !failedUsersSnapshot.isEmpty else { return }
+
+        let bulkRequest = BulkProfileRequest(
+            device: self.cache.device.makeRequest(),
+            users: failedUsersSnapshot
+        )
+
+        api.requestWithoutResponse(
+            baseURL: .event,
+            path: "v1/client/profile/user/bulk?project_id=\(projectId)",
+            body: bulkRequest
+        ) { [weak self] result in
+            if case .failure(let error) = result, case MarketapError.serverError = error {
+                self?.failedUsersStorage.restoreFailedData(failedUsersSnapshot)
+            }
         }
     }
 }

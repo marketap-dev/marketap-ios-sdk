@@ -95,11 +95,9 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
         return topController
     }
 
-    func onEvent(eventRequest: IngestEventRequest, device: Device) {
+    func onEvent(eventRequest: IngestEventRequest) {
         guard let campaigns else {
-            fetchCampaigns { [weak self] campaigns in
-                self?.onEvent(eventRequest: eventRequest, device: device)
-            }
+            pendingRequest = eventRequest
             return
         }
 

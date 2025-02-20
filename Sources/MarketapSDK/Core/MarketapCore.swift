@@ -91,7 +91,7 @@ extension MarketapCore: EventServiceDelegate {
     func onEvent(eventRequest: IngestEventRequest, device: Device) {
         queue.async {
             if !["mkt_delivery_message", "mkt_click_message"].contains(eventRequest.name) {
-                self.inAppMessageService.onEvent(eventRequest: eventRequest, device: device)
+                self.inAppMessageService.onEvent(eventRequest: eventRequest)
             }
         }
     }
