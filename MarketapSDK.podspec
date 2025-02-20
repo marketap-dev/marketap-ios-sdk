@@ -11,6 +11,6 @@ Pod::Spec.new do |spec|
   spec.source       = { :git => "https://github.com/marketap-dev/marketap-ios-sdk.git", :tag => spec.version }
   spec.swift_version = "5.0"
 
-  spec.source_files = "Sources/MarketapSDK/**/*.swift"
+  spec.source_files = "Sources/MarketapSDK/**/*"
   spec.public_header_files = "Sources/MarketapSDK/**/*.h"
 end
