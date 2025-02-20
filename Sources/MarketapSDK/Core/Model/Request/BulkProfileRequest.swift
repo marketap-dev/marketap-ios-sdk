@@ -55,10 +55,10 @@ struct BulkProfile: Codable {
 
 struct BulkProfileRequest: Codable {
     let device: UpdateDeviceRequest
-    let users: [BulkProfile]
+    let profiles: [BulkProfile]
 
     enum CodingKeys: String, CodingKey {
         case device
-        case users
+        case profiles
     }
 }

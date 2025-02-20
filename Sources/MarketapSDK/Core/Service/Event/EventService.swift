@@ -217,12 +217,12 @@ extension EventService {
 
         let bulkRequest = BulkProfileRequest(
             device: self.cache.device.makeRequest(),
-            users: failedUsersSnapshot
+            profiles: failedUsersSnapshot
         )
 
         api.requestWithoutResponse(
             baseURL: .event,
-            path: "v1/client/profile/user/bulk?project_id=\(projectId)",
+            path: "/v1/client/profile/user/bulk?project_id=\(projectId)",
             body: bulkRequest
         ) { [weak self] result in
             if case .failure(let error) = result, case MarketapError.serverError = error {

@@ -186,7 +186,7 @@ class EventServiceTests: XCTestCase {
         users.forEach { eventService.failedUsersStorage.saveData($0) }
         eventService.sendFailedUsersIfNeeded()
 
-        XCTAssertEqual(self.mockAPI.lastRequestPath, "v1/client/profile/user/bulk?project_id=mock_project")
+        XCTAssertEqual(self.mockAPI.lastRequestPath, "/v1/client/profile/user/bulk?project_id=mock_project")
         XCTAssertEqual(self.eventService.failedUsersStorage.getStoredData().count, 0, "벌크 유저 프로필이 정상적으로 전송되지 않음")
     }
 
