@@ -133,18 +133,17 @@ class EventServiceTests: XCTestCase {
         XCTAssertEqual(mockAPI.lastRequestPath, "/v1/client/profile/device?project_id=mock_project")
     }
 
-
     func testTrackEventFails() {
         let eventName = "test_event_fail"
         let testProperties: [String: Any] = ["key": "value"]
 
         mockAPI.shouldFail = true
         eventService.trackEvent(eventName: eventName, eventProperties: testProperties)
-        XCTAssertEqual(self.eventService.failedEvents.count, 1)
+        XCTAssertEqual(self.eventService.failedEventsStorage.getStoredData().count, 1)
 
         mockAPI.shouldFail = false
         eventService.trackEvent(eventName: "test_event_success", eventProperties: nil)
-        XCTAssertEqual(self.eventService.failedEvents.count, 0)
+        XCTAssertEqual(self.eventService.failedEventsStorage.getStoredData().count, 0)
     }
 
     func testFailedEventsAreSentInBulk() {
@@ -152,98 +151,95 @@ class EventServiceTests: XCTestCase {
             BulkEvent(id: "\($0)", name: "failed_event_\($0)", timestamp: Date(), properties: nil)
         }
 
-        eventService._failedEvents = events
+        events.forEach { eventService.failedEventsStorage.saveData($0) }
         eventService.sendFailedEventsIfNeeded()
 
         XCTAssertEqual(self.mockAPI.lastRequestPath, "/v1/client/events/bulk?project_id=mock_project")
         XCTAssertEqual(self.mockAPI.lastBulkEvents?.count, 5, "벌크 이벤트가 정상적으로 전송되지 않음")
     }
 
+    func testIdentifyFails() {
+        let userId = "testUser_fail"
+        let userProperties: [String: Any] = ["age": 30, "gender": "male"]
 
-    func testFailedEventsThreadSafety() {
-        let concurrentQueue = DispatchQueue(label: "com.marketap.concurrent", attributes: .concurrent)
-        let expectation = self.expectation(description: "Concurrent Event Tracking")
-
-        for i in 0..<200 {
-            concurrentQueue.async {
-                let eventName = "concurrent_event_\(i)"
-                self.eventService.trackEvent(eventName: eventName, eventProperties: nil)
-            }
-        }
-
-        DispatchQueue.global().asyncAfter(deadline: .now() + 1.0) {
-            expectation.fulfill()
-        }
-
-        wait(for: [expectation], timeout: 2)
-
-        XCTAssertTrue(eventService.failedEvents.count <= 100, "이벤트 저장 개수 제한이 제대로 적용되지 않음")
-    }
-
-    func testUpdateProfileFailsAndStoresFailedUser() {
         mockAPI.shouldFail = true
+        eventService.identify(userId: userId, userProperties: userProperties)
 
-        eventService.identify(userId: "testUser", userProperties: ["key": "value"])
-
-        XCTAssertNotNil(eventService.failedUser, "updateProfile 실패 시 failedUser가 저장되지 않음")
-        XCTAssertEqual(eventService.failedUser?.userId, "testUser", "저장된 failedUser의 userId가 다름")
-    }
-
-    func testSendFailedUserIfNeededRetriesUpdateProfile() {
-        let failedRequest = UpdateProfileRequest(
-            userId: "testUser",
-            properties: ["key": "value"].toAnyCodable(),
-            device: mockCache.device.makeRequest(),
-            timestamp: Date()
-        )
-        eventService.failedUser = failedRequest
-
-        eventService.sendFailedUserIfNeeded()
-
-        XCTAssertEqual(mockAPI.lastRequestPath, "/v1/client/profile/user?project_id=mock_project")
-    }
-
-    func testUpdateProfileSuccessClearsFailedUser() {
-        let failedRequest = UpdateProfileRequest(
-            userId: "testUser",
-            properties: ["key": "value"].toAnyCodable(),
-            device: mockCache.device.makeRequest(),
-            timestamp: Date()
-        )
-        eventService.failedUser = failedRequest
+        XCTAssertEqual(self.eventService.failedUsersStorage.getStoredData().count, 1, "identify 실패 시 failedUsersStorage에 저장되지 않음")
 
         mockAPI.shouldFail = false
-        eventService.sendFailedUserIfNeeded()
+        eventService.identify(userId: "testUser_success", userProperties: nil)
 
-        XCTAssertNil(eventService.failedUser, "updateProfile 성공 후 failedUser가 초기화되지 않음")
+        XCTAssertEqual(self.eventService.failedUsersStorage.getStoredData().count, 0, "identify 성공 후 failedUsersStorage가 비워지지 않음")
     }
 
-    func testUpdateProfileMergesFailedUserProperties() {
-        let previousFailedRequest = UpdateProfileRequest(
+    func testFailedUsersAreSentInBulk() {
+        let users = (1...5).map {
+            BulkProfile(
+                userId: "failed_user_\($0)",
+                properties: ["test_key": "test_value"].toAnyCodable(),
+                device: mockCache.device.makeRequest(),
+                timestamp: Date()
+            )
+        }
+
+        users.forEach { eventService.failedUsersStorage.saveData($0) }
+        eventService.sendFailedUsersIfNeeded()
+
+        XCTAssertEqual(self.mockAPI.lastRequestPath, "v1/client/profile/user/bulk?project_id=mock_project")
+        XCTAssertEqual(self.eventService.failedUsersStorage.getStoredData().count, 0, "벌크 유저 프로필이 정상적으로 전송되지 않음")
+    }
+
+    func testUpdateProfileClearsFailedUsersStorage() {
+        let failedUser = BulkProfile(
             userId: "testUser",
-            properties: ["existing_key": "existing_value"].toAnyCodable(),
+            properties: ["key": "value"].toAnyCodable(),
             device: mockCache.device.makeRequest(),
             timestamp: Date()
         )
-        eventService.failedUser = previousFailedRequest
-        mockAPI.shouldFail = true
+        eventService.failedUsersStorage.saveData(failedUser)
+        let event = BulkEvent(
+            id: "event_1",
+            userId: "testUser",
+            name: "test_event",
+            timestamp: Date(),
+            properties: ["key": "value"].toAnyCodable()
+        )
+        eventService.failedEventsStorage.saveData(event)
 
-        eventService.identify(userId: "testUser", userProperties: ["new_key": "new_value"])
-        XCTAssertNotNil(eventService.failedUser, "updateProfile 실패 시 failedUser가 저장되지 않음")
+        XCTAssertEqual(eventService.failedEventsStorage.getStoredData().count, 1, "updateProfile 전에 failedEventsStorage에 데이터가 있어야 함")
+        XCTAssertEqual(eventService.failedUsersStorage.getStoredData().count, 1, "updateProfile 전에 failedUsersStorage에 데이터가 있어야 함")
 
-        let mergedProperties = eventService.failedUser?.properties
-        XCTAssertEqual(mergedProperties?["existing_key"]?.value as? String, "existing_value", "기존 properties가 유지되지 않음")
-        XCTAssertEqual(mergedProperties?["new_key"]?.value as? String, "new_value", "새로운 properties가 추가되지 않음")
+        mockAPI.shouldFail = false
+        eventService.identify(userId: "foo", userProperties: nil)
 
-        let lastRequestBody = mockAPI.lastRequestBody
-        if let decodedRequest = try? JSONDecoder().decode(UpdateProfileRequest.self, from: lastRequestBody!) {
-            let mergedProperties = decodedRequest.properties
+        XCTAssertEqual(eventService.failedUsersStorage.getStoredData().count, 0, "updateProfile 후 failedUsersStorage가 비워지지 않음")
+        XCTAssertEqual(eventService.failedEventsStorage.getStoredData().count, 0, "updateProfile 후 failedEventsStorage가 비워지지 않음")    }
 
-            XCTAssertEqual(mergedProperties?["existing_key"]?.value as? String, "existing_value", "기존 properties가 유지되지 않음")
-            XCTAssertEqual(mergedProperties?["new_key"]?.value as? String, "new_value", "새로운 properties가 추가되지 않음")
-        } else {
-            XCTFail("UpdateProfileRequest 디코딩 실패")
-        }
+    func testTrackEventClearsFailedEventsStorage() {
+        let failedUser = BulkProfile(
+            userId: "testUser",
+            properties: ["key": "value"].toAnyCodable(),
+            device: mockCache.device.makeRequest(),
+            timestamp: Date()
+        )
+        eventService.failedUsersStorage.saveData(failedUser)
+        let event = BulkEvent(
+            id: "event_1",
+            userId: "testUser",
+            name: "test_event",
+            timestamp: Date(),
+            properties: ["key": "value"].toAnyCodable()
+        )
+        eventService.failedEventsStorage.saveData(event)
+
+        XCTAssertEqual(eventService.failedEventsStorage.getStoredData().count, 1, "trackEvent 전에 failedEventsStorage에 데이터가 있어야 함")
+        XCTAssertEqual(eventService.failedUsersStorage.getStoredData().count, 1, "trackEvent 전에 failedUsersStorage에 데이터가 있어야 함")
+
+        mockAPI.shouldFail = false
+        eventService.trackEvent(eventName: "foo", eventProperties: nil)
+        XCTAssertEqual(eventService.failedUsersStorage.getStoredData().count, 0, "trackEvent 후 failedUsersStorage가 비워지지 않음")
+        XCTAssertEqual(eventService.failedEventsStorage.getStoredData().count, 0, "trackEvent 후 failedEventsStorage가 비워지지 않음")
     }
 
 }

@@ -9,7 +9,7 @@ import Foundation
 
 protocol InAppMessageServiceProtocol {
     func fetchCampaigns(force: Bool, completion: (([InAppCampaign]) -> Void)?)
-    func onEvent(eventRequest: IngestEventRequest, device: Device)
+    func onEvent(eventRequest: IngestEventRequest)
 }
 
 extension InAppMessageServiceProtocol {

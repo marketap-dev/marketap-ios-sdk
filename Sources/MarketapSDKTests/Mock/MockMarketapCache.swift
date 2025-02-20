@@ -50,11 +50,10 @@ class MockMarketapCache: MarketapCacheProtocol {
         self.userId = userId
     }
 
-    func updateDevice(pushToken: String? = nil) -> Device {
+    func updateDevice(pushToken: String? = nil) {
         if let pushToken {
             device.token = pushToken
         }
-        return device
     }
 
     func saveCodableObject<T: Codable>(_ object: T, key: String) {

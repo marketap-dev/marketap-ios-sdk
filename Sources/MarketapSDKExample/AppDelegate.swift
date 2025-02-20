@@ -17,11 +17,27 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         if let name: String = UserDefaults.standard.string(forKey: "userName"),
            let email: String = UserDefaults.standard.string(forKey: "userEmail"),
            let phone: String = UserDefaults.standard.string(forKey: "userPhone") {
-            Marketap.identify(userId: phone, userProperties: [
-                "mkt_name": name,
-                "mkt_email": email,
-                "mkt+mkt_phone_number": phone
-            ])
+            var cartValue: [[String: Any]] = []
+            if let savedData = UserDefaults.standard.data(forKey: "cartItems"),
+               let decoded = try? JSONDecoder().decode([CartItem].self, from: savedData) {
+                cartValue = decoded.map { item in
+                    return [
+                        "mkt_product_id": item.name,
+                        "mkt_product_name": item.name,
+                        "mkt_product_price": item.price,
+                        "mkt_quantity": 1
+                    ]
+                }
+            }
+            Marketap.identify(
+                userId: phone,
+                userProperties: [
+                    "mkt_name": name,
+                    "mkt_email": email,
+                    "mkt_phone_number": phone,
+                    "mkt_cart": cartValue
+                ]
+            )
         }
 
         return true

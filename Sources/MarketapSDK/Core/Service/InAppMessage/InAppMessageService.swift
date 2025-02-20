@@ -22,13 +22,24 @@ class InAppMessageService: NSObject, InAppMessageServiceProtocol {
 
     var isModalShown: Bool = false
     var didFinishLoad = false
+    var pendingRequest: IngestEventRequest?
     var pendingCampaign: InAppCampaign?
 
     private var projectId: String {
         cache.projectId
     }
 
-    var campaigns: [InAppCampaign]?
+    var campaigns: [InAppCampaign]? {
+        didSet {
+            if let pendingRequest, let requestTime = pendingRequest.timestamp,
+               campaigns != nil {
+                self.pendingRequest = nil
+                if Date().timeIntervalSince(requestTime) < 0.5 {
+                    onEvent(eventRequest: pendingRequest)
+                }
+            }
+        }
+    }
     var lastFetch: Date?
     let campaignViewController = InAppMessageWebViewController()
 
@@ -40,7 +51,6 @@ class InAppMessageService: NSObject, InAppMessageServiceProtocol {
 
         campaignViewController.delegate = self
         self.lastFetch = cache.loadCodableObject(forKey: Self.lastFetchKey)
-        self.campaigns = cache.loadCodableObject(forKey: Self.campaignCacheKey)
         fetchCampaigns()
 
         DispatchQueue.main.async {
@@ -50,6 +60,9 @@ class InAppMessageService: NSObject, InAppMessageServiceProtocol {
 
     func fetchCampaigns(force: Bool = false, completion: (([InAppCampaign]) -> Void)? = nil) {
         if let lastFetch, !force, Date().timeIntervalSince(lastFetch) < Self.cacheExpiration {
+            if self.campaigns == nil {
+                self.campaigns = cache.loadCodableObject(forKey: Self.campaignCacheKey)
+            }
             completion?(campaigns ?? [])
             return
         }

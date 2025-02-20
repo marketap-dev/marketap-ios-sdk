@@ -52,7 +52,7 @@ class MockInAppMessageService: InAppMessageServiceProtocol {
         fetchCampaignsCalled = true
     }
 
-    func onEvent(eventRequest: IngestEventRequest, device: Device) {
+    func onEvent(eventRequest: IngestEventRequest) {
         receivedEvent = eventRequest
     }
 }
