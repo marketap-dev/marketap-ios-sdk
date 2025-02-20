@@ -218,4 +218,32 @@ class EventServiceTests: XCTestCase {
         XCTAssertNil(eventService.failedUser, "updateProfile 성공 후 failedUser가 초기화되지 않음")
     }
 
+    func testUpdateProfileMergesFailedUserProperties() {
+        let previousFailedRequest = UpdateProfileRequest(
+            userId: "testUser",
+            properties: ["existing_key": "existing_value"].toAnyCodable(),
+            device: mockCache.device.makeRequest(),
+            timestamp: Date()
+        )
+        eventService.failedUser = previousFailedRequest
+        mockAPI.shouldFail = true
+
+        eventService.identify(userId: "testUser", userProperties: ["new_key": "new_value"])
+        XCTAssertNotNil(eventService.failedUser, "updateProfile 실패 시 failedUser가 저장되지 않음")
+
+        let mergedProperties = eventService.failedUser?.properties
+        XCTAssertEqual(mergedProperties?["existing_key"]?.value as? String, "existing_value", "기존 properties가 유지되지 않음")
+        XCTAssertEqual(mergedProperties?["new_key"]?.value as? String, "new_value", "새로운 properties가 추가되지 않음")
+
+        let lastRequestBody = mockAPI.lastRequestBody
+        if let decodedRequest = try? JSONDecoder().decode(UpdateProfileRequest.self, from: lastRequestBody!) {
+            let mergedProperties = decodedRequest.properties
+
+            XCTAssertEqual(mergedProperties?["existing_key"]?.value as? String, "existing_value", "기존 properties가 유지되지 않음")
+            XCTAssertEqual(mergedProperties?["new_key"]?.value as? String, "new_value", "새로운 properties가 추가되지 않음")
+        } else {
+            XCTFail("UpdateProfileRequest 디코딩 실패")
+        }
+    }
+
 }

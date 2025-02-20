@@ -9,7 +9,7 @@ import Foundation
 
 struct UpdateProfileRequest: Codable {
     let userId: String
-    let properties: [String: AnyCodable]?
+    var properties: [String: AnyCodable]?
     let device: UpdateDeviceRequest?
     let timestamp: Date?
 

@@ -130,21 +130,29 @@ class EventService: EventServiceProtocol {
     }
 
     private func updateProfile(request: UpdateProfileRequest) {
-        api.requestWithoutResponse(
+        var newRequest = request
+
+        if let prevFailedUser = self.failedUser, prevFailedUser.userId == request.userId {
+            let mergedProperties = newRequest.properties?.merging(prevFailedUser.properties ?? [:]) { _, new in new }
+            newRequest.properties = mergedProperties
+        }
+
+        self.api.requestWithoutResponse(
             baseURL: .event,
-            path: "/v1/client/profile/user?project_id=\(projectId)",
-            body: request
+            path: "/v1/client/profile/user?project_id=\(self.projectId)",
+            body: newRequest
         ) { [weak self] result in
             switch result {
             case .success:
                 self?.failedUser = nil
             case .failure(let error):
                 if case MarketapError.serverError = error {
-                    self?.failedUser = request
+                    self?.saveFailedUser(newRequest)
                 }
             }
         }
     }
+
 
     private func track(request: IngestEventRequest) {
         api.requestWithoutResponse(
@@ -209,6 +217,21 @@ extension EventService {
             }
         }
     }
+
+    private func saveFailedUser(_ user: UpdateProfileRequest) {
+        userQueue.async(flags: .barrier) {
+            let prevUser = self._failedUser
+            var newUser = user
+
+            if let properties = prevUser?.properties {
+                let properties = newUser.properties?.merging(properties) { _, new in new } ?? properties
+                newUser.properties = properties
+            }
+
+            self._failedUser = newUser
+        }
+    }
+
 
     func sendFailedUserIfNeeded() {
         if let user = failedUser {
