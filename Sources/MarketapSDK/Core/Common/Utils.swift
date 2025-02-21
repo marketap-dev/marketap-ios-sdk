@@ -10,6 +10,12 @@ import Foundation
 extension Device {
     func makeRequest(removeUserId: Bool = false) -> UpdateDeviceRequest {
         let screen = screen.map { "\($0.width)x\($0.height)" }
+        let deviceId = {
+            if let idfv {
+                return "idfv:\(idfv)"
+            }
+            return "app_local_id:\(appLocalId)"
+        }()
 
         let properties: [String: AnyCodable] = [
             "os": AnyCodable(os),
@@ -29,7 +35,7 @@ extension Device {
         ]
 
         return UpdateDeviceRequest(
-            deviceId: "app_local_id:\(appLocalId)",
+            deviceId: deviceId,
             idfa: idfa,
             idfv: idfv,
             appLocalId: appLocalId,
