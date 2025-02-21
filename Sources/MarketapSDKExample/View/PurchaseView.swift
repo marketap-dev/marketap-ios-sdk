@@ -12,6 +12,7 @@ struct PurchaseView: View {
     @Binding var product: (String, Double, String)?
     @Binding var cartItems: [CartItem]
     @Binding var isPresented: Bool
+    @State var purchase: Bool = false
 
     var body: some View {
         NavigationView {
@@ -55,13 +56,7 @@ struct PurchaseView: View {
                 .padding(.horizontal)
 
                 Button(action: {
-                    Marketap.trackPurchase(revenue: priceDouble, eventProperties: ["mkt_items": [[
-                        "mkt_product_id": name,
-                        "mkt_product_name": name,
-                        "mkt_product_price": priceDouble,
-                        "mkt_quantity": 1,
-                        "mkt_category1": product?.2 ?? "카테고리"
-                    ]]])
+                    purchase = true
                     isPresented = false
                 }) {
                     Text("구매")
@@ -88,7 +83,25 @@ struct PurchaseView: View {
             .padding()
             .navigationTitle("구매하기")
             .onAppear {
+                Marketap.track(eventName: "mkt_product_view", eventProperties: ["mkt_items": [[
+                    "mkt_product_id": name,
+                    "mkt_product_name": name,
+                    "mkt_product_price": priceDouble,
+                    "mkt_quantity": 1,
+                    "mkt_category1": product?.2 ?? "카테고리"
+                ]]])
                 Marketap.trackPageView(eventProperties: ["mkt_page_title": "구매하기"])
+            }
+            .onDisappear {
+                if purchase {
+                    Marketap.trackPurchase(revenue: priceDouble, eventProperties: ["mkt_items": [[
+                        "mkt_product_id": name,
+                        "mkt_product_name": name,
+                        "mkt_product_price": priceDouble,
+                        "mkt_quantity": 1,
+                        "mkt_category1": product?.2 ?? "카테고리"
+                    ]]])
+                }
             }
         }
     }
