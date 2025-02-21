@@ -24,7 +24,7 @@ extension InAppMessageService {
 
     func isPropertyConditionMatched(_ propertyCondition: EventPropertyCondition, event: IngestEventRequest) -> Bool {
         if propertyCondition.extractionStrategy.propertySchema.path == .item {
-            guard let items = event.properties?["items"]?.value as? [[String: Any]] else {
+            guard let items = event.properties?["mkt_items"]?.value as? [[String: Any]] else {
                 return false
             }
             return items.allSatisfy { item in
