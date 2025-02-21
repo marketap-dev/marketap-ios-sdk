@@ -16,6 +16,7 @@ class MockMarketapCache: MarketapCacheProtocol {
     var device: Device = Device(
         idfa: nil,
         idfv: "mock_idfv",
+        appLocalId: "mock_app_local_id",
         platform: "iOS",
         os: "iOS",
         osVersion: "16.0",

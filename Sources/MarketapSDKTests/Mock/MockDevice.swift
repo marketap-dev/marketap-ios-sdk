@@ -11,7 +11,7 @@ class MockDevice {
     var idfa: String? = "mock_idfa"
     var idfv: String? = "mock_idfv"
     var appSetId: String? = nil
-    var appLocalId: String? = "mock_app_local_id"
+    var appLocalId: String = "mock_app_local_id"
     var platform: String = "ios"
     var os: String = "iOS"
     var osVersion: String? = "18.1"
@@ -52,6 +52,7 @@ class MockDevice {
         return Device(
             idfa: idfa,
             idfv: idfv,
+            appLocalId: appLocalId,
             platform: platform,
             os: os,
             osVersion: osVersion,

@@ -8,15 +8,6 @@
 import Foundation
 
 extension Device {
-    func getDeviceId() -> String {
-        if let idfa = idfa {
-            return "idfa:\(idfa)"
-        } else if let idfv = idfv {
-            return "idfv:\(idfv)"
-        }
-        return "anonymous:\(UUID().uuidString)"
-    }
-
     func makeRequest(removeUserId: Bool = false) -> UpdateDeviceRequest {
         let screen = screen.map { "\($0.width)x\($0.height)" }
 
@@ -38,9 +29,10 @@ extension Device {
         ]
 
         return UpdateDeviceRequest(
-            deviceId: getDeviceId(),
+            deviceId: "app_local_id:\(appLocalId)",
             idfa: idfa,
             idfv: idfv,
+            appLocalId: appLocalId,
             platform: platform,
             token: token,
             properties: properties,

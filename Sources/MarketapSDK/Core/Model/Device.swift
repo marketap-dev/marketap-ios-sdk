@@ -10,6 +10,8 @@ import Foundation
 struct Device: Codable {
     let idfa: String?
     let idfv: String?
+    let appLocalId: String
+
     let platform: String
     let os: String
     let osVersion: String?
@@ -62,6 +64,7 @@ struct Device: Codable {
         case maxTouchPoints = "max_touch_points"
         case permissions
         case sessionId = "session_id"
+        case appLocalId = "app_local_id"
     }
 }
 

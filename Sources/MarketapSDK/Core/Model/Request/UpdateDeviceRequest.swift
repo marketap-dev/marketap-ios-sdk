@@ -11,6 +11,7 @@ struct UpdateDeviceRequest: Codable, Equatable {
     let deviceId: String
     let idfa: String?
     let idfv: String?
+    let appLocalId: String
     let platform: String
     let token: String?
     let properties: [String: AnyCodable]?
@@ -20,6 +21,7 @@ struct UpdateDeviceRequest: Codable, Equatable {
         case deviceId = "device_id"
         case idfa
         case idfv
+        case appLocalId = "app_local_id"
         case platform
         case token
         case properties

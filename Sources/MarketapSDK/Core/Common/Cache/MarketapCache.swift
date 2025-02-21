@@ -32,14 +32,14 @@ class MarketapCache: MarketapCacheProtocol {
         self.config = config
         self.userDefaults = userDefaults
 
-        self._device = getDeviceInfo()
-        self._userId = loadCodableObject(forKey: CacheKey.userIdKey)
         self.localId = {
             if let id: String = loadCodableObject(forKey: CacheKey.localIdKey) { return id }
             let newLocalID = UUID().uuidString
             saveCodableObject(newLocalID, key: CacheKey.localIdKey)
             return newLocalID
         }()
+        self._userId = loadCodableObject(forKey: CacheKey.userIdKey)
+        self._device = getDeviceInfo()
     }
 
     var localId: String!

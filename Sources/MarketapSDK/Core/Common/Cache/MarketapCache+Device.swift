@@ -90,6 +90,7 @@ extension MarketapCache {
         let result = Device(
             idfa: idfa,
             idfv: idfv,
+            appLocalId: localId,
             platform: "ios",
             os: "\(device.systemName) \(device.systemVersion)",
             osVersion: device.systemVersion,
