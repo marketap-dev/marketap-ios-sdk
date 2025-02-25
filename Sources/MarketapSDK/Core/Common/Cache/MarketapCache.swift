@@ -10,6 +10,7 @@ import Foundation
 class MarketapCache: MarketapCacheProtocol {
     enum CacheKey {
         static let userIdKey = "MarketapCache_userId"
+        static let sessionIdKey = "MarketapCache_sessionId"
         static let configKey = "MarketapCache_config"
         static let deviceKey = "MarketapCache_device"
         static let localIdKey = "MarketapCache_localId"
@@ -19,12 +20,12 @@ class MarketapCache: MarketapCacheProtocol {
 
     private let userDefaults: UserDefaults
 
-    let sessionId = UUID().uuidString
     let config: MarketapConfig
     var projectId: String {
         config.projectId
     }
 
+    private let sessionIdQueue = DispatchQueue(label: "com.marketap.sessionIdQueue", attributes: .concurrent)
     private let userIdQueue = DispatchQueue(label: "com.marketap.userIdQueue", attributes: .concurrent)
     private let deviceQueue = DispatchQueue(label: "com.marketap.deviceQueue", attributes: .concurrent)
 
@@ -32,6 +33,7 @@ class MarketapCache: MarketapCacheProtocol {
         self.config = config
         self.userDefaults = userDefaults
 
+        self._sessionId = loadCodableObject(forKey: CacheKey.sessionIdKey) ?? UUID().uuidString
         self.localId = {
             if let id: String = loadCodableObject(forKey: CacheKey.localIdKey) { return id }
             let newLocalID = UUID().uuidString
@@ -40,6 +42,21 @@ class MarketapCache: MarketapCacheProtocol {
         }()
         self._userId = loadCodableObject(forKey: CacheKey.userIdKey)
         self._device = getDeviceInfo()
+    }
+
+    private var _sessionId: String!
+    var sessionId: String {
+        get {
+            sessionIdQueue.sync {
+                return _sessionId
+            }
+        }
+        set {
+            sessionIdQueue.async(flags: .barrier) {
+                self._sessionId = newValue
+                self.saveCodableObject(newValue, key: CacheKey.sessionIdKey)
+            }
+        }
     }
 
     var localId: String!

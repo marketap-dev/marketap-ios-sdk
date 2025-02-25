@@ -11,6 +11,7 @@ import Foundation
 class MockMarketapCache: MarketapCacheProtocol {
     private var mockStorage: [String: Data] = [:]
 
+    var sessionId: String = UUID().uuidString
     var projectId: String = "mock_project"
     var userId: String?
     var device: Device = Device(
@@ -38,8 +39,7 @@ class MockMarketapCache: MarketapCacheProtocol {
         carrier: nil,
         hasSim: true,
         maxTouchPoints: 5,
-        permissions: nil,
-        sessionId: "mock_session"
+        permissions: nil
     )
 
     var failedEvents: [BulkEvent] {

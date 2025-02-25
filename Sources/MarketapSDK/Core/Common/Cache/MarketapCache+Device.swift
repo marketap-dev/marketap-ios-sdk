@@ -112,8 +112,7 @@ extension MarketapCache {
             carrier: nil,
             hasSim: nil,
             maxTouchPoints: 5,
-            permissions: nil,
-            sessionId: sessionId
+            permissions: nil
         )
 
         return result

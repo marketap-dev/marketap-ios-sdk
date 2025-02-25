@@ -91,19 +91,52 @@ class EventService: EventServiceProtocol {
         }
     }
 
-    func trackEvent(eventName: String, eventProperties: [String: Any]?, id: String? = nil, timestamp: Date? = nil) {
+    func trackEvent(
+        eventName: String,
+        eventProperties: [String: Any]?,
+        id: String? = nil,
+        timestamp: Date? = nil
+    ) {
+        let device = cache.device
+        var properties = eventProperties ?? [:]
+
+        let currentTime = Date()
+        let lastEventTimestamp = UserDefaults.standard.double(forKey: "last_event_time")
+        let timeInterval = currentTime.timeIntervalSince1970 - lastEventTimestamp
+
+        if timeInterval > 1800 || lastEventTimestamp == 0 {
+            let newSessionId = UUID().uuidString
+            cache.sessionId = newSessionId
+
+            let event = IngestEventRequest(
+                id: nil,
+                name: "mkt_session_start",
+                userId: cache.userId,
+                device: device.makeRequest(),
+                properties: ["mkt_session_id": AnyCodable(newSessionId)],
+                timestamp: Date()
+            )
+            track(request: event)
+        }
+
+        properties["mkt_session_id"] = cache.sessionId
+        let eventTimestamp = timestamp ?? Date()
+
         let event = IngestEventRequest(
             id: id,
             name: eventName,
             userId: cache.userId,
-            device: cache.device.makeRequest(),
-            properties: eventProperties?.toAnyCodable(),
-            timestamp: timestamp ?? Date()
+            device: device.makeRequest(),
+            properties: properties.toAnyCodable(),
+            timestamp: eventTimestamp
         )
 
+        UserDefaults.standard.set(eventTimestamp.timeIntervalSince1970, forKey: "last_event_time")
+
         track(request: event)
-        delegate?.onEvent(eventRequest: event, device: cache.device)
+        delegate?.onEvent(eventRequest: event, device: device)
     }
+
 
     func updateDevice(pushToken: String? = nil, removeUserId: Bool = false) {
         cache.updateDevice(pushToken: pushToken)

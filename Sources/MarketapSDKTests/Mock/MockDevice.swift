@@ -46,8 +46,6 @@ class MockDevice {
 
     var permissions: Permissions = Permissions(camera: true, microphone: true, location: true, notifications: true)
 
-    var sessionId: String? = UUID().uuidString
-
     func toDevice() -> Device {
         return Device(
             idfa: idfa,
@@ -74,8 +72,7 @@ class MockDevice {
             carrier: carrier,
             hasSim: hasSim,
             maxTouchPoints: maxTouchPoints,
-            permissions: permissions,
-            sessionId: sessionId
+            permissions: permissions
         )
     }
 }

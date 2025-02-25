@@ -7,10 +7,11 @@
 
 import Foundation
 
-protocol MarketapCacheProtocol {
+protocol MarketapCacheProtocol: AnyObject {
     var device: Device { get }
     var userId: String? { get }
     var projectId: String { get }
+    var sessionId: String { get set }
 
     func saveUserId(_ userId: String?)
     func updateDevice(pushToken: String?)

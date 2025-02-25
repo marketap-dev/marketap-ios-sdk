@@ -40,8 +40,7 @@ struct Device: Codable {
     let maxTouchPoints: Int?
     
     let permissions: Permissions?
-    
-    let sessionId: String?
+
     
     enum CodingKeys: String, CodingKey {
         case idfa, idfv
@@ -63,7 +62,6 @@ struct Device: Codable {
         case hasSim = "has_sim"
         case maxTouchPoints = "max_touch_points"
         case permissions
-        case sessionId = "session_id"
         case appLocalId = "app_local_id"
     }
 }

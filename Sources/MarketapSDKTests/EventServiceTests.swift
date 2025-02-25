@@ -242,4 +242,43 @@ class EventServiceTests: XCTestCase {
         XCTAssertEqual(eventService.failedEventsStorage.getStoredData().count, 0, "trackEvent 후 failedEventsStorage가 비워지지 않음")
     }
 
+    func testNewSessionCreatedIfLastEventTimeIsMoreThan30Minutes() {
+        let thirtyOneMinutesAgo = Date().addingTimeInterval(-1860).timeIntervalSince1970
+        UserDefaults.standard.set(thirtyOneMinutesAgo, forKey: "last_event_time")
+        let previousSessionId = "existing-session-id"
+        mockCache.sessionId = previousSessionId
+
+        eventService.trackEvent(
+            eventName: "test_event",
+            eventProperties: ["key": "value"]
+        )
+
+        XCTAssertNotEqual(mockCache.sessionId, previousSessionId)
+    }
+
+    func testExistingSessionMaintainedIfWithin30Minutes() {
+        let fiveMinutesAgo = Date().addingTimeInterval(-300).timeIntervalSince1970
+        let previousSessionId = "existing-session-id"
+        mockCache.sessionId = previousSessionId
+        UserDefaults.standard.set(fiveMinutesAgo, forKey: "last_event_time")
+
+        eventService.trackEvent(
+            eventName: "test_event",
+            eventProperties: ["key": "value"]
+        )
+
+        XCTAssertEqual(mockCache.sessionId, previousSessionId)
+    }
+
+    func testLastEventTimeIsUpdated() {
+        eventService.trackEvent(
+            eventName: "test_event",
+            eventProperties: ["key": "value"]
+        )
+
+        let lastEventTimestamp = UserDefaults.standard.double(forKey: "last_event_time")
+        let currentTime = Date().timeIntervalSince1970
+
+        XCTAssertTrue(currentTime - lastEventTimestamp < 1, "Last event timestamp should be updated to the current time.")
+    }
 }
