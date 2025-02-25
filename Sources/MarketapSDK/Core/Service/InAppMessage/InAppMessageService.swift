@@ -22,24 +22,13 @@ class InAppMessageService: NSObject, InAppMessageServiceProtocol {
 
     var isModalShown: Bool = false
     var didFinishLoad = false
-    var pendingRequest: IngestEventRequest?
     var pendingCampaign: InAppCampaign?
 
     private var projectId: String {
         cache.projectId
     }
 
-    var campaigns: [InAppCampaign]? {
-        didSet {
-            if let pendingRequest, let requestTime = pendingRequest.timestamp,
-               campaigns != nil {
-                self.pendingRequest = nil
-                if Date().timeIntervalSince(requestTime) < 0.5 {
-                    onEvent(eventRequest: pendingRequest)
-                }
-            }
-        }
-    }
+    var campaigns: [InAppCampaign]?
     var lastFetch: Date?
     let campaignViewController = InAppMessageWebViewController()
 

@@ -96,16 +96,14 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
     }
 
     func onEvent(eventRequest: IngestEventRequest) {
-        guard let campaigns else {
-            pendingRequest = eventRequest
-            return
-        }
+        fetchCampaigns { [weak self] campaigns in
+            guard let self else { return }
+            for campaign in campaigns {
+                if self.isEventTriggered(condition: campaign.triggerEventCondition, event: eventRequest) {
+                    let didShowCampaign = self.showCampaignIfPossible(campaign: campaign)
 
-        for campaign in campaigns {
-            if isEventTriggered(condition: campaign.triggerEventCondition, event: eventRequest) {
-                let didShowCampaign = showCampaignIfPossible(campaign: campaign)
-
-                if didShowCampaign { break }
+                    if didShowCampaign { break }
+                }
             }
         }
     }
