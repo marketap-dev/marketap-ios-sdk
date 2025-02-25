@@ -10,7 +10,17 @@ import MarketapSDK
 
 struct ContentView: View {
     var body: some View {
-        ShoppingHomeView()
+        TabView {
+            ShoppingHomeView().tabItem {
+                Label("Home", systemImage: "house.fill")
+            }
+
+
+            WebView(url: URL(string: "https://marketap.cafe24.com/shop2")!)
+                .tabItem {
+                    Label("Web", systemImage: "safari")
+                }
+        }
     }
 }
 
