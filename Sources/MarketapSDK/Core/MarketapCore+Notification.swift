@@ -1,14 +1,14 @@
 //
-//  MarketapClient+Notification.swift
+//  MarketapCore+Notification.swift
 //  MarketapSDK
 //
-//  Created by 이동현 on 2/13/25.
+//  Created by 이동현 on 3/20/25.
 //
 
 import UserNotifications
 import UIKit
 
-extension MarketapClient {
+extension MarketapCore {
     struct MarketapNotification {
         let deepLink: URL?
         let campaignId: String?
@@ -18,36 +18,36 @@ extension MarketapClient {
             self.campaignId = campaignId
         }
     }
-    
+
     private func getMarketapNotification(request: UNNotificationRequest) -> MarketapNotification? {
         guard let info = request.content.userInfo["marketap"] as? [String: Any] else { return nil }
-        
+
         return MarketapNotification(
             deepLink: (info["deepLink"] as? String).map { URL(string: $0) } ?? nil,
             campaignId: info["campaignId"] as? String
         )
     }
-    
+
     func setPushToken(token: Data) {
         let tokenString = token.map { String(format: "%02x", $0) }.joined()
-        core.setPushToken(token: tokenString)
+        setPushToken(token: tokenString)
     }
-    
+
     func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) -> Bool {
-        
+
         if getMarketapNotification(request: notification.request) == nil {
             return false
         }
-                
+
         if #available(iOS 14.0, *) {
             completionHandler([.banner, .sound, .badge])
         } else {
             completionHandler([.alert, .sound, .badge])
         }
-        
+
         return true
     }
-    
+
     func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse,
@@ -56,13 +56,13 @@ extension MarketapClient {
         guard let notification = getMarketapNotification(request: response.notification.request) else {
             return false
         }
-        
+
         if let deepLink = notification.deepLink {
             UIApplication.shared.open(deepLink, options: [:], completionHandler: nil)
         }
 
         if let campaignId = notification.campaignId {
-            core.track(
+            track(
                 eventName: "mkt_click_message",
                 eventProperties: [
                     "mkt_campaign_id": campaignId,
@@ -80,7 +80,7 @@ extension MarketapClient {
             )
         }
         completionHandler()
-        
+
         return true
     }
 }
