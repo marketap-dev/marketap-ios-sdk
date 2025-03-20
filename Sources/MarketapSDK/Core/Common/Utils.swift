@@ -26,12 +26,7 @@ extension Device {
             "max_touch_points": AnyCodable(maxTouchPoints),
             "locale": AnyCodable(locale),
             "model": AnyCodable(model),
-            "cpu_arch": AnyCodable(cpuArch),
-            "memory_total": AnyCodable(memoryTotal),
-            "storage_total": AnyCodable(storageTotal),
-            "battery_level": AnyCodable(batteryLevel),
-            "network_type": AnyCodable(networkType),
-            "carrier": AnyCodable(carrier)
+            "environment": AnyCodable(environment)
         ]
 
         return UpdateDeviceRequest(

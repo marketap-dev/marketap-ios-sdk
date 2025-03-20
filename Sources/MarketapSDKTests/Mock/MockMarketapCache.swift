@@ -30,16 +30,8 @@ class MockMarketapCache: MarketapCacheProtocol {
         timezone: "Asia/Seoul",
         locale: "en_KR",
         screen: nil,
-        cpuArch: "arm64",
-        memoryTotal: nil,
-        storageTotal: nil,
-        batteryLevel: nil,
-        isCharging: nil,
-        networkType: "WiFi",
-        carrier: nil,
-        hasSim: true,
         maxTouchPoints: 5,
-        permissions: nil
+        environment: "develop"
     )
 
     var failedEvents: [BulkEvent] {

@@ -32,19 +32,7 @@ class MockDevice {
     var locale: String = "ko_KR"
 
     var screen: ScreenInfo = ScreenInfo(width: 390, height: 844, pixelRatio: 3.0)
-
-    var cpuArch: String? = "arm64"
-    var memoryTotal: Int? = 4096
-    var storageTotal: Int? = 128_000
-    var batteryLevel: Int? = 95
-    var isCharging: Bool? = false
-
-    var networkType: String? = "WiFi"
-    var carrier: String? = "SKT"
-    var hasSim: Bool? = true
     var maxTouchPoints: Int? = 5
-
-    var permissions: Permissions = Permissions(camera: true, microphone: true, location: true, notifications: true)
 
     func toDevice() -> Device {
         return Device(
@@ -63,16 +51,8 @@ class MockDevice {
             timezone: timezone,
             locale: locale,
             screen: screen,
-            cpuArch: cpuArch,
-            memoryTotal: memoryTotal,
-            storageTotal: storageTotal,
-            batteryLevel: batteryLevel,
-            isCharging: isCharging,
-            networkType: networkType,
-            carrier: carrier,
-            hasSim: hasSim,
             maxTouchPoints: maxTouchPoints,
-            permissions: permissions
+            environment: "develop"
         )
     }
 }

@@ -39,6 +39,14 @@ public class Marketap: NSObject {
     ///
     /// - Important: `initialize`를 호출하기 전에는 `client`를 사용할 수 없습니다.
     @objc public static func initialize(projectId: String) {
-        client = MarketapClient(projectId: projectId)
+        let config = MarketapConfig(projectId: projectId)
+        let api = MarketapAPI()
+        let cache = MarketapCache(config: config)
+        let eventService = EventService(api: api, cache: cache)
+        let inAppMessageService = InAppMessageService(api: api, cache: cache)
+        let core = MarketapCore(eventService: eventService, inAppMessageService: inAppMessageService)
+        eventService.delegate = core
+        inAppMessageService.delegate = core
+        client = core
     }
 }
