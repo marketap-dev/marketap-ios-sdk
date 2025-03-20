@@ -5,6 +5,8 @@
 //  Created by 이동현 on 3/20/25.
 //
 
+import Foundation
+
 extension MarketapCore {
     func setPushToken(token: String) {
         queue.async {
