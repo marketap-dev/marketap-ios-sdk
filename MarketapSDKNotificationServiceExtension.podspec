@@ -1,6 +1,6 @@
 Pod::Spec.new do |spec|
   spec.name         = "MarketapSDKNotificationServiceExtension"
-  spec.version      = "1.0.1"
+  spec.version      = "1.0.2"
   spec.summary      = "Marketap SDK Notification Service Extension"
   spec.description  = "Marketap SDK's extension for handling notifications."
 
