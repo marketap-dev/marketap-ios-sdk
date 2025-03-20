@@ -78,7 +78,7 @@ struct UserInfoView: View {
             userProperties: [
                 "mkt_name": name,
                 "mkt_email": email,
-                "mkt+mkt_phone_number": phone
+                "mkt_phone_number": phone
             ],
             eventProperties: nil
         )
