@@ -19,6 +19,11 @@ struct Device: Encodable {
     let deviceId: String
     let platform: String = "ios"
 
+    enum CodingKeys: String, CodingKey {
+        case deviceId = "device_id"
+        case platform
+    }
+
     init(deviceId: String) {
         self.deviceId = deviceId
     }
