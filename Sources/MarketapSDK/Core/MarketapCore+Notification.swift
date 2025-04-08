@@ -12,19 +12,39 @@ extension MarketapCore {
     struct MarketapNotification {
         let deepLink: URL?
         let campaignId: String?
+        let messageId: String?
+        let serverProperties: [String: String]?
 
-        init(deepLink: URL?, campaignId: String?) {
+        init(deepLink: URL?, campaignId: String?, messageId: String?, serverProperties: [String: String]?) {
             self.deepLink = deepLink
             self.campaignId = campaignId
+            self.messageId = messageId
+            self.serverProperties = serverProperties
         }
     }
 
     private func getMarketapNotification(request: UNNotificationRequest) -> MarketapNotification? {
         guard let info = request.content.userInfo["marketap"] as? [String: Any] else { return nil }
 
+        let deepLink = (info["deepLink"] as? String).flatMap { URL(string: $0) }
+        let campaignId = info["campaignId"] as? String
+        let messageId = info["messageId"] as? String
+
+        let serverProperties: [String: String]? = {
+            guard let propertiesString = info["serverProperties"] as? String,
+                  let data = propertiesString.data(using: .utf8),
+                  let jsonObject = try? JSONSerialization.jsonObject(with: data, options: []),
+                  let dict = jsonObject as? [String: String] else {
+                return nil
+            }
+            return dict
+        }()
+
         return MarketapNotification(
-            deepLink: (info["deepLink"] as? String).map { URL(string: $0) } ?? nil,
-            campaignId: info["campaignId"] as? String
+            deepLink: deepLink,
+            campaignId: campaignId,
+            messageId: messageId,
+            serverProperties: serverProperties
         )
     }
 
@@ -61,7 +81,7 @@ extension MarketapCore {
             UIApplication.shared.open(deepLink, options: [:], completionHandler: nil)
         }
 
-        if let campaignId = notification.campaignId {
+        if let campaignId = notification.campaignId, let messageId = notification.messageId, let serverProperties = notification.serverProperties {
             track(
                 eventName: "mkt_click_message",
                 eventProperties: [
@@ -73,8 +93,8 @@ extension MarketapCore {
                     "mkt_result_message": "SUCCESS",
                     "mkt_location_id": "push",
                     "mkt_is_success": true,
-                    "mkt_message_id": UUID().uuidString
-                ],
+                    "mkt_message_id": messageId
+                ].merging(serverProperties) { (_, new) in new },
                 id: nil,
                 timestamp: nil
             )

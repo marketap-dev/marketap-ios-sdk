@@ -14,6 +14,8 @@ class MarketapNotificationServiceClient: MarketapNotificationServiceClientProtoc
         let deviceId: String?
         let projectId: String?
         let campaignId: String?
+        let messageId: String?
+        let serverProperties: [String: String]?
 
         let imageUrl: URL?
     }
@@ -29,6 +31,16 @@ class MarketapNotificationServiceClient: MarketapNotificationServiceClientProtoc
             deviceId: info["deviceId"] as? String,
             projectId: info["projectId"] as? String,
             campaignId: info["campaignId"] as? String,
+            messageId: info["messageId"] as? String,
+            serverProperties: {
+                guard let propertiesString = info["serverProperties"] as? String,
+                      let data = propertiesString.data(using: .utf8),
+                      let jsonObject = try? JSONSerialization.jsonObject(with: data, options: []),
+                      let dict = jsonObject as? [String: String] else {
+                    return nil
+                }
+                return dict
+            }(),
             imageUrl: (info["imageUrl"] as? String).map { URL(string: $0) } ?? nil
         )
     }
@@ -92,7 +104,8 @@ extension MarketapNotificationServiceClient {
         guard let userId = notification.userId,
               let projectId = notification.projectId,
               let deviceId = notification.deviceId,
-              let campaignId = notification.campaignId else {
+              let campaignId = notification.campaignId,
+              let messageId = notification.messageId else {
             return
         }
 
@@ -105,7 +118,11 @@ extension MarketapNotificationServiceClient {
             name: "mkt_push_impression",
             userId: userId,
             device: Device(deviceId: deviceId),
-            properties: ImpressionRequestProperties(campaignId: campaignId),
+            properties: ImpressionRequestProperties(
+                campaignId: campaignId,
+                messageId: messageId,
+                serverProperties: notification.serverProperties
+            ),
             timestamp: Date()
         )
 

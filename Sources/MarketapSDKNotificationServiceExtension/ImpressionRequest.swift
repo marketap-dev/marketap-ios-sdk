@@ -7,6 +7,14 @@
 
 import Foundation
 
+struct DynamicCodingKeys: CodingKey {
+    var stringValue: String
+    init(stringValue: String) { self.stringValue = stringValue }
+
+    var intValue: Int? { return nil }
+    init?(intValue: Int) { return nil }
+}
+
 struct Device: Encodable {
     let deviceId: String
     let platform: String = "ios"
@@ -18,13 +26,14 @@ struct Device: Encodable {
 
 struct ImpressionRequestProperties: Encodable {
     let campaignId: String
-    let messageId: String = UUID().uuidString
+    let messageId: String
     let campaignCategory: String = "ON_SITE"
     let channelType: String = "PUSH"
     let subChannelType: String = "IOS"
     let resultStatus: Int = 200
     let resultMessage: String = "SUCCESS"
     let isSuccess: Bool = true
+    let serverProperties: [String: String]?
 
     enum CodingKeys: String, CodingKey {
         case campaignId = "mkt_campaign_id"
@@ -37,10 +46,34 @@ struct ImpressionRequestProperties: Encodable {
         case messageId = "mkt_message_id"
     }
 
-    init(campaignId: String) {
+    init(campaignId: String, messageId: String, serverProperties: [String: String]?) {
         self.campaignId = campaignId
+        self.messageId = messageId
+        self.serverProperties = serverProperties
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+
+        try container.encode(campaignId, forKey: .campaignId)
+        try container.encode(messageId, forKey: .messageId)
+        try container.encode(campaignCategory, forKey: .campaignCategory)
+        try container.encode(channelType, forKey: .channelType)
+        try container.encode(subChannelType, forKey: .subChannelType)
+        try container.encode(resultStatus, forKey: .resultStatus)
+        try container.encode(resultMessage, forKey: .resultMessage)
+        try container.encode(isSuccess, forKey: .isSuccess)
+
+        if let serverProperties = serverProperties {
+            var dynamicContainer = encoder.container(keyedBy: DynamicCodingKeys.self)
+            for (key, value) in serverProperties {
+                let dynamicKey = DynamicCodingKeys(stringValue: key)
+                try dynamicContainer.encode(value, forKey: dynamicKey)
+            }
+        }
     }
 }
+
 
 struct ImpressionRequest: Encodable {
     let name: String
