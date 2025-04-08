@@ -35,7 +35,7 @@ struct ImpressionRequestProperties: Encodable {
     let campaignCategory: String = "ON_SITE"
     let channelType: String = "PUSH"
     let subChannelType: String = "IOS"
-    let resultStatus: Int = 200
+    let resultStatus: Int = 200000
     let resultMessage: String = "SUCCESS"
     let isSuccess: Bool = true
     let serverProperties: [String: String]?

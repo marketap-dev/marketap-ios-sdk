@@ -89,7 +89,7 @@ extension MarketapCore {
                     "mkt_campaign_category": "OFF_SITE",
                     "mkt_channel_type": "PUSH",
                     "mkt_sub_channel_type": "IOS",
-                    "mkt_result_status": 200,
+                    "mkt_result_status": 200000,
                     "mkt_result_message": "SUCCESS",
                     "mkt_location_id": "push",
                     "mkt_is_success": true,

@@ -116,7 +116,7 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
                 "mkt_campaign_category": "ON_SITE",
                 "mkt_channel_type": "IN_APP_MESSAGE",
                 "mkt_sub_channel_type": campaign.layout.layoutSubType,
-                "mkt_result_status": 200,
+                "mkt_result_status": 200000,
                 "mkt_result_message": "SUCCESS",
                 "mkt_is_success": true,
                 "mkt_message_id": messageId
@@ -132,7 +132,7 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
                 "mkt_campaign_category": "ON_SITE",
                 "mkt_channel_type": "IN_APP_MESSAGE",
                 "mkt_sub_channel_type": campaign.layout.layoutSubType,
-                "mkt_result_status": 200,
+                "mkt_result_status": 200000,
                 "mkt_result_message": "SUCCESS",
                 "mkt_location_id": locationId,
                 "mkt_is_success": true,
