@@ -1,6 +1,6 @@
 Pod::Spec.new do |spec|
   spec.name         = "MarketapSDK"
-  spec.version      = "1.0.3-beta.1"
+  spec.version      = "1.0.3"
   spec.summary      = "MarketapSDK collects data and runs campaigns for Marketap Console."
   spec.description  = "MarketapSDK integrates with Marketap Console to collect user data, track events, and run personalized campaigns."
 
