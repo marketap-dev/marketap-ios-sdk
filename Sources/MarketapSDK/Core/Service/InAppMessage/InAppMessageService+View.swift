@@ -75,8 +75,9 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
         DispatchQueue.main.async {
             self.campaignViewController.campaign = campaign
             if let topViewController = self.getTopViewController() {
-                self.isModalShown = true
-                topViewController.present(self.campaignViewController, animated: false)
+                topViewController.present(self.campaignViewController, animated: false) {
+                    self.isModalShown = true
+                }
             }
         }
     }
