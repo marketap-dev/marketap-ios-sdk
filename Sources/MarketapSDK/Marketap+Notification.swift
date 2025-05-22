@@ -33,4 +33,10 @@ import UIKit
         guard let client else { return false }
         return client.userNotificationCenter(center, didReceive: response, withCompletionHandler: completionHandler)
     }
+
+    /// 콜드스타트시 필요한 정보를 처리합니다.
+    @objc public static func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]?) {
+        guard let client else { return }
+        client.application(application, didFinishLaunchingWithOptions: launchOptions)
+    }
 }

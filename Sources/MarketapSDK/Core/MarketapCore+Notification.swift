@@ -23,8 +23,8 @@ extension MarketapCore {
         }
     }
 
-    private func getMarketapNotification(request: UNNotificationRequest) -> MarketapNotification? {
-        guard let info = request.content.userInfo["marketap"] as? [String: Any] else { return nil }
+    private func getMarketapNotification(info: [String: Any]?) -> MarketapNotification? {
+        guard let info else { return nil }
 
         let deepLink = (info["deepLink"] as? String).flatMap { URL(string: $0) }
         let campaignId = info["campaignId"] as? String
@@ -55,7 +55,8 @@ extension MarketapCore {
 
     func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) -> Bool {
 
-        if getMarketapNotification(request: notification.request) == nil {
+        let info = notification.request.content.userInfo["marketap"] as? [String: Any]
+        if getMarketapNotification(info: info) == nil {
             return false
         }
 
@@ -73,12 +74,35 @@ extension MarketapCore {
         didReceive response: UNNotificationResponse,
         withCompletionHandler completionHandler: @escaping () -> Void
     ) -> Bool {
-        guard let notification = getMarketapNotification(request: response.notification.request) else {
+        let info = response.notification.request.content.userInfo["marketap"] as? [String: Any]
+        guard let notification = getMarketapNotification(info: info) else {
             return false
         }
 
+        handleNotification(notification)
+        completionHandler()
+
+        return true
+    }
+
+    func application(
+        _ application: UIApplication,
+        didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]?
+    ) {
+        guard let remoteNotification = launchOptions?[.remoteNotification] as? [AnyHashable: Any],
+              let info = remoteNotification["marketap"] as? [String: Any],
+              let notification = getMarketapNotification(info: info) else {
+            return
+        }
+
+        handleNotification(notification)
+    }
+
+    private func handleNotification(_ notification: MarketapNotification) {
         if let deepLink = notification.deepLink {
-            UIApplication.shared.open(deepLink, options: [:], completionHandler: nil)
+            DispatchQueue.main.async {
+                UIApplication.shared.open(deepLink, options: [:], completionHandler: nil)
+            }
         }
 
         if let campaignId = notification.campaignId, let messageId = notification.messageId, let serverProperties = notification.serverProperties {
@@ -99,8 +123,5 @@ extension MarketapCore {
                 timestamp: nil
             )
         }
-        completionHandler()
-
-        return true
     }
 }

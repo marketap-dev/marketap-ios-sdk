@@ -5,6 +5,7 @@
 //  Created by 이동현 on 2/13/25.
 //
 
+import UIKit
 import UserNotifications
 
 public protocol MarketapNotificationClientProtocol {
@@ -49,5 +50,7 @@ public protocol MarketapNotificationClientProtocol {
         didReceive response: UNNotificationResponse,
         withCompletionHandler completionHandler: @escaping () -> Void
     ) -> Bool
+
+    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]?)
 }
 

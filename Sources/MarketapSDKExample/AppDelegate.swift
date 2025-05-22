@@ -14,6 +14,8 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         requestNotificationPermissions()
 
         Marketap.initialize(projectId: "kx43pz7")
+        Marketap.application(application, didFinishLaunchingWithOptions: launchOptions)
+
         if let name: String = UserDefaults.standard.string(forKey: "userName"),
            let email: String = UserDefaults.standard.string(forKey: "userEmail"),
            let phone: String = UserDefaults.standard.string(forKey: "userPhone") {
