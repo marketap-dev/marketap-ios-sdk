@@ -7,7 +7,7 @@
 
 import Foundation
 
-class MarketapCore: MarketapClientProtocol {
+class MarketapCore: MarketapClientProtocol, MarketapNotificationHandlerProtocol {
     let eventService: EventServiceProtocol
     let inAppMessageService: InAppMessageServiceProtocol
     let queue = DispatchQueue(label: "com.marketap.core")

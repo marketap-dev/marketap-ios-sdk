@@ -8,22 +8,13 @@
 import UserNotifications
 import UIKit
 
-extension MarketapCore {
-    struct MarketapNotification {
-        let deepLink: URL?
-        let campaignId: String?
-        let messageId: String?
-        let serverProperties: [String: String]?
+struct MarketapNotification {
+    let deepLink: URL?
+    let campaignId: String?
+    let messageId: String?
+    let serverProperties: [String: String]?
 
-        init(deepLink: URL?, campaignId: String?, messageId: String?, serverProperties: [String: String]?) {
-            self.deepLink = deepLink
-            self.campaignId = campaignId
-            self.messageId = messageId
-            self.serverProperties = serverProperties
-        }
-    }
-
-    private func getMarketapNotification(info: [String: Any]?) -> MarketapNotification? {
+    init?(info: [String: Any]?) {
         guard let info else { return nil }
 
         let deepLink = (info["deepLink"] as? String).flatMap { URL(string: $0) }
@@ -40,33 +31,17 @@ extension MarketapCore {
             return dict
         }()
 
-        return MarketapNotification(
-            deepLink: deepLink,
-            campaignId: campaignId,
-            messageId: messageId,
-            serverProperties: serverProperties
-        )
+        self.deepLink = deepLink
+        self.campaignId = campaignId
+        self.messageId = messageId
+        self.serverProperties = serverProperties
     }
+}
 
+extension MarketapCore {
     func setPushToken(token: Data) {
         let tokenString = token.map { String(format: "%02x", $0) }.joined()
         setPushToken(token: tokenString)
-    }
-
-    func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) -> Bool {
-
-        let info = notification.request.content.userInfo["marketap"] as? [String: Any]
-        if getMarketapNotification(info: info) == nil {
-            return false
-        }
-
-        if #available(iOS 14.0, *) {
-            completionHandler([.banner, .sound, .badge])
-        } else {
-            completionHandler([.alert, .sound, .badge])
-        }
-
-        return true
     }
 
     func userNotificationCenter(
@@ -75,7 +50,7 @@ extension MarketapCore {
         withCompletionHandler completionHandler: @escaping () -> Void
     ) -> Bool {
         let info = response.notification.request.content.userInfo["marketap"] as? [String: Any]
-        guard let notification = getMarketapNotification(info: info) else {
+        guard let notification = MarketapNotification(info: info) else {
             return false
         }
 
@@ -91,14 +66,14 @@ extension MarketapCore {
     ) {
         guard let remoteNotification = launchOptions?[.remoteNotification] as? [AnyHashable: Any],
               let info = remoteNotification["marketap"] as? [String: Any],
-              let notification = getMarketapNotification(info: info) else {
+              let notification = MarketapNotification(info: info) else {
             return
         }
 
         handleNotification(notification)
     }
 
-    private func handleNotification(_ notification: MarketapNotification) {
+    func handleNotification(_ notification: MarketapNotification) {
         if let deepLink = notification.deepLink {
             DispatchQueue.main.async {
                 UIApplication.shared.open(deepLink, options: [:], completionHandler: nil)
@@ -123,5 +98,23 @@ extension MarketapCore {
                 timestamp: nil
             )
         }
+    }
+}
+
+extension MarketapNotificationClientProtocol {
+    func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) -> Bool {
+
+        let info = notification.request.content.userInfo["marketap"] as? [String: Any]
+        if MarketapNotification(info: info) == nil {
+            return false
+        }
+
+        if #available(iOS 14.0, *) {
+            completionHandler([.banner, .sound, .badge])
+        } else {
+            completionHandler([.alert, .sound, .badge])
+        }
+
+        return true
     }
 }

@@ -54,3 +54,6 @@ public protocol MarketapNotificationClientProtocol {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]?)
 }
 
+protocol MarketapNotificationHandlerProtocol {
+    func handleNotification(_ notification: MarketapNotification)
+}

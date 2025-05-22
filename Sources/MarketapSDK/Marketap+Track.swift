@@ -10,12 +10,6 @@ import UIKit
 
 extension Marketap {
 
-    /// 디바이스의 푸시 토큰을 설정합니다.
-    /// - Parameter token: 디바이스의 푸시 알림 토큰 (APNs 토큰)
-    @objc public static func setPushToken(token: Data) {
-        client?.setPushToken(token: token)
-    }
-
     /// 유저를 로그인 처리하고, 유저 및 이벤트 속성을 설정합니다.
     /// - Parameters:
     ///   - userId: 유저의 고유 식별자 (ID)

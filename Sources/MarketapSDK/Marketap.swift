@@ -13,6 +13,7 @@ public class Marketap: NSObject {
 
     private override init() {}
     private static var _client: MarketapClientProtocol?
+    static let coldStartNotificationHandler = ColdStartNotificationHandler()
 
     /// Marketap SDK의 클라이언트 인스턴스를 제공합니다.
     ///
@@ -48,5 +49,7 @@ public class Marketap: NSObject {
         eventService.delegate = core
         inAppMessageService.delegate = core
         client = core
+
+        coldStartNotificationHandler.didInitializeClient(client: core)
     }
 }
