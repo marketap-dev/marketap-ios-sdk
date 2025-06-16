@@ -12,7 +12,7 @@ import Foundation
 public class Marketap: NSObject {
 
     private override init() {}
-    private static var _client: MarketapClientProtocol?
+    static var _client: MarketapClientProtocol?
     static let coldStartNotificationHandler = ColdStartNotificationHandler()
 
     /// Marketap SDK의 클라이언트 인스턴스를 제공합니다.
@@ -24,7 +24,7 @@ public class Marketap: NSObject {
     public static var client: MarketapClientProtocol? {
         get {
             guard let _client else {
-                Logger.error("SDK가 초기화되지 않았습니다. `Marketap.initialize(projectId:)`를 호출하세요.")
+                Logger.error("Marketap SDK is not initialized. Make sure to call Marketap.initialize(projectId:) before using the SDK.")
                 return nil
             }
             return _client
@@ -49,6 +49,7 @@ public class Marketap: NSObject {
         eventService.delegate = core
         inAppMessageService.delegate = core
         client = core
+        Logger.info("Marketap SDK initialized successfully with projectId: \(projectId)")
 
         coldStartNotificationHandler.didInitializeClient(client: core)
     }
