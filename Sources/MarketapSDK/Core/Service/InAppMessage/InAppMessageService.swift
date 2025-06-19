@@ -16,6 +16,7 @@ class InAppMessageService: NSObject, InAppMessageServiceProtocol {
     static let campaignCacheKey = "InAppMessageService_campaigns"
     static let lastFetchKey = "InAppMessageService_lastFetch"
 
+    let customHandlerStore: MarketapCustomHandlerStoreProtocol
     private let api: MarketapAPIProtocol
     private let cache: MarketapCacheProtocol
     weak var delegate: InAppMessageServiceDelegate?
@@ -32,7 +33,12 @@ class InAppMessageService: NSObject, InAppMessageServiceProtocol {
     var lastFetch: Date?
     let campaignViewController = InAppMessageWebViewController()
 
-    init(api: MarketapAPIProtocol, cache: MarketapCacheProtocol) {
+    init(
+        customHandlerStore: MarketapCustomHandlerStoreProtocol,
+        api: MarketapAPIProtocol,
+        cache: MarketapCacheProtocol
+    ) {
+        self.customHandlerStore = customHandlerStore
         self.cache = cache
         self.api = api
 

@@ -9,7 +9,7 @@ import UIKit
 import WebKit
 
 protocol InAppMessageWebViewControllerDelegate: AnyObject, WKNavigationDelegate {
-    func onClick(campaign: InAppCampaign, locationId: String, messageId: String)
+    func onClick(campaign: InAppCampaign, locationId: String, messageId: String, url: String)
     func hideCampaign(campaignId: String, until: TimeInterval)
     func onImpression(campaign: InAppCampaign, messageId: String)
 }
@@ -128,10 +128,7 @@ extension InAppMessageWebViewController: WKScriptMessageHandler {
         switch jsEvent {
         case .click:
             if let body = message.body as? [String], let locationId = body.first, let urlString = body.last {
-                if let url = URL(string: urlString) {
-                    UIApplication.shared.open(url)
-                }
-                delegate?.onClick(campaign: campaign, locationId: locationId, messageId: messageId)
+                delegate?.onClick(campaign: campaign, locationId: locationId, messageId: messageId, url: urlString)
             }
         case .hide:
             self.dismiss(animated: false)

@@ -8,11 +8,17 @@
 import Foundation
 
 class MarketapCore: MarketapClientProtocol, MarketapNotificationHandlerProtocol {
+    let customHandlerStore: MarketapCustomHandlerStoreProtocol
     let eventService: EventServiceProtocol
     let inAppMessageService: InAppMessageServiceProtocol
     let queue = DispatchQueue(label: "com.marketap.core")
 
-    init(eventService: EventServiceProtocol, inAppMessageService: InAppMessageServiceProtocol) {
+    init(
+        customHandlerStore: MarketapCustomHandlerStoreProtocol,
+        eventService: EventServiceProtocol,
+        inAppMessageService: InAppMessageServiceProtocol
+    ) {
+        self.customHandlerStore = customHandlerStore
         self.inAppMessageService = inAppMessageService
         self.eventService = eventService
 

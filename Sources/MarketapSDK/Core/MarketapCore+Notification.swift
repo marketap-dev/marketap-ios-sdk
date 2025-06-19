@@ -9,7 +9,7 @@ import UserNotifications
 import UIKit
 
 struct MarketapNotification {
-    let deepLink: URL?
+    let deepLink: String?
     let campaignId: String?
     let messageId: String?
     let serverProperties: [String: String]?
@@ -17,7 +17,7 @@ struct MarketapNotification {
     init?(info: [String: Any]?) {
         guard let info else { return nil }
 
-        let deepLink = (info["deepLink"] as? String).flatMap { URL(string: $0) }
+        let deepLink = info["deepLink"] as? String
         let campaignId = info["campaignId"] as? String
         let messageId = info["messageId"] as? String
 
@@ -74,10 +74,8 @@ extension MarketapCore {
     }
 
     func handleNotification(_ notification: MarketapNotification) {
-        if let deepLink = notification.deepLink {
-            DispatchQueue.main.async {
-                UIApplication.shared.open(deepLink, options: [:], completionHandler: nil)
-            }
+        if let campaignId = notification.campaignId {
+            customHandlerStore.handleClick(MarketapClickEvent(campaignType: .push, campaignId: campaignId, url: notification.deepLink))
         }
 
         if let campaignId = notification.campaignId, let messageId = notification.messageId, let serverProperties = notification.serverProperties {

@@ -13,6 +13,7 @@ public class Marketap: NSObject {
 
     private override init() {}
     static var _client: MarketapClientProtocol?
+    static let customHandlerStore = MarketapCustomHandlerStore()
     static let coldStartNotificationHandler = ColdStartNotificationHandler()
 
     /// Marketap SDK의 클라이언트 인스턴스를 제공합니다.
@@ -44,13 +45,17 @@ public class Marketap: NSObject {
         let api = MarketapAPI()
         let cache = MarketapCache(config: config)
         let eventService = EventService(api: api, cache: cache)
-        let inAppMessageService = InAppMessageService(api: api, cache: cache)
-        let core = MarketapCore(eventService: eventService, inAppMessageService: inAppMessageService)
+        let inAppMessageService = InAppMessageService(customHandlerStore: self.customHandlerStore, api: api, cache: cache)
+        let core = MarketapCore(customHandlerStore: self.customHandlerStore, eventService: eventService, inAppMessageService: inAppMessageService)
         eventService.delegate = core
         inAppMessageService.delegate = core
         client = core
         Logger.info("Marketap SDK initialized successfully with projectId: \(projectId)")
 
         coldStartNotificationHandler.didInitializeClient(client: core)
+    }
+
+    public static func setClickHandler(_ handler: @escaping (MarketapClickEvent) -> Void) {
+        customHandlerStore.setClickHandler(handler)
     }
 }

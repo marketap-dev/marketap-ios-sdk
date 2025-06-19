@@ -66,7 +66,7 @@ class MarketapCoreTests: XCTestCase {
         super.setUp()
         mockEventService = MockEventService()
         mockInAppService = MockInAppMessageService()
-        core = MarketapCore(eventService: mockEventService, inAppMessageService: mockInAppService)
+        core = MarketapCore(customHandlerStore: CustomHandlerStor(), eventService: mockEventService, inAppMessageService: mockInAppService)
         mockEventService.delegate = core
     }
 

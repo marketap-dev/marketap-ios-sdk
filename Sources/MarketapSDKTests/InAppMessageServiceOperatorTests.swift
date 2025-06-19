@@ -16,6 +16,7 @@ class InAppMessageServiceOperatorTests: XCTestCase {
         let api = MockMarketapAPIForIAM()
         let cache = MockMarketapCache()
         inAppMessageService = InAppMessageService(
+            customHandlerStore: CustomHandlerStor(),
             api: api,
             cache: cache
         )

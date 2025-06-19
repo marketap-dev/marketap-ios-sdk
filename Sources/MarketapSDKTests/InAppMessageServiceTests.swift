@@ -33,6 +33,15 @@ class MockMarketapAPIForIAM: MarketapAPIProtocol {
     }
 }
 
+class CustomHandlerStor: MarketapCustomHandlerStoreProtocol {
+    func handleClick(_ event: MarketapSDK.MarketapClickEvent) {
+
+    }
+    
+    func setClickHandler(_ handler: @escaping (MarketapSDK.MarketapClickEvent) -> Void) {
+
+    }
+}
 
 class InAppMessageServiceTests: XCTestCase {
     var service: InAppMessageService!
@@ -44,7 +53,7 @@ class InAppMessageServiceTests: XCTestCase {
         mockAPI = MockMarketapAPIForIAM()
         mockCache = MockMarketapCache()
 
-        service = InAppMessageService(api: mockAPI, cache: mockCache)
+        service = InAppMessageService(customHandlerStore: CustomHandlerStor(), api: mockAPI, cache: mockCache)
     }
 
     override func tearDown() {

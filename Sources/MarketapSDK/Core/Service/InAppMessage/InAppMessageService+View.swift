@@ -125,7 +125,11 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
         )
     }
 
-    func onClick(campaign: InAppCampaign, locationId: String, messageId: String) {
+    func onClick(campaign: InAppCampaign, locationId: String, messageId: String, url: String) {
+        customHandlerStore.handleClick(
+            MarketapClickEvent(campaignType: .inAppMessage, campaignId: campaign.id, url: url)
+        )
+
         delegate?.trackEvent(
             eventName: "mkt_click_message",
             eventProperties: [
