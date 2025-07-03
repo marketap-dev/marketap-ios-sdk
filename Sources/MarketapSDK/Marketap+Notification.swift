@@ -49,6 +49,7 @@ import UIKit
 
     /// 콜드스타트시 필요한 정보를 처리합니다.
     @objc public static func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]?) {
+        swizzler.enableSwizzlingIfNeeded()
         guard let client = _client else {
             coldStartNotificationHandler.application(application, didFinishLaunchingWithOptions: launchOptions)
             return

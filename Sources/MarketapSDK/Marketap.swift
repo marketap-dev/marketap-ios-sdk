@@ -15,6 +15,7 @@ public class Marketap: NSObject {
     static var _client: MarketapClientProtocol?
     static let customHandlerStore = MarketapCustomHandlerStore()
     static let coldStartNotificationHandler = ColdStartNotificationHandler()
+    static let swizzler = MarketapSwizzler()
 
     /// Marketap SDK의 클라이언트 인스턴스를 제공합니다.
     ///
