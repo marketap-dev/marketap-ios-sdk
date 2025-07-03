@@ -7,7 +7,7 @@
 
 import Foundation
 
-class MarketapAPI: MarketapAPIProtocol {
+final class MarketapAPI: MarketapAPIProtocol {
     enum BaseURL: String {
         case event = "https://event.marketap.io"
         case crm = "https://crm.marketap.io"

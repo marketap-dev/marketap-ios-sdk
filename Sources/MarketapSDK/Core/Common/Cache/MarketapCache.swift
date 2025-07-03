@@ -7,7 +7,7 @@
 
 import Foundation
 
-class MarketapCache: MarketapCacheProtocol {
+final class MarketapCache: MarketapCacheProtocol {
     enum CacheKey {
         static let userIdKey = "MarketapCache_userId"
         static let sessionIdKey = "MarketapCache_sessionId"

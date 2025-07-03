@@ -11,7 +11,7 @@ protocol InAppMessageServiceDelegate: AnyObject {
     func trackEvent(eventName: String, eventProperties: [String: Any]?)
 }
 
-class InAppMessageService: NSObject, InAppMessageServiceProtocol {
+final class InAppMessageService: NSObject, InAppMessageServiceProtocol {
     static let cacheExpiration = Double(60 * 5)
     static let campaignCacheKey = "InAppMessageService_campaigns"
     static let lastFetchKey = "InAppMessageService_lastFetch"

@@ -7,7 +7,7 @@
 
 import Foundation
 
-class MarketapCore: MarketapClientProtocol, MarketapNotificationHandlerProtocol {
+final class MarketapCore: MarketapClientProtocol, MarketapNotificationHandlerProtocol {
     let customHandlerStore: MarketapCustomHandlerStoreProtocol
     let eventService: EventServiceProtocol
     let inAppMessageService: InAppMessageServiceProtocol

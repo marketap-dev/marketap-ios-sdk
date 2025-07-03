@@ -7,7 +7,7 @@
 
 import Foundation
 
-class DataStorageManager<T: Codable> {
+final class DataStorageManager<T: Codable> {
     private let queue: DispatchQueue
     private var storedData: [T] {
         didSet {

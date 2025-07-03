@@ -8,7 +8,7 @@
 import UIKit
 
 /// MarketapClient 가 initialize 되기 이전에 발생한 노티피케이션 관련 액션을 관리합니다.
-class ColdStartNotificationHandler: MarketapNotificationClientProtocol {
+final class ColdStartNotificationHandler: MarketapNotificationClientProtocol {
     var token: Data?
     var notification: MarketapNotification?
 

@@ -14,7 +14,7 @@ protocol InAppMessageWebViewControllerDelegate: AnyObject, WKNavigationDelegate 
     func onImpression(campaign: InAppCampaign, messageId: String)
 }
 
-class InAppMessageWebViewController: UIViewController {
+final class InAppMessageWebViewController: UIViewController {
     var campaign: InAppCampaign? {
         didSet {
             if let campaign {

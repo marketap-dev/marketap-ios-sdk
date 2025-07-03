@@ -7,7 +7,7 @@
 
 import Foundation
 
-class EventService: EventServiceProtocol {
+final class EventService: EventServiceProtocol {
     static let deviceRequestKey = "EventService_deviceRequest"
     static let failedEventsKey = "EventService_failedEvents"
     static let failedUsersKey = "EventService_failedUsers"

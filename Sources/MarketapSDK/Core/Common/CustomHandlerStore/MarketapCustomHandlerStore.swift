@@ -8,7 +8,7 @@
 import Foundation
 import UIKit
 
-class MarketapCustomHandlerStore: MarketapCustomHandlerStoreProtocol {
+final class MarketapCustomHandlerStore: MarketapCustomHandlerStoreProtocol {
     var clickHandler: (MarketapClickEvent) -> Void = { event in
         if let urlString = event.url, let url = URL(string: urlString) {
             DispatchQueue.main.async {
