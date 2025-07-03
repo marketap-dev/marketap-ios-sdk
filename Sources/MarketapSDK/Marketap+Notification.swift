@@ -57,13 +57,15 @@ import UIKit
     }
 
     public static func requestAuthorizationForPushNotifications() {
+        Logger.verbose("[Marketap] requesting push authorization")
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { granted, error in
             if granted {
                 DispatchQueue.main.async {
+                    Logger.verbose("[Marketap] registerForRemoteNotifications")
                     UIApplication.shared.registerForRemoteNotifications()
                 }
             } else if let error = error {
-                Logger.error("Notification permission error: \(error.localizedDescription)")
+                Logger.warn("Notification permission error: \(error.localizedDescription)")
             }
         }
     }

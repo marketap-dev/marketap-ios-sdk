@@ -161,6 +161,7 @@ final class EventService: EventServiceProtocol {
     }
 
     private func updateProfile(request: UpdateProfileRequest) {
+        Logger.debug("[EventService] update user: \(request.userId) \(request.properties?.toJSONString() ?? "null")")
         self.api.requestWithoutResponse(
             baseURL: .event,
             path: "/v1/client/profile/user?project_id=\(self.projectId)",
@@ -179,6 +180,7 @@ final class EventService: EventServiceProtocol {
 
 
     private func track(request: IngestEventRequest) {
+        Logger.debug("[EventService] track event: \(request.name) \(request.properties?.toJSONString() ?? "null")")
         api.requestWithoutResponse(
             baseURL: .event,
             path: "/v1/client/events?project_id=\(self.projectId)",

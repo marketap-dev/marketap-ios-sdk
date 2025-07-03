@@ -105,6 +105,7 @@ final class MarketapCache: MarketapCacheProtocol {
                 updatedDevice.token = pushToken
                 self.saveCodableObject(pushToken, key: CacheKey.pushTokenKey)
             }
+            Logger.verbose("[MarketapCache] updating device info: \(updatedDevice.toJSONString())")
             self._device = updatedDevice
         }
     }
@@ -114,7 +115,7 @@ final class MarketapCache: MarketapCacheProtocol {
             let data = try JSONEncoder().encode(object)
             self.userDefaults.set(data, forKey: key)
         } catch {
-            Logger.error("Failed to save \(key): \(error.localizedDescription)")
+            Logger.error("[MarketapCache] Failed to save \(key): \(error.localizedDescription)")
         }
     }
 
@@ -123,7 +124,7 @@ final class MarketapCache: MarketapCacheProtocol {
         do {
             return try JSONDecoder().decode(T.self, from: data)
         } catch {
-            Logger.error("Failed to load \(key): \(error.localizedDescription)")
+            Logger.error("[MarketapCache] Failed to load \(key): \(error.localizedDescription)")
             return nil
         }
     }

@@ -10,7 +10,27 @@ import Foundation
 import os
 #endif
 
-public enum Logger {
+public enum MarketapLogLevel: Int {
+    case verbose, debug, info, warn, error, none
+
+    var osLogType: OSLogType? {
+        switch self {
+        case .verbose, .debug:
+            return .debug
+        case .info:
+            return .info
+        case .warn:
+            return .error
+        case .error:
+            return .fault
+        case .none:
+            return nil
+        }
+    }
+}
+
+enum Logger {
+    static var level = MarketapLogLevel.info
     private static let subsystem = "com.marketap.sdk"
     private static let prefix = "[MarketapSDK]"
 
@@ -18,8 +38,8 @@ public enum Logger {
         log(message, level: .error)
     }
 
-    public static func warning(_ message: String) {
-        log(message, level: .default)
+    public static func warn(_ message: String) {
+        log(message, level: .warn)
     }
 
     public static func info(_ message: String) {
@@ -30,25 +50,42 @@ public enum Logger {
         log(message, level: .debug)
     }
 
-    private static func log(_ message: String, level: OSLogType) {
+    public static func verbose(_ message: String) {
+        log(message, level: .verbose)
+    }
+
+    private static func log(_ message: String, level: MarketapLogLevel) {
+        if level.rawValue < Self.level.rawValue { return }
+
         #if canImport(os)
         if #available(iOS 14.0, *) {
             let logger = os.Logger(subsystem: subsystem, category: "\(level)")
             switch level {
             case .error:
-                logger.error("\(message)")
+                logger.critical("\(message)")
             case .info:
                 logger.info("\(message)")
             case .debug:
                 logger.debug("\(message)")
+            case .warn:
+                logger.warning("\(message)")
             default:
-                logger.log("\(message)") // `.default` 로그
+                logger.log("\(message)")
             }
-        } else {
-            os_log("%{public}s %{public}s", type: level, prefix, message)
+        } else if let osLogType = level.osLogType {
+            os_log("%{public}s %{public}s", type: osLogType, prefix, message)
         }
         #else
         print(message)
         #endif
+    }
+}
+
+extension Encodable {
+    func toJSONString() -> String {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .prettyPrinted
+        guard let data = try? encoder.encode(self) else { return "(encode failed)" }
+        return String(data: data, encoding: .utf8) ?? "(encode failed)"
     }
 }

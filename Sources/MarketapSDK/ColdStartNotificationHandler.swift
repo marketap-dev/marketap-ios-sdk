@@ -13,6 +13,7 @@ final class ColdStartNotificationHandler: MarketapNotificationClientProtocol {
     var notification: MarketapNotification?
 
     func setPushToken(token: Data) {
+        Logger.verbose("[ColdStartNotificationHandler] store token")
         self.token = token
     }
 
@@ -25,6 +26,7 @@ final class ColdStartNotificationHandler: MarketapNotificationClientProtocol {
         guard let notification = MarketapNotification(info: info) else {
             return false
         }
+        Logger.verbose("[ColdStartNotificationHandler] store didReceive event")
 
         self.notification = notification
         completionHandler()
@@ -41,6 +43,7 @@ final class ColdStartNotificationHandler: MarketapNotificationClientProtocol {
               let notification = MarketapNotification(info: info) else {
             return
         }
+        Logger.verbose("[ColdStartNotificationHandler] store didFinishLaunchingWithOptions event")
 
         self.notification = notification
     }

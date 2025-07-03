@@ -16,6 +16,9 @@ import UIKit
               let body = message.body as? [String: Any],
               let typeString = body["type"] as? String,
               let eventType = MarketapBridgeEventType(rawValue: typeString) else {
+            if message.name == Self.name {
+                Logger.error("[MarketapWebBridge] invalid body: \(message.body)")
+            }
             return
         }
 
@@ -26,10 +29,13 @@ import UIKit
     private func handleEvent(_ event: MarketapBridgeEvent) {
         switch event.type {
         case .track:
+            Logger.debug("[MarketapWebBridge] handling track event: \(String(describing: event.params))")
             handleTrackEvent(params: event.params)
         case .identify:
+            Logger.debug("[MarketapWebBridge] handling identify event: \(String(describing: event.params))")
             handleIdentifyEvent(params: event.params)
         case .resetIdentity:
+            Logger.debug("[MarketapWebBridge] reset identity")
             Marketap.resetIdentity()
         }
     }

@@ -13,8 +13,9 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         UNUserNotificationCenter.current().delegate = self
 
         Marketap.initialize(projectId: "kx43pz7")
-        Marketap.requestAuthorizationForPushNotifications()
         Marketap.application(application, didFinishLaunchingWithOptions: launchOptions)
+        Marketap.requestAuthorizationForPushNotifications()
+        Marketap.setLogLevel(.verbose)
 
         if let name: String = UserDefaults.standard.string(forKey: "userName"),
            let email: String = UserDefaults.standard.string(forKey: "userEmail"),
@@ -47,10 +48,6 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
 
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
         Marketap.setPushToken(token: deviceToken)
-        let tokenParts = deviceToken.map { data in String(format: "%02.2hhx", data) }
-        let token = tokenParts.joined()
-
-        print("Push Token: \(token)")
     }
 
     func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {

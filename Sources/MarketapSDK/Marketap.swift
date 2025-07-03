@@ -25,7 +25,7 @@ public class Marketap: NSObject {
     public static var client: MarketapClientProtocol? {
         get {
             guard let _client else {
-                Logger.error("Marketap SDK is not initialized. Make sure to call Marketap.initialize(projectId:) before using the SDK.")
+                Logger.warn("Marketap SDK is not initialized. Make sure to call Marketap.initialize(projectId:) before using the SDK.")
                 return nil
             }
             return _client
@@ -57,5 +57,9 @@ public class Marketap: NSObject {
 
     public static func setClickHandler(_ handler: @escaping (MarketapClickEvent) -> Void) {
         customHandlerStore.setClickHandler(handler)
+    }
+
+    public static func setLogLevel(_ level: MarketapLogLevel) {
+        Logger.level = level
     }
 }

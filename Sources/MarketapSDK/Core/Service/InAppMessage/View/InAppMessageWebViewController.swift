@@ -121,6 +121,7 @@ final class InAppMessageWebViewController: UIViewController {
 extension InAppMessageWebViewController: WKScriptMessageHandler {
 
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+        Logger.verbose("[InAppMessageService] receive message - id: \(campaign?.id ?? "null"), name: \(message.name), body: \(message.body)")
         guard let campaign, let jsEvent = MarketapJSMessage(rawValue: message.name) else {
             return
         }

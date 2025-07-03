@@ -41,6 +41,7 @@ struct MarketapNotification {
 extension MarketapCore {
     func setPushToken(token: Data) {
         let tokenString = token.map { String(format: "%02x", $0) }.joined()
+        Logger.debug("[MarketapCore] set push token: \(tokenString)")
         setPushToken(token: tokenString)
     }
 
@@ -50,10 +51,10 @@ extension MarketapCore {
         withCompletionHandler completionHandler: @escaping () -> Void
     ) -> Bool {
         let info = response.notification.request.content.userInfo["marketap"] as? [String: Any]
-        guard let notification = MarketapNotification(info: info) else {
+        guard let info, let notification = MarketapNotification(info: info) else {
             return false
         }
-
+        Logger.debug("[MarketapCore] didReceive: \(info)")
         handleNotification(notification)
         completionHandler()
 
@@ -69,6 +70,7 @@ extension MarketapCore {
               let notification = MarketapNotification(info: info) else {
             return
         }
+        Logger.debug("[MarketapCore] cold start notification: \(info)")
 
         handleNotification(notification)
     }
@@ -106,6 +108,7 @@ extension MarketapNotificationClientProtocol {
         if MarketapNotification(info: info) == nil {
             return false
         }
+        Logger.debug("[MarketapCore] willPresent: \(info ?? [:])")
 
         if #available(iOS 14.0, *) {
             completionHandler([.banner, .sound, .badge])
