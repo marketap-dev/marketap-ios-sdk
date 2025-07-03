@@ -55,4 +55,16 @@ import UIKit
         }
         client.application(application, didFinishLaunchingWithOptions: launchOptions)
     }
+
+    public static func requestAuthorizationForPushNotifications() {
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { granted, error in
+            if granted {
+                DispatchQueue.main.async {
+                    UIApplication.shared.registerForRemoteNotifications()
+                }
+            } else if let error = error {
+                Logger.error("Notification permission error: \(error.localizedDescription)")
+            }
+        }
+    }
 }

@@ -11,9 +11,9 @@ import MarketapSDK
 class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
         UNUserNotificationCenter.current().delegate = self
-        requestNotificationPermissions()
 
         Marketap.initialize(projectId: "kx43pz7")
+        Marketap.requestAuthorizationForPushNotifications()
         Marketap.application(application, didFinishLaunchingWithOptions: launchOptions)
 
         if let name: String = UserDefaults.standard.string(forKey: "userName"),
