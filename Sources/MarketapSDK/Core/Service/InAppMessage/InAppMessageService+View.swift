@@ -25,7 +25,7 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
     }
 
     func hideCampaign(campaignId: String, until: TimeInterval) {
-        Logger.verbose("[InAppMessageService] hide \(campaignId) until: \(until)")
+        Logger.debug("hide \(campaignId) until: \(until)")
         isModalShown = false
         if until > 0 {
             UserDefaults.standard.set(Date().timeIntervalSince1970 + until, forKey: "hide_campaign_\(campaignId)")
@@ -70,20 +70,20 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
     private func presentCampaignModal(campaign: InAppCampaign) {
 
         guard didFinishLoad else {
-            Logger.verbose("[InAppMessageService] loading campaign: \(campaign.id)")
+            Logger.verbose("loading campaign: \(campaign.id)")
             pendingCampaign = campaign
             return
         }
         DispatchQueue.main.async {
             self.campaignViewController.campaign = campaign
             if let topViewController = self.getTopViewController() {
-                Logger.verbose("[InAppMessageService] presenting campaign: \(campaign.id)")
+                Logger.verbose("presenting campaign: \(campaign.id)")
                 topViewController.present(self.campaignViewController, animated: false) {
-                    Logger.verbose("[InAppMessageService] presented campaign: \(campaign.id)")
+                    Logger.verbose("presented campaign: \(campaign.id)")
                     self.isModalShown = true
                 }
             } else {
-                Logger.warn("[InAppMessageService] failed to find topViewController: \(campaign.id)")
+                Logger.warn("failed to find topViewController: \(campaign.id)")
             }
         }
     }
@@ -131,7 +131,8 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
         )
     }
 
-    func onClick(campaign: InAppCampaign, locationId: String, messageId: String, url: String) {
+    func onClick(campaign: InAppCampaign, locationId: String, messageId: String, url: String?) {
+        Logger.debug("onClick: \(url ?? "null")")
         customHandlerStore.handleClick(
             MarketapClickEvent(campaignType: .inAppMessage, campaignId: campaign.id, url: url)
         )

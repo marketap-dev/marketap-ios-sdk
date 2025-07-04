@@ -107,6 +107,7 @@ final class EventService: EventServiceProtocol {
         if timeInterval > 1800 || lastEventTimestamp == 0 {
             let newSessionId = UUID().uuidString
             cache.sessionId = newSessionId
+            Logger.debug("session start: \(newSessionId)")
 
             let event = IngestEventRequest(
                 id: nil,
@@ -161,7 +162,6 @@ final class EventService: EventServiceProtocol {
     }
 
     private func updateProfile(request: UpdateProfileRequest) {
-        Logger.debug("[EventService] update user: \(request.userId) \(request.properties?.toJSONString() ?? "null")")
         self.api.requestWithoutResponse(
             baseURL: .event,
             path: "/v1/client/profile/user?project_id=\(self.projectId)",
@@ -180,7 +180,6 @@ final class EventService: EventServiceProtocol {
 
 
     private func track(request: IngestEventRequest) {
-        Logger.debug("[EventService] track event: \(request.name) \(request.properties?.toJSONString() ?? "null")")
         api.requestWithoutResponse(
             baseURL: .event,
             path: "/v1/client/events?project_id=\(self.projectId)",

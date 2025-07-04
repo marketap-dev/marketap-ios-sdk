@@ -12,10 +12,10 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
         UNUserNotificationCenter.current().delegate = self
 
+        Marketap.setLogLevel(.verbose)
         Marketap.initialize(projectId: "kx43pz7")
         Marketap.application(application, didFinishLaunchingWithOptions: launchOptions)
         Marketap.requestAuthorizationForPushNotifications()
-        Marketap.setLogLevel(.verbose)
 
         if let name: String = UserDefaults.standard.string(forKey: "userName"),
            let email: String = UserDefaults.standard.string(forKey: "userEmail"),

@@ -41,7 +41,6 @@ struct MarketapNotification {
 extension MarketapCore {
     func setPushToken(token: Data) {
         let tokenString = token.map { String(format: "%02x", $0) }.joined()
-        Logger.debug("[MarketapCore] set push token: \(tokenString)")
         setPushToken(token: tokenString)
     }
 
@@ -52,9 +51,10 @@ extension MarketapCore {
     ) -> Bool {
         let info = response.notification.request.content.userInfo["marketap"] as? [String: Any]
         guard let info, let notification = MarketapNotification(info: info) else {
+            Logger.verbose("invalid info")
             return false
         }
-        Logger.debug("[MarketapCore] didReceive: \(info)")
+        Logger.debug("didReceive:\n\(info.prettyPrintedJSONString)")
         handleNotification(notification)
         completionHandler()
 
@@ -68,9 +68,10 @@ extension MarketapCore {
         guard let remoteNotification = launchOptions?[.remoteNotification] as? [AnyHashable: Any],
               let info = remoteNotification["marketap"] as? [String: Any],
               let notification = MarketapNotification(info: info) else {
+            Logger.verbose("invalid info")
             return
         }
-        Logger.debug("[MarketapCore] cold start notification: \(info)")
+        Logger.debug("cold start notification:\n\(info.prettyPrintedJSONString)")
 
         handleNotification(notification)
     }
@@ -106,9 +107,10 @@ extension MarketapNotificationClientProtocol {
 
         let info = notification.request.content.userInfo["marketap"] as? [String: Any]
         if MarketapNotification(info: info) == nil {
+            Logger.verbose("invalid info")
             return false
         }
-        Logger.debug("[MarketapCore] willPresent: \(info ?? [:])")
+        Logger.debug("willPresent:\n\(info.prettyPrintedJSONString)")
 
         if #available(iOS 14.0, *) {
             completionHandler([.banner, .sound, .badge])

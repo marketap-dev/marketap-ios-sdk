@@ -33,7 +33,7 @@ final class MarketapAPI: MarketapAPIProtocol {
         do {
             request.httpBody = try JSONEncoder().encode(body)
         } catch {
-            Logger.error("[MarketapAPI] encoding error: \(error.localizedDescription)")
+            Logger.error("encoding error: \(error.localizedDescription)")
             completion?(.failure(.encodingError(error)))
             return
         }
@@ -42,7 +42,7 @@ final class MarketapAPI: MarketapAPIProtocol {
 
         let task = URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
-                Logger.error("[MarketapAPI] response error: \(error.localizedDescription)")
+                Logger.error("response error: \(error.localizedDescription)")
                 completion?(.failure(.networkError(error)))
                 return
             }
@@ -50,7 +50,7 @@ final class MarketapAPI: MarketapAPIProtocol {
             self.logResponse(response, data: data)
 
             guard let data = data else {
-                Logger.error("[MarketapAPI] response error: no data")
+                Logger.error("response error: no data")
                 completion?(.failure(.noData))
                 return
             }
@@ -59,7 +59,7 @@ final class MarketapAPI: MarketapAPIProtocol {
                 let wrappedResponse = try JSONDecoder().decode(ServerResponse<T>.self, from: data)
                 completion?(.success(wrappedResponse.data))
             } catch {
-                Logger.error("[MarketapAPI] decoding error: \(error.localizedDescription)")
+                Logger.error("decoding error: \(error.localizedDescription)")
                 completion?(.failure(.decodingError(error)))
             }
         }
@@ -85,7 +85,7 @@ final class MarketapAPI: MarketapAPIProtocol {
         do {
             request.httpBody = try JSONEncoder().encode(body)
         } catch {
-            Logger.error("[MarketapAPI] encoding error: \(error.localizedDescription)")
+            Logger.error("encoding error: \(error.localizedDescription)")
             completion?(.failure(.encodingError(error)))
             return
         }
@@ -94,7 +94,7 @@ final class MarketapAPI: MarketapAPIProtocol {
 
         let task = URLSession.shared.dataTask(with: request) { _, response, error in
             if let error = error {
-                Logger.error("[MarketapAPI] response error: \(error.localizedDescription)")
+                Logger.error("response error: \(error.localizedDescription)")
                 completion?(.failure(.networkError(error)))
                 return
             }
@@ -102,7 +102,7 @@ final class MarketapAPI: MarketapAPIProtocol {
             self.logResponse(response, data: nil)
 
             guard let httpResponse = response as? HTTPURLResponse else {
-                Logger.error("[MarketapAPI] response error: no data")
+                Logger.error("response error: no data")
                 completion?(.failure(.noData))
                 return
             }
@@ -110,7 +110,7 @@ final class MarketapAPI: MarketapAPIProtocol {
             if (200...299).contains(httpResponse.statusCode) {
                 completion?(.success(()))
             } else {
-                Logger.error("[MarketapAPI] status code invalid: \(httpResponse.statusCode)")
+                Logger.error("status code invalid: \(httpResponse.statusCode)")
                 completion?(.failure(.serverError(statusCode: httpResponse.statusCode)))
             }
         }

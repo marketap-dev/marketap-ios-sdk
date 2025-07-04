@@ -9,7 +9,7 @@ import UIKit
 import WebKit
 
 protocol InAppMessageWebViewControllerDelegate: AnyObject, WKNavigationDelegate {
-    func onClick(campaign: InAppCampaign, locationId: String, messageId: String, url: String)
+    func onClick(campaign: InAppCampaign, locationId: String, messageId: String, url: String?)
     func hideCampaign(campaignId: String, until: TimeInterval)
     func onImpression(campaign: InAppCampaign, messageId: String)
 }
@@ -121,15 +121,15 @@ final class InAppMessageWebViewController: UIViewController {
 extension InAppMessageWebViewController: WKScriptMessageHandler {
 
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
-        Logger.verbose("[InAppMessageService] receive message - id: \(campaign?.id ?? "null"), name: \(message.name), body: \(message.body)")
+        Logger.verbose("receive message: \(campaign?.id ?? "null"), name: \(message.name), body: \(message.body)")
         guard let campaign, let jsEvent = MarketapJSMessage(rawValue: message.name) else {
             return
         }
 
         switch jsEvent {
         case .click:
-            if let body = message.body as? [String], let locationId = body.first, let urlString = body.last {
-                delegate?.onClick(campaign: campaign, locationId: locationId, messageId: messageId, url: urlString)
+            if let body = message.body as? [String], let locationId = body.first {
+                delegate?.onClick(campaign: campaign, locationId: locationId, messageId: messageId, url: body.last)
             }
         case .hide:
             self.dismiss(animated: false)

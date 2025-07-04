@@ -10,7 +10,7 @@ import Foundation
 extension MarketapAPI {
     private func logJSON(_ title: String, _ data: Data?) {
         guard let data = data else {
-            Logger.verbose("[MarketapAPI] \(title): No data")
+            Logger.verbose("\(title): No data")
             return
         }
 
@@ -19,22 +19,22 @@ extension MarketapAPI {
             let prettyData = try JSONSerialization.data(withJSONObject: jsonObject, options: .prettyPrinted)
 
             if let jsonString = String(data: prettyData, encoding: .utf8) {
-                Logger.verbose("[MarketapAPI] \(title):\n\(jsonString)")
+                Logger.verbose("\(title):\n\(jsonString)")
             } else {
-                Logger.verbose("[MarketapAPI] \(title): Unable to convert to string")
+                Logger.verbose("\(title): Unable to convert to string")
             }
         } catch {
-            Logger.verbose("[MarketapAPI] \(title): Failed to parse JSON - \(error)")
+            Logger.verbose("\(title): Failed to parse JSON - \(error)")
         }
     }
 
     func logRequest(_ request: URLRequest, body: Encodable?) {
-        Logger.verbose("[MarketapAPI] HTTP Request")
-        Logger.verbose("[MarketapAPI] URL: \(request.url?.absoluteString ?? "Unknown URL")")
-        Logger.verbose("[MarketapAPI] Method: \(request.httpMethod ?? "Unknown Method")")
+        Logger.verbose("HTTP Request")
+        Logger.verbose("URL: \(request.url?.absoluteString ?? "Unknown URL")")
+        Logger.verbose("Method: \(request.httpMethod ?? "Unknown Method")")
 
         if let headers = request.allHTTPHeaderFields {
-            Logger.verbose("[MarketapAPI] Headers: \(headers)")
+            Logger.verbose("Headers:\n\(headers.toJSONString())")
         }
 
         if let body = body, let encodedBody = try? JSONEncoder().encode(body) {
@@ -46,15 +46,15 @@ extension MarketapAPI {
 
     func logResponse(_ response: URLResponse?, data: Data?) {
         guard let httpResponse = response as? HTTPURLResponse else {
-            Logger.verbose("[MarketapAPI] Invalid response received")
+            Logger.verbose("Invalid response received")
             return
         }
 
-        Logger.verbose("[MarketapAPI] HTTP Response")
-        Logger.verbose("[MarketapAPI] URL: \(httpResponse.url?.absoluteString ?? "Unknown URL")")
-        Logger.verbose("[MarketapAPI] Status Code: \(httpResponse.statusCode)")
+        Logger.verbose("HTTP Response")
+        Logger.verbose("URL: \(httpResponse.url?.absoluteString ?? "Unknown URL")")
+        Logger.verbose("Status Code: \(httpResponse.statusCode)")
 
-        Logger.verbose("[MarketapAPI] Headers: \(httpResponse.allHeaderFields)")
+        Logger.verbose("Headers:\n\(httpResponse.allHeaderFields.prettyPrintedJSONString)")
 
         logJSON("Response Body", data)
 

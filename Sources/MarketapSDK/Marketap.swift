@@ -12,7 +12,11 @@ import Foundation
 public class Marketap: NSObject {
 
     private override init() {}
-    static var _client: MarketapClientProtocol?
+    static var _client: MarketapClientProtocol? {
+        didSet {
+            Logger.verbose("didSet client: \(String(describing: _client))")
+        }
+    }
     static let customHandlerStore = MarketapCustomHandlerStore()
     static let coldStartNotificationHandler = ColdStartNotificationHandler()
 
@@ -31,6 +35,7 @@ public class Marketap: NSObject {
             return _client
         }
         set {
+            Logger.verbose("set client: \(String(describing: newValue))")
             _client = newValue
         }
     }
@@ -56,10 +61,12 @@ public class Marketap: NSObject {
     }
 
     public static func setClickHandler(_ handler: @escaping (MarketapClickEvent) -> Void) {
+        Logger.info("set custom click handler")
         customHandlerStore.setClickHandler(handler)
     }
 
     public static func setLogLevel(_ level: MarketapLogLevel) {
+        Logger.info("setLogLevel: \(level)")
         Logger.level = level
     }
 }

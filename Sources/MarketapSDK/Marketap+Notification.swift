@@ -57,11 +57,11 @@ import UIKit
     }
 
     public static func requestAuthorizationForPushNotifications() {
-        Logger.verbose("[Marketap] requesting push authorization")
+        Logger.info("requesting push authorization")
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { granted, error in
             if granted {
                 DispatchQueue.main.async {
-                    Logger.verbose("[Marketap] registerForRemoteNotifications")
+                    Logger.verbose("registerForRemoteNotifications")
                     UIApplication.shared.registerForRemoteNotifications()
                 }
             } else if let error = error {

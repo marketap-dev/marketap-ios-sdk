@@ -34,28 +34,57 @@ enum Logger {
     private static let subsystem = "com.marketap.sdk"
     private static let prefix = "[MarketapSDK]"
 
-    public static func error(_ message: String) {
-        log(message, level: .error)
+    public static func error(
+        _ message: @autoclosure () -> String,
+        file: String = #file,
+        line: Int = #line
+    ) {
+        log(message, file: file, line: line, level: .error)
     }
 
-    public static func warn(_ message: String) {
-        log(message, level: .warn)
+    public static func warn(
+        _ message: @autoclosure () -> String,
+        file: String = #file,
+        line: Int = #line
+    ) {
+        log(message, file: file, line: line, level: .warn)
     }
 
-    public static func info(_ message: String) {
-        log(message, level: .info)
+    public static func info(
+        _ message: @autoclosure () -> String,
+        file: String = #file,
+        function: String = #function,
+        line: Int = #line
+    ) {
+        log(message, file: file, line: line, level: .info)
     }
 
-    public static func debug(_ message: String) {
-        log(message, level: .debug)
+    public static func debug(
+        _ message: @autoclosure () -> String,
+        file: String = #file,
+        line: Int = #line
+    ) {
+        log(message, file: file, line: line, level: .debug)
     }
 
-    public static func verbose(_ message: String) {
-        log(message, level: .verbose)
+    public static func verbose(
+        _ message: @autoclosure () -> String,
+        file: String = #file,
+        line: Int = #line
+    ) {
+        log(message, file: file, line: line, level: .verbose)
     }
 
-    private static func log(_ message: String, level: MarketapLogLevel) {
+    private static func log(
+        _ messageMaker: () -> String,
+        file: String,
+        line: Int,
+        level: MarketapLogLevel
+    ) {
         if level.rawValue < Self.level.rawValue { return }
+        let fileName = (file as NSString).lastPathComponent
+        let tag = "[\(fileName):\(line)]"
+        let message = "\(tag) \(messageMaker())"
 
         #if canImport(os)
         if #available(iOS 14.0, *) {
@@ -87,5 +116,39 @@ extension Encodable {
         encoder.outputFormatting = .prettyPrinted
         guard let data = try? encoder.encode(self) else { return "(encode failed)" }
         return String(data: data, encoding: .utf8) ?? "(encode failed)"
+    }
+}
+
+extension Dictionary where Key == AnyHashable, Value == Any {
+    var prettyPrintedJSONString: String {
+        guard JSONSerialization.isValidJSONObject(self),
+              let data = try? JSONSerialization.data(withJSONObject: self, options: [.prettyPrinted]),
+              let jsonString = String(data: data, encoding: .utf8) else {
+            return "\(self)"
+        }
+        return jsonString
+    }
+}
+
+extension Dictionary where Key == String, Value == Any {
+    var prettyPrintedJSONString: String {
+        guard JSONSerialization.isValidJSONObject(self),
+              let data = try? JSONSerialization.data(withJSONObject: self, options: [.prettyPrinted]),
+              let jsonString = String(data: data, encoding: .utf8) else {
+            return "\(self)"
+        }
+        return jsonString
+    }
+}
+
+extension Optional where Wrapped == [String: Any] {
+    var prettyPrintedJSONString: String {
+        guard let dict = self,
+              JSONSerialization.isValidJSONObject(dict),
+              let data = try? JSONSerialization.data(withJSONObject: dict, options: [.prettyPrinted]),
+              let jsonString = String(data: data, encoding: .utf8) else {
+            return "null"
+        }
+        return jsonString
     }
 }
