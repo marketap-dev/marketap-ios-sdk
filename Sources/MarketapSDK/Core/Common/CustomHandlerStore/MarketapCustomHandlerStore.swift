@@ -12,9 +12,12 @@ final class MarketapCustomHandlerStore: MarketapCustomHandlerStoreProtocol {
     var storedEvent: MarketapClickEvent?
     var clickHandler: ((MarketapClickEvent) -> Void)?
 
+    var customized: Bool {
+        (Bundle.main.object(forInfoDictionaryKey: "MarketapClickCustomized") as? NSNumber)?.boolValue ?? false
+    }
+
     func handleClick(_ event: MarketapClickEvent) {
-        let customized = Bundle.main.object(forInfoDictionaryKey: "MarketapClickCustomized") as? Bool
-        if customized == true {
+        if customized {
             if let handler = clickHandler {
                 Logger.debug("custom handler: \(event.campaignType) clicked with url \(event.url ?? "null")")
                 handler(event)
@@ -23,9 +26,9 @@ final class MarketapCustomHandlerStore: MarketapCustomHandlerStoreProtocol {
                 storedEvent = event
             }
         } else {
+            Logger.debug("default handler: \(event.campaignType) clicked with url \(event.url ?? "null")")
             if let urlString = event.url, let url = URL(string: urlString) {
                 DispatchQueue.main.async {
-                    Logger.debug("default handler: \(event.campaignType) clicked with url \(event.url ?? "null")")
                     UIApplication.shared.open(url, options: [:], completionHandler: nil)
                 }
             }
@@ -33,6 +36,11 @@ final class MarketapCustomHandlerStore: MarketapCustomHandlerStoreProtocol {
     }
 
     func setClickHandler(_ handler: @escaping (MarketapClickEvent) -> Void) {
+        guard customized else {
+            Logger.warn("MarketapClickCustomized is not set. Please set this key in Info.plist to enable the custom click handler.")
+            return
+        }
+
         self.clickHandler = handler
         if let event = storedEvent {
             self.storedEvent = nil
