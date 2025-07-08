@@ -8,4 +8,4 @@
 import Foundation
 
 /// Defines the required methods for integrating Marketap SDK.
-public protocol MarketapClientProtocol: MarketapEventClientProtocol, MarketapNotificationClientProtocol {}
+public protocol MarketapClientProtocol: AnyObject, MarketapEventClientProtocol, MarketapNotificationClientProtocol {}

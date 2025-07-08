@@ -57,15 +57,15 @@ import UIKit
     }
 
     public static func requestAuthorizationForPushNotifications() {
-        Logger.info("requesting push authorization")
+        Logger.info("requestAuthorizationForPushNotifications")
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { granted, error in
             if granted {
                 DispatchQueue.main.async {
-                    Logger.verbose("registerForRemoteNotifications")
+                    Logger.debug("Push authorization granted")
                     UIApplication.shared.registerForRemoteNotifications()
                 }
             } else if let error = error {
-                Logger.warn("Notification permission error: \(error.localizedDescription)")
+                Logger.warn("Push permission error: \(error.localizedDescription)")
             }
         }
     }

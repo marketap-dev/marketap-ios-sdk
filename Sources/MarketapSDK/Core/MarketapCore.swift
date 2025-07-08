@@ -30,6 +30,10 @@ final class MarketapCore: MarketapClientProtocol, MarketapNotificationHandlerPro
             }
         }
     }
+
+    deinit {
+        Logger.verbose("client has been deallocated: \(ObjectIdentifier(self).hashValue)")
+    }
 }
 
 

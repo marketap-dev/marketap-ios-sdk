@@ -14,7 +14,11 @@ public class Marketap: NSObject {
     private override init() {}
     static var _client: MarketapClientProtocol? {
         didSet {
-            Logger.verbose("didSet client: \(String(describing: _client))")
+            if let _client {
+                Logger.verbose("didSet client: \(ObjectIdentifier(_client).hashValue)")
+            } else {
+                Logger.verbose("didSet client: null")
+            }
         }
     }
     static let customHandlerStore = MarketapCustomHandlerStore()
@@ -35,7 +39,11 @@ public class Marketap: NSObject {
             return _client
         }
         set {
-            Logger.verbose("set client: \(String(describing: newValue))")
+            if let newValue {
+                Logger.verbose("set client: \(ObjectIdentifier(newValue).hashValue)")
+            } else {
+                Logger.verbose("set client: null")
+            }
             _client = newValue
         }
     }
@@ -61,7 +69,7 @@ public class Marketap: NSObject {
     }
 
     public static func setClickHandler(_ handler: @escaping (MarketapClickEvent) -> Void) {
-        Logger.info("set custom click handler")
+        Logger.info("setClickHandler")
         customHandlerStore.setClickHandler(handler)
     }
 
