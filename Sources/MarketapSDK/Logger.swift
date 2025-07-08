@@ -53,7 +53,6 @@ enum Logger {
     public static func info(
         _ message: @autoclosure () -> String,
         file: String = #file,
-        function: String = #function,
         line: Int = #line
     ) {
         log(message, file: file, line: line, level: .info)

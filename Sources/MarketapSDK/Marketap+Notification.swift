@@ -64,7 +64,11 @@ import UIKit
                     Logger.debug("Push authorization granted")
                     UIApplication.shared.registerForRemoteNotifications()
                 }
-            } else if let error = error {
+            } else {
+                Logger.debug("Push authorization not granted")
+            }
+
+            if let error = error {
                 Logger.warn("Push permission error: \(error.localizedDescription)")
             }
         }
