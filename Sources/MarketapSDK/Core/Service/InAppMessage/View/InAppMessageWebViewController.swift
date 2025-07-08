@@ -17,7 +17,7 @@ protocol InAppMessageWebViewControllerDelegate: AnyObject, WKNavigationDelegate 
 final class InAppMessageWebViewController: UIViewController {
     var campaign: InAppCampaign? {
         didSet {
-            if let campaign {
+            if let campaign = campaign {
                 self.updateCampaignContent(campaignHTML: campaign.html)
             }
         }
@@ -80,7 +80,7 @@ final class InAppMessageWebViewController: UIViewController {
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
-        if let campaign {
+        if let campaign = campaign {
             delegate?.onImpression(campaign: campaign, messageId: messageId)
         }
     }
@@ -122,7 +122,7 @@ extension InAppMessageWebViewController: WKScriptMessageHandler {
 
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
         Logger.verbose("receive message: \(campaign?.id ?? "null"), name: \(message.name), body: \(message.body)")
-        guard let campaign, let jsEvent = MarketapJSMessage(rawValue: message.name) else {
+        guard let campaign = campaign, let jsEvent = MarketapJSMessage(rawValue: message.name) else {
             return
         }
 

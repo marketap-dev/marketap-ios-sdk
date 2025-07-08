@@ -104,7 +104,7 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
 
     func onEvent(eventRequest: IngestEventRequest) {
         fetchCampaigns { [weak self] campaigns in
-            guard let self else { return }
+            guard let self = self else { return }
             for campaign in campaigns {
                 if self.isEventTriggered(condition: campaign.triggerEventCondition, event: eventRequest) {
                     let didShowCampaign = self.showCampaignIfPossible(campaign: campaign)
@@ -155,7 +155,7 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         didFinishLoad = true
-        if let pendingCampaign {
+        if let pendingCampaign = pendingCampaign {
             self.pendingCampaign = nil
             presentCampaignModal(campaign: pendingCampaign)
         }

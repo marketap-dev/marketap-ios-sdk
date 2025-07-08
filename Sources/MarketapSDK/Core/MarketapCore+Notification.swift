@@ -15,7 +15,7 @@ struct MarketapNotification {
     let serverProperties: [String: String]?
 
     init?(info: [String: Any]?) {
-        guard let info else { return nil }
+        guard let info = info else { return nil }
 
         let deepLink = info["deepLink"] as? String
         let campaignId = info["campaignId"] as? String
@@ -50,7 +50,7 @@ extension MarketapCore {
         withCompletionHandler completionHandler: @escaping () -> Void
     ) -> Bool {
         let info = response.notification.request.content.userInfo["marketap"] as? [String: Any]
-        guard let info, let notification = MarketapNotification(info: info) else {
+        guard let info = info, let notification = MarketapNotification(info: info) else {
             Logger.verbose("invalid info")
             return false
         }

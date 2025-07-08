@@ -54,7 +54,7 @@ final class InAppMessageService: NSObject, InAppMessageServiceProtocol {
     }
 
     func fetchCampaigns(force: Bool = false, completion: (([InAppCampaign]) -> Void)? = nil) {
-        if let lastFetch, !force, Date().timeIntervalSince(lastFetch) < Self.cacheExpiration {
+        if let lastFetch = lastFetch, !force, Date().timeIntervalSince(lastFetch) < Self.cacheExpiration {
             if self.campaigns == nil {
                 self.campaigns = cache.loadCodableObject(forKey: Self.campaignCacheKey)
             }

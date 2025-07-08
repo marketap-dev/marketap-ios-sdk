@@ -44,7 +44,7 @@ class MockMarketapCache: MarketapCacheProtocol {
     }
 
     func updateDevice(pushToken: String? = nil) {
-        if let pushToken {
+        if let pushToken = pushToken {
             device.token = pushToken
         }
     }

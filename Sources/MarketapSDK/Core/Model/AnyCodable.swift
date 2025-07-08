@@ -17,7 +17,7 @@ struct AnyCodable: Codable, Equatable {
     func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
 
-        guard let value else {
+        guard let value = value else {
             try container.encodeNil()
             return
         }

@@ -14,7 +14,7 @@ public class Marketap: NSObject {
     private override init() {}
     static var _client: MarketapClientProtocol? {
         didSet {
-            if let _client {
+            if let _client = _client {
                 Logger.verbose("didSet client: \(ObjectIdentifier(_client).hashValue)")
             } else {
                 Logger.verbose("didSet client: null")
@@ -32,14 +32,14 @@ public class Marketap: NSObject {
     /// - Note: 테스트 환경에서 `client`를 교체하여 Mock을 주입할 수 있습니다.
     public static var client: MarketapClientProtocol? {
         get {
-            guard let _client else {
+            guard let _client = _client else {
                 Logger.warn("Marketap SDK is not initialized. Make sure to call Marketap.initialize(projectId:) before using the SDK.")
                 return nil
             }
             return _client
         }
         set {
-            if let newValue {
+            if let newValue = newValue {
                 Logger.verbose("set client: \(ObjectIdentifier(newValue).hashValue)")
             } else {
                 Logger.verbose("set client: null")

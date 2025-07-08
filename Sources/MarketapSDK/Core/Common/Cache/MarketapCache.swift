@@ -85,7 +85,7 @@ final class MarketapCache: MarketapCacheProtocol {
         set {
             userIdQueue.async(flags: .barrier) {
                 self._userId = newValue
-                if let newValue {
+                if let newValue = newValue {
                     self.saveCodableObject(newValue, key: CacheKey.userIdKey)
                 } else {
                     self.userDefaults.removeObject(forKey: CacheKey.userIdKey)
@@ -101,7 +101,7 @@ final class MarketapCache: MarketapCacheProtocol {
     func updateDevice(pushToken: String? = nil) {
         deviceQueue.async(flags: .barrier){
             var updatedDevice = self.getDeviceInfo(pushToken: pushToken)
-            if let pushToken {
+            if let pushToken = pushToken {
                 updatedDevice.token = pushToken
                 self.saveCodableObject(pushToken, key: CacheKey.pushTokenKey)
             }

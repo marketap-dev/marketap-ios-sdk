@@ -53,12 +53,12 @@ final class ColdStartNotificationHandler: MarketapNotificationClientProtocol {
 
     func didInitializeClient(client: MarketapNotificationClientProtocol & MarketapNotificationHandlerProtocol) {
         Logger.verbose("didInitializeClient")
-        if let token {
+        if let token = token {
             client.setPushToken(token: token)
             self.token = nil
         }
 
-        if let notification {
+        if let notification = notification {
             client.handleNotification(notification)
             self.notification = nil
         }

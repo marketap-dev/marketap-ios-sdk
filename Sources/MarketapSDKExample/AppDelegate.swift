@@ -14,6 +14,13 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
 
         Marketap.setLogLevel(.verbose)
         Marketap.initialize(projectId: "kx43pz7")
+        Marketap.setClickHandler { event in
+            if let urlString = event.url, let url = URL(string: urlString) {
+                DispatchQueue.main.async {
+                    UIApplication.shared.open(url, options: [:], completionHandler: nil)
+                }
+            }
+        }
         Marketap.application(application, didFinishLaunchingWithOptions: launchOptions)
         Marketap.requestAuthorizationForPushNotifications()
 

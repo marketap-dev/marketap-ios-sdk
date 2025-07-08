@@ -11,7 +11,7 @@ extension Device {
     func makeRequest(removeUserId: Bool = false) -> UpdateDeviceRequest {
         let screen = screen.map { "\($0.width)x\($0.height)" }
         let deviceId = {
-            if let idfv {
+            if let idfv = idfv {
                 return "idfv:\(idfv)"
             }
             return "app_local_id:\(appLocalId)"
