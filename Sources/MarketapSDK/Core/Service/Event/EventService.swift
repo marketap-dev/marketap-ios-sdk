@@ -53,16 +53,6 @@ final class EventService: EventServiceProtocol {
         updateDevice(pushToken: token)
     }
 
-    func login(userId: String, userProperties: [String: Any]?, eventProperties: [String: Any]?) {
-        identify(userId: userId, userProperties: userProperties)
-        trackEvent(eventName: MarketapEvent.login.rawValue, eventProperties: eventProperties)
-    }
-
-    func logout(eventProperties: [String: Any]?) {
-        trackEvent(eventName: MarketapEvent.logout.rawValue, eventProperties: eventProperties)
-        flushUser()
-    }
-
     func identify(userId: String, userProperties: [String: Any]?) {
         let userIdChanged = cache.userId != userId
         cache.saveUserId(userId)

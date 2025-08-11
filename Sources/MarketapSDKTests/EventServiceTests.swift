@@ -98,22 +98,6 @@ class EventServiceTests: XCTestCase {
         super.tearDown()
     }
 
-    func testLogin() {
-        let testUserId = "user_123"
-        eventService.login(userId: testUserId, userProperties: nil, eventProperties: nil)
-
-        XCTAssertTrue(mockDelegate.handleUserIdChangedCalled, "Delegate의 handleUserIdChanged가 호출되지 않음")
-        XCTAssertEqual(mockCache.userId, testUserId, "UserID가 정상적으로 저장되지 않음")
-    }
-
-    func testLogout() {
-        mockCache.userId = "user_123"
-        eventService.logout(eventProperties: nil)
-
-        XCTAssertTrue(mockDelegate.handleUserIdChangedCalled, "Delegate의 handleUserIdChanged가 호출되지 않음")
-        XCTAssertNil(mockCache.userId, "UserID가 정상적으로 삭제되지 않음")
-    }
-
     func testTrackEvent() {
         let eventName = "test_event"
         let testProperties: [String: Any] = ["key": "value"]

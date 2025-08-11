@@ -15,17 +15,35 @@ extension MarketapCore {
         }
     }
 
+    func signup(
+        userId: String,
+        userProperties: [String: Any]? = nil,
+        eventProperties: [String: Any]? = nil,
+        persistUser: Bool = true
+    ) {
+        queue.async {
+            Logger.debug("signup: userProperties \(userProperties.prettyPrintedJSONString), eventProperties \(eventProperties.prettyPrintedJSONString), persistUser: \(persistUser)")
+            self.eventService.identify(userId: userId, userProperties: userProperties)
+            self.eventService.trackEvent(eventName: MarketapEvent.signup.rawValue, eventProperties: eventProperties)
+            if !persistUser {
+                self.eventService.flushUser()
+            }
+        }
+    }
+
     func login(userId: String, userProperties: [String : Any]?, eventProperties: [String : Any]?) {
         queue.async {
             Logger.debug("login: userProperties \(userProperties.prettyPrintedJSONString), eventProperties \(eventProperties.prettyPrintedJSONString)")
-            self.eventService.login(userId: userId, userProperties: userProperties, eventProperties: eventProperties)
+            self.eventService.identify(userId: userId, userProperties: userProperties)
+            self.eventService.trackEvent(eventName: MarketapEvent.login.rawValue, eventProperties: eventProperties)
         }
     }
 
     func logout(eventProperties: [String : Any]?) {
         queue.async {
-            Logger.debug("logout:\n\(eventProperties.prettyPrintedJSONString)")
-            self.eventService.logout(eventProperties: eventProperties)
+            Logger.debug("logout: \(eventProperties.prettyPrintedJSONString)")
+            self.eventService.trackEvent(eventName: MarketapEvent.logout.rawValue, eventProperties: eventProperties)
+            self.eventService.flushUser()
         }
     }
 

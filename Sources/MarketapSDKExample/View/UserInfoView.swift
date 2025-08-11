@@ -56,6 +56,16 @@ struct UserInfoView: View {
                             .cornerRadius(10)
                     }
                     .disabled(name.isEmpty || email.isEmpty)
+
+                    Button(action: signup) {
+                        Text("회원가입")
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.blue)
+                            .foregroundColor(.white)
+                            .cornerRadius(10)
+                    }
+                    .disabled(name.isEmpty || email.isEmpty)
                 }
             }
             .navigationTitle("내 정보")
@@ -81,6 +91,24 @@ struct UserInfoView: View {
                 "mkt_phone_number": phone
             ],
             eventProperties: nil
+        )
+
+        UserDefaults.standard.set(name, forKey: "userName")
+        UserDefaults.standard.set(email, forKey: "userEmail")
+        UserDefaults.standard.set(phone, forKey: "userPhone")
+        isLoggedIn = true
+    }
+
+    private func signup() {
+        Marketap.signup(
+            userId: phone,
+            userProperties: [
+                "mkt_name": name,
+                "mkt_email": email,
+                "mkt_phone_number": phone
+            ],
+            eventProperties: nil,
+            persistUser: true
         )
 
         UserDefaults.standard.set(name, forKey: "userName")

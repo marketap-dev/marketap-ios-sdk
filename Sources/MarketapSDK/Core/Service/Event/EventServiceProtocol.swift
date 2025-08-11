@@ -11,8 +11,6 @@ protocol EventServiceProtocol {
     var delegate: EventServiceDelegate? { get set }
 
     func setPushToken(token: String)
-    func login(userId: String, userProperties: [String: Any]?, eventProperties: [String: Any]?)
-    func logout(eventProperties: [String: Any]?)
     func identify(userId: String, userProperties: [String: Any]?)
     func flushUser()
     func trackEvent(eventName: String, eventProperties: [String: Any]?, id: String?, timestamp: Date?)

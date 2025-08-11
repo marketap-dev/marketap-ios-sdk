@@ -10,6 +10,21 @@ import UIKit
 
 extension Marketap {
 
+    /// 회원 가입, 유저 및 이벤트 속성을 설정합니다.
+    /// - Parameters:
+    ///   - userId: 유저의 고유 식별자 (ID)
+    ///   - userProperties: 유저 속성 (선택)
+    ///   - eventProperties: 기록할 이벤트 속성 (선택)
+    ///   - persistUser: 가입 이후 로그인 상태 유지
+    public static func signup(
+        userId: String,
+        userProperties: [String: Any]? = nil,
+        eventProperties: [String: Any]? = nil,
+        persistUser: Bool = true
+    ) {
+        client?.signup(userId: userId, userProperties: userProperties, eventProperties: eventProperties, persistUser: persistUser)
+    }
+
     /// 유저를 로그인 처리하고, 유저 및 이벤트 속성을 설정합니다.
     /// - Parameters:
     ///   - userId: 유저의 고유 식별자 (ID)

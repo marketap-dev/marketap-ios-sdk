@@ -10,6 +10,12 @@ import Foundation
 public protocol MarketapEventClientProtocol {
     // MARK: - User Authentication
 
+    /// - Parameters:
+    ///   - userId: A unique identifier for the user.
+    ///   - userProperties: A dictionary containing user-specific attributes (optional).
+    ///   - eventProperties: Additional properties related to the event (optional).
+    func signup(userId: String, userProperties: [String: Any]?, eventProperties: [String: Any]?, persistUser: Bool)
+
     /// Logs in the user and associates them with their properties.
     /// This method sets the user ID and updates user-specific attributes.
     /// Optionally, an event can be tracked to log the login action.

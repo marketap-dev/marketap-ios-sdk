@@ -20,14 +20,6 @@ class MockEventService: EventServiceProtocol {
         pushToken = token
     }
 
-    func login(userId: String, userProperties: [String : Any]?, eventProperties: [String : Any]?) {
-        identifiedUserId = userId
-    }
-
-    func logout(eventProperties: [String : Any]?) {
-        userFlushed = true
-    }
-
     func trackEvent(eventName: String, eventProperties: [String : Any]?, id: String?, timestamp: Date?) {
         trackedEvents.append(eventName)
     }
