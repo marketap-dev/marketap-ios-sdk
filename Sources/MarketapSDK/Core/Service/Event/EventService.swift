@@ -14,7 +14,7 @@ final class EventService: EventServiceProtocol {
 
     static let failedDataSize = 100
 
-    private let api: MarketapAPIProtocol
+    let api: MarketapAPIProtocol
     private let cache: MarketapCacheProtocol
     weak var delegate: EventServiceDelegate?
 
@@ -60,8 +60,7 @@ final class EventService: EventServiceProtocol {
         let request = UpdateProfileRequest(
             userId: userId,
             properties: userProperties?.toAnyCodable(),
-            device: cache.device.makeRequest(),
-            timestamp: Date()
+            device: cache.device.makeRequest()
         )
         updateProfile(request: request)
 
@@ -104,8 +103,7 @@ final class EventService: EventServiceProtocol {
                 name: "mkt_session_start",
                 userId: cache.userId,
                 device: device.makeRequest(),
-                properties: ["mkt_session_id": AnyCodable(newSessionId)],
-                timestamp: Date()
+                properties: ["mkt_session_id": AnyCodable(newSessionId)]
             )
             track(request: event)
         }
@@ -152,17 +150,23 @@ final class EventService: EventServiceProtocol {
     }
 
     private func updateProfile(request: UpdateProfileRequest) {
-        self.api.requestWithoutResponse(
-            baseURL: .event,
-            path: "/v1/client/profile/user?project_id=\(self.projectId)",
-            body: request
-        ) { [weak self] result in
-            switch result {
-            case .success:
-                self?.requestDidSuccess()
-            case .failure(let error):
-                if case MarketapError.serverError = error {
-                    self?.saveFailedUser(request)
+        withServerTime { [weak self] serverTime in
+            guard let self = self else { return }
+            var request = request
+            request.timestamp = serverTime
+
+            self.api.requestWithoutResponse(
+                baseURL: .event,
+                path: "/v1/client/profile/user?project_id=\(self.projectId)",
+                body: request
+            ) { [weak self] result in
+                switch result {
+                case .success:
+                    self?.requestDidSuccess()
+                case .failure(let error):
+                    if case MarketapError.serverError = error {
+                        self?.saveFailedUser(request)
+                    }
                 }
             }
         }
@@ -170,17 +174,22 @@ final class EventService: EventServiceProtocol {
 
 
     private func track(request: IngestEventRequest) {
-        api.requestWithoutResponse(
-            baseURL: .event,
-            path: "/v1/client/events?project_id=\(self.projectId)",
-            body: request
-        ) { [weak self] result in
-            switch result {
-            case .success:
-                self?.requestDidSuccess()
-            case .failure(let error):
-                if case MarketapError.serverError = error {
-                    self?.saveFailedEvent(request)
+        withServerTime { [weak self] serverTime in
+            guard let self = self else { return }
+            var request = request
+            request.timestamp = serverTime
+            self.api.requestWithoutResponse(
+                baseURL: .event,
+                path: "/v1/client/events?project_id=\(self.projectId)",
+                body: request
+            ) { [weak self] result in
+                switch result {
+                case .success:
+                    self?.requestDidSuccess()
+                case .failure(let error):
+                    if case MarketapError.serverError = error {
+                        self?.saveFailedEvent(request)
+                    }
                 }
             }
         }

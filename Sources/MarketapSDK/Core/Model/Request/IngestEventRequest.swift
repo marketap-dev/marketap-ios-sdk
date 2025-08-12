@@ -13,7 +13,7 @@ struct IngestEventRequest: Encodable {
     let userId: String?
     let device: UpdateDeviceRequest
     let properties: [String: AnyCodable]?
-    let timestamp: Date?
+    var timestamp: Date?
 
     enum CodingKeys: String, CodingKey {
         case id

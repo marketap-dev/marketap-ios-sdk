@@ -11,13 +11,12 @@ struct UpdateProfileRequest: Codable {
     let userId: String
     var properties: [String: AnyCodable]?
     let device: UpdateDeviceRequest?
-    let timestamp: Date?
+    var timestamp: Date?
 
-    init(userId: String, properties: [String: AnyCodable]?, device: UpdateDeviceRequest?, timestamp: Date?) {
+    init(userId: String, properties: [String: AnyCodable]?, device: UpdateDeviceRequest?) {
         self.userId = userId
         self.properties = properties
         self.device = device
-        self.timestamp = timestamp
     }
 
     enum CodingKeys: String, CodingKey {

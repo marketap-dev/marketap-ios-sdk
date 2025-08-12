@@ -117,3 +117,52 @@ final class MarketapAPI: MarketapAPIProtocol {
         task.resume()
     }
 }
+
+extension MarketapAPI {
+    func get<T: Decodable>(
+        baseURL: BaseURL = .event,
+        path: String,
+        queryItems: [URLQueryItem]? = nil,
+        responseType: T.Type,
+        completion: ((Result<T, MarketapError>) -> Void)? = nil
+    ) {
+        var urlComponents = URLComponents(string: "\(baseURL.rawValue)\(path)")
+        urlComponents?.queryItems = queryItems
+
+        guard let url = urlComponents?.url else {
+            completion?(.failure(.invalidURL))
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+
+        logRequest(request, body: nil as String?)
+
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                Logger.error("response error: \(error.localizedDescription)")
+                completion?(.failure(.networkError(error)))
+                return
+            }
+
+            self.logResponse(response, data: data)
+
+            guard let data = data else {
+                Logger.error("response error: no data")
+                completion?(.failure(.noData))
+                return
+            }
+
+            do {
+                let wrappedResponse = try JSONDecoder().decode(ServerResponse<T>.self, from: data)
+                completion?(.success(wrappedResponse.data))
+            } catch {
+                Logger.error("decoding error: \(error.localizedDescription)")
+                completion?(.failure(.decodingError(error)))
+            }
+        }
+        task.resume()
+    }
+}

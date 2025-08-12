@@ -8,6 +8,14 @@
 import Foundation
 
 protocol MarketapAPIProtocol {
+    func get<T: Decodable>(
+        baseURL: MarketapAPI.BaseURL,
+        path: String,
+        queryItems: [URLQueryItem]?,
+        responseType: T.Type,
+        completion: ((Result<T, MarketapError>) -> Void)?
+    )
+
     func request<T: Decodable, U: Encodable>(
         baseURL: MarketapAPI.BaseURL,
         path: String,

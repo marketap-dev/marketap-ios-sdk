@@ -26,7 +26,7 @@ struct BulkEvent: Codable, Equatable {
         self.id = id
         self.userId = userId
         self.name = name
-        self.timestamp = timestamp ?? Date()
+        self.timestamp = timestamp
         self.properties = properties
     }
 
