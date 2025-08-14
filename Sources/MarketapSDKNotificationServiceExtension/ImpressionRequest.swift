@@ -32,7 +32,7 @@ struct Device: Encodable {
 struct ImpressionRequestProperties: Encodable {
     let campaignId: String
     let messageId: String
-    let campaignCategory: String = "ON_SITE"
+    let campaignCategory: String = "OFF_SITE"
     let channelType: String = "PUSH"
     let subChannelType: String = "IOS"
     let resultStatus: Int = 200000
