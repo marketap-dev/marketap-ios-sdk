@@ -20,7 +20,7 @@ class MockEventService: EventServiceProtocol {
         pushToken = token
     }
 
-    func trackEvent(eventName: String, eventProperties: [String : Any]?, id: String?, timestamp: Date?) {
+    func trackEvent(eventName: String, eventProperties: [String : Any]?, userId: String?, id: String?, timestamp: Date?) {
         trackedEvents.append(eventName)
     }
 

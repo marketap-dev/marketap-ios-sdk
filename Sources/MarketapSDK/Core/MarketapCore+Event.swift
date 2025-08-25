@@ -24,7 +24,7 @@ extension MarketapCore {
         queue.async {
             Logger.debug("signup: userProperties \(userProperties.prettyPrintedJSONString), eventProperties \(eventProperties.prettyPrintedJSONString), persistUser: \(persistUser)")
             self.eventService.identify(userId: userId, userProperties: userProperties)
-            self.eventService.trackEvent(eventName: MarketapEvent.signup.rawValue, eventProperties: eventProperties)
+            self.eventService.trackEvent(eventName: MarketapEvent.signup.rawValue, eventProperties: eventProperties, userId: userId)
             if !persistUser {
                 self.eventService.flushUser()
             }
@@ -35,7 +35,7 @@ extension MarketapCore {
         queue.async {
             Logger.debug("login: userProperties \(userProperties.prettyPrintedJSONString), eventProperties \(eventProperties.prettyPrintedJSONString)")
             self.eventService.identify(userId: userId, userProperties: userProperties)
-            self.eventService.trackEvent(eventName: MarketapEvent.login.rawValue, eventProperties: eventProperties)
+            self.eventService.trackEvent(eventName: MarketapEvent.login.rawValue, eventProperties: eventProperties, userId: userId)
         }
     }
 

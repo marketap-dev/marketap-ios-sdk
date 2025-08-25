@@ -8,11 +8,37 @@
 import XCTest
 @testable import MarketapSDK
 
+private class MockServerTimeManager: ServerTimeManagerProtocol {
+    func withServerTime(completion: @escaping (Date?) -> Void) {
+        completion(Date())
+    }
+}
+
 private class MockMarketapAPI: MarketapAPIProtocol {
     var shouldFail = false
     var lastRequestPath: String?
     var lastRequestBody: Data?
     var lastBulkEvents: [BulkEvent]?
+
+    func get<T: Decodable>(
+        baseURL: MarketapAPI.BaseURL,
+        path: String,
+        queryItems: [URLQueryItem]?,
+        responseType: T.Type,
+        completion: ((Result<T, MarketapError>) -> Void)?
+    ) {
+        lastRequestPath = path
+
+        if shouldFail {
+            completion?(.failure(.serverError(statusCode: 500)))
+        } else {
+            if let response = try? JSONDecoder().decode(responseType, from: Data()) {
+                completion?(.success(response))
+            } else {
+                completion?(.failure(.decodingError(NSError(domain: "MockError", code: -1, userInfo: nil))))
+            }
+        }
+    }
 
     func request<T: Decodable, U: Encodable>(
         baseURL: MarketapAPI.BaseURL,
@@ -80,13 +106,15 @@ class EventServiceTests: XCTestCase {
     fileprivate var mockAPI: MockMarketapAPI!
     var mockCache: MockMarketapCache!
     var mockDelegate: MockEventServiceDelegate!
+    fileprivate var mockServerTimeManager: MockServerTimeManager!
 
     override func setUp() {
         super.setUp()
         mockAPI = MockMarketapAPI()
         mockCache = MockMarketapCache()
+        mockServerTimeManager = MockServerTimeManager()
         mockDelegate = MockEventServiceDelegate()
-        eventService = EventService(api: mockAPI, cache: mockCache)
+        eventService = EventService(api: mockAPI, cache: mockCache, serverTimeManager: mockServerTimeManager)
         eventService.delegate = mockDelegate
     }
 

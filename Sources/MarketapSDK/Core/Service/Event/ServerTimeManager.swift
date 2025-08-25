@@ -1,13 +1,17 @@
 //
-//  EventService+Time.swift
+//  ServerTimeManager.swift
 //  MarketapSDK
 //
-//  Created by 이동현 on 8/12/25.
+//  Created by 이동현 on 8/25/25.
 //
 
 import Foundation
 
-extension EventService {
+protocol ServerTimeManagerProtocol {
+    func withServerTime(completion: @escaping (Date?) -> Void)
+}
+
+class ServerTimeManager: ServerTimeManagerProtocol {
     // MARK: - Thread-safety
     private static let timeSyncQueue = DispatchQueue(label: "marketap.time-sync")
     private var q: DispatchQueue { Self.timeSyncQueue }
@@ -21,6 +25,11 @@ extension EventService {
     private static var _pending: [((Date?) -> Void)] = []
 
     private var cacheDuration: TimeInterval { 300 }
+    private let api: MarketapAPIProtocol
+
+    init(api: MarketapAPIProtocol) {
+        self.api = api
+    }
 
     func withServerTime(completion: @escaping (Date?) -> Void) {
         q.async { [weak self] in

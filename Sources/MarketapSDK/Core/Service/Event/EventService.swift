@@ -27,10 +27,12 @@ final class EventService: EventServiceProtocol {
 
     let failedEventsStorage: DataStorageManager<BulkEvent>
     let failedUsersStorage: DataStorageManager<BulkProfile>
+    let serverTimeManager: ServerTimeManagerProtocol
 
-    init(api: MarketapAPIProtocol, cache: MarketapCacheProtocol) {
+    init(api: MarketapAPIProtocol, cache: MarketapCacheProtocol, serverTimeManager: ServerTimeManagerProtocol? = nil) {
         self.api = api
         self.cache = cache
+        self.serverTimeManager = serverTimeManager ?? ServerTimeManager(api: api)
 
         self.failedEventsStorage = DataStorageManager<BulkEvent>(
             cache: cache,
@@ -83,6 +85,7 @@ final class EventService: EventServiceProtocol {
     func trackEvent(
         eventName: String,
         eventProperties: [String: Any]?,
+        userId: String? = nil,
         id: String? = nil,
         timestamp: Date? = nil
     ) {
@@ -99,9 +102,9 @@ final class EventService: EventServiceProtocol {
             Logger.debug("session start: \(newSessionId)")
 
             let event = IngestEventRequest(
-                id: nil,
+                id: UUID().uuidString,
                 name: "mkt_session_start",
-                userId: cache.userId,
+                userId: userId ?? cache.userId,
                 device: device.makeRequest(),
                 properties: ["mkt_session_id": AnyCodable(newSessionId)]
             )
@@ -112,7 +115,7 @@ final class EventService: EventServiceProtocol {
         let eventTimestamp = timestamp ?? Date()
 
         let event = IngestEventRequest(
-            id: id,
+            id: id ?? UUID().uuidString,
             name: eventName,
             userId: cache.userId,
             device: device.makeRequest(),
@@ -150,7 +153,7 @@ final class EventService: EventServiceProtocol {
     }
 
     private func updateProfile(request: UpdateProfileRequest) {
-        withServerTime { [weak self] serverTime in
+        serverTimeManager.withServerTime { [weak self] serverTime in
             guard let self = self else { return }
             var request = request
             request.timestamp = serverTime
@@ -174,7 +177,7 @@ final class EventService: EventServiceProtocol {
 
 
     private func track(request: IngestEventRequest) {
-        withServerTime { [weak self] serverTime in
+        serverTimeManager.withServerTime { [weak self] serverTime in
             guard let self = self else { return }
             var request = request
             request.timestamp = serverTime
@@ -205,7 +208,7 @@ extension EventService {
     private func saveFailedEvent(_ event: IngestEventRequest) {
         let failedEvent = BulkEvent(
             id: event.id,
-            userId: self.cache.userId,
+            userId: event.userId,
             name: event.name,
             timestamp: event.timestamp,
             properties: event.properties

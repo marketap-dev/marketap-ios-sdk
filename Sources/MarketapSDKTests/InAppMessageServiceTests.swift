@@ -11,6 +11,18 @@ import XCTest
 class MockMarketapAPIForIAM: MarketapAPIProtocol {
     var fetchCampaignsResult: Result<InAppCampaignFetchResponse, MarketapError>?
 
+    func get<T: Decodable>(
+        baseURL: MarketapAPI.BaseURL,
+        path: String,
+        queryItems: [URLQueryItem]?,
+        responseType: T.Type,
+        completion: ((Result<T, MarketapError>) -> Void)?
+    ) {
+        if let fetchCampaignsResult = fetchCampaignsResult as? Result<T, MarketapError> {
+            completion?(fetchCampaignsResult)
+        }
+    }
+
     func request<T: Decodable, U: Encodable>(
         baseURL: MarketapAPI.BaseURL,
         path: String,
