@@ -8,6 +8,6 @@
 import Foundation
 
 struct MarketapConfig: Codable {
-    static let sdkVersion = "1.1.3"
+    static let sdkVersion = "1.1.4"
     let projectId: String
 }
