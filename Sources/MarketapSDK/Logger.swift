@@ -34,7 +34,7 @@ enum MarketapLogger {
     private static let subsystem = "com.marketap.sdk"
     private static let prefix = "[MarketapSDK]"
 
-    static func error(
+    public static func error(
         _ message: @autoclosure () -> String,
         file: String = #file,
         line: Int = #line
