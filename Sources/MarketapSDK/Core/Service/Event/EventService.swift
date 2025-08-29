@@ -132,7 +132,7 @@ final class EventService: EventServiceProtocol {
 
     func updateDevice(pushToken: String? = nil, removeUserId: Bool = false) {
         cache.updateDevice(pushToken: pushToken)
-        let updatedDevice = cache.device.makeRequest()
+        let updatedDevice = cache.device.makeRequest(removeUserId: removeUserId)
         let cachedRequest: UpdateDeviceRequest? = cache.loadCodableObject(forKey: Self.deviceRequestKey)
 
         guard updatedDevice != cachedRequest else { return }
