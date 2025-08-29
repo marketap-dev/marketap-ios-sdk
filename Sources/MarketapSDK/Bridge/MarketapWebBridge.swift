@@ -17,7 +17,7 @@ import UIKit
               let typeString = body["type"] as? String,
               let eventType = MarketapBridgeEventType(rawValue: typeString) else {
             if message.name == Self.name {
-                Logger.error("invalid body: \(message.body)")
+                MarketapLogger.error("invalid body: \(message.body)")
             }
             return
         }

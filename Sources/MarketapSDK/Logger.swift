@@ -29,12 +29,12 @@ public enum MarketapLogLevel: Int {
     }
 }
 
-enum Logger {
+enum MarketapLogger {
     static var level = MarketapLogLevel.info
     private static let subsystem = "com.marketap.sdk"
     private static let prefix = "[MarketapSDK]"
 
-    public static func error(
+    static func error(
         _ message: @autoclosure () -> String,
         file: String = #file,
         line: Int = #line
@@ -42,7 +42,7 @@ enum Logger {
         log(message, file: file, line: line, level: .error)
     }
 
-    public static func warn(
+    static func warn(
         _ message: @autoclosure () -> String,
         file: String = #file,
         line: Int = #line
@@ -50,7 +50,7 @@ enum Logger {
         log(message, file: file, line: line, level: .warn)
     }
 
-    public static func info(
+    static func info(
         _ message: @autoclosure () -> String,
         file: String = #file,
         line: Int = #line
@@ -58,7 +58,7 @@ enum Logger {
         log(message, file: file, line: line, level: .info)
     }
 
-    public static func debug(
+    static func debug(
         _ message: @autoclosure () -> String,
         file: String = #file,
         line: Int = #line
@@ -66,7 +66,7 @@ enum Logger {
         log(message, file: file, line: line, level: .debug)
     }
 
-    public static func verbose(
+    static func verbose(
         _ message: @autoclosure () -> String,
         file: String = #file,
         line: Int = #line
@@ -104,7 +104,7 @@ enum Logger {
             os_log("%{public}s %{public}s", type: osLogType, prefix, message)
         }
         #else
-        print(message)
+        NSLog("%@", "\(prefix) \(message)")
         #endif
     }
 }

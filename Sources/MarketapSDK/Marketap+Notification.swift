@@ -56,20 +56,20 @@ import UIKit
         client.application(application, didFinishLaunchingWithOptions: launchOptions)
     }
 
-    public static func requestAuthorizationForPushNotifications() {
-        Logger.info("requestAuthorizationForPushNotifications")
+    @objc public static func requestAuthorizationForPushNotifications() {
+        MarketapLogger.info("requestAuthorizationForPushNotifications")
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { granted, error in
             if granted {
                 DispatchQueue.main.async {
-                    Logger.debug("Push authorization granted")
+                    MarketapLogger.debug("Push authorization granted")
                     UIApplication.shared.registerForRemoteNotifications()
                 }
             } else {
-                Logger.debug("Push authorization not granted")
+                MarketapLogger.debug("Push authorization not granted")
             }
 
             if let error = error {
-                Logger.warn("Push permission error: \(error.localizedDescription)")
+                MarketapLogger.warn("Push permission error: \(error.localizedDescription)")
             }
         }
     }

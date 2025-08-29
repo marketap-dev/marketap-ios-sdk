@@ -16,7 +16,7 @@ extension Marketap {
     ///   - userProperties: 유저 속성 (선택)
     ///   - eventProperties: 기록할 이벤트 속성 (선택)
     ///   - persistUser: 가입 이후 로그인 상태 유지
-    public static func signup(
+    @objc public static func signup(
         userId: String,
         userProperties: [String: Any]? = nil,
         eventProperties: [String: Any]? = nil,

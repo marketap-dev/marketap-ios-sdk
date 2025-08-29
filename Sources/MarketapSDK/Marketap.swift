@@ -15,9 +15,9 @@ public class Marketap: NSObject {
     static var _client: MarketapClientProtocol? {
         didSet {
             if let _client = _client {
-                Logger.verbose("didSet client: \(ObjectIdentifier(_client).hashValue)")
+                MarketapLogger.verbose("didSet client: \(ObjectIdentifier(_client).hashValue)")
             } else {
-                Logger.verbose("didSet client: null")
+                MarketapLogger.verbose("didSet client: null")
             }
         }
     }
@@ -33,16 +33,16 @@ public class Marketap: NSObject {
     public static var client: MarketapClientProtocol? {
         get {
             guard let _client = _client else {
-                Logger.warn("Marketap SDK is not initialized. Make sure to call Marketap.initialize(projectId:) before using the SDK.")
+                MarketapLogger.warn("Marketap SDK is not initialized. Make sure to call Marketap.initialize(projectId:) before using the SDK.")
                 return nil
             }
             return _client
         }
         set {
             if let newValue = newValue {
-                Logger.verbose("set client: \(ObjectIdentifier(newValue).hashValue)")
+                MarketapLogger.verbose("set client: \(ObjectIdentifier(newValue).hashValue)")
             } else {
-                Logger.verbose("set client: null")
+                MarketapLogger.verbose("set client: null")
             }
             _client = newValue
         }
@@ -63,18 +63,31 @@ public class Marketap: NSObject {
         eventService.delegate = core
         inAppMessageService.delegate = core
         client = core
-        Logger.info("Marketap SDK initialized successfully with projectId: \(projectId)")
+        MarketapLogger.info("Marketap SDK initialized successfully with projectId: \(projectId)")
 
         coldStartNotificationHandler.didInitializeClient(client: core)
     }
 
     public static func setClickHandler(_ handler: @escaping (MarketapClickEvent) -> Void) {
-        Logger.info("setClickHandler")
+        MarketapLogger.info("setClickHandler")
         customHandlerStore.setClickHandler(handler)
     }
 
     public static func setLogLevel(_ level: MarketapLogLevel) {
-        Logger.info("setLogLevel: \(level)")
-        Logger.level = level
+        MarketapLogger.info("setLogLevel: \(level)")
+        MarketapLogger.level = level
+    }
+}
+
+extension Marketap {
+    @objc public static func setClickHandlerObjC(_ handler: @escaping (MarketapClickEventObjC) -> Void) {
+        setClickHandler { swiftEvent in
+            handler(MarketapClickEventObjC(from: swiftEvent))
+        }
+    }
+
+    @objc public static func setLogLevelRaw(_ rawLevel: Int) {
+        guard let level = MarketapLogLevel(rawValue: rawLevel) else { return }
+        Marketap.setLogLevel(level)
     }
 }

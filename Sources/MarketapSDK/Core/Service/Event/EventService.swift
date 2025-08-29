@@ -99,7 +99,7 @@ final class EventService: EventServiceProtocol {
         if timeInterval > 1800 || lastEventTimestamp == 0 {
             let newSessionId = UUID().uuidString
             cache.sessionId = newSessionId
-            Logger.debug("session start: \(newSessionId)")
+            MarketapLogger.debug("session start: \(newSessionId)")
 
             let event = IngestEventRequest(
                 id: UUID().uuidString,

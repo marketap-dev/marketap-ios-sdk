@@ -10,7 +10,7 @@ import Foundation
 extension MarketapCore {
     func setPushToken(token: String) {
         queue.async {
-            Logger.debug("setPushToken: \(token)")
+            MarketapLogger.debug("setPushToken: \(token)")
             self.eventService.setPushToken(token: token)
         }
     }
@@ -22,7 +22,7 @@ extension MarketapCore {
         persistUser: Bool = true
     ) {
         queue.async {
-            Logger.debug("signup: userProperties \(userProperties.prettyPrintedJSONString), eventProperties \(eventProperties.prettyPrintedJSONString), persistUser: \(persistUser)")
+            MarketapLogger.debug("signup: userProperties \(userProperties.prettyPrintedJSONString), eventProperties \(eventProperties.prettyPrintedJSONString), persistUser: \(persistUser)")
             self.eventService.identify(userId: userId, userProperties: userProperties)
             self.eventService.trackEvent(eventName: MarketapEvent.signup.rawValue, eventProperties: eventProperties, userId: userId)
             if !persistUser {
@@ -33,7 +33,7 @@ extension MarketapCore {
 
     func login(userId: String, userProperties: [String : Any]?, eventProperties: [String : Any]?) {
         queue.async {
-            Logger.debug("login: userProperties \(userProperties.prettyPrintedJSONString), eventProperties \(eventProperties.prettyPrintedJSONString)")
+            MarketapLogger.debug("login: userProperties \(userProperties.prettyPrintedJSONString), eventProperties \(eventProperties.prettyPrintedJSONString)")
             self.eventService.identify(userId: userId, userProperties: userProperties)
             self.eventService.trackEvent(eventName: MarketapEvent.login.rawValue, eventProperties: eventProperties, userId: userId)
         }
@@ -41,7 +41,7 @@ extension MarketapCore {
 
     func logout(eventProperties: [String : Any]?) {
         queue.async {
-            Logger.debug("logout: \(eventProperties.prettyPrintedJSONString)")
+            MarketapLogger.debug("logout: \(eventProperties.prettyPrintedJSONString)")
             self.eventService.trackEvent(eventName: MarketapEvent.logout.rawValue, eventProperties: eventProperties)
             self.eventService.flushUser()
         }
@@ -49,7 +49,7 @@ extension MarketapCore {
 
     func track(eventName: String, eventProperties: [String : Any]?, id: String?, timestamp: Date?) {
         queue.async {
-            Logger.debug("track: \(eventName)\n\(eventProperties.prettyPrintedJSONString)")
+            MarketapLogger.debug("track: \(eventName)\n\(eventProperties.prettyPrintedJSONString)")
             self.eventService.trackEvent(eventName: eventName, eventProperties: eventProperties, id: id, timestamp: timestamp)
         }
     }
@@ -58,7 +58,7 @@ extension MarketapCore {
         queue.async {
             var eventProperties = eventProperties ?? [:]
             eventProperties["mkt_revenue"] = revenue
-            Logger.debug("trackPurchase:\n\(eventProperties.prettyPrintedJSONString)")
+            MarketapLogger.debug("trackPurchase:\n\(eventProperties.prettyPrintedJSONString)")
             self.eventService.trackEvent(eventName: MarketapEvent.purchase.rawValue, eventProperties: eventProperties)
         }
     }
@@ -67,28 +67,28 @@ extension MarketapCore {
         queue.async {
             var eventProperties = eventProperties ?? [:]
             eventProperties["mkt_revenue"] = revenue
-            Logger.debug("trackRevenue: \(revenue)\n\(eventProperties.prettyPrintedJSONString)")
+            MarketapLogger.debug("trackRevenue: \(revenue)\n\(eventProperties.prettyPrintedJSONString)")
             self.eventService.trackEvent(eventName: eventName, eventProperties: eventProperties)
         }
     }
 
     func trackPageView(eventProperties: [String : Any]?) {
         queue.async {
-            Logger.debug("trackPageView:\n\(eventProperties.prettyPrintedJSONString)")
+            MarketapLogger.debug("trackPageView:\n\(eventProperties.prettyPrintedJSONString)")
             self.eventService.trackEvent(eventName: MarketapEvent.view.rawValue, eventProperties: eventProperties)
         }
     }
 
     func identify(userId: String, userProperties: [String : Any]?) {
         queue.async {
-            Logger.debug("identify: \(userId)\n\(userProperties.prettyPrintedJSONString)")
+            MarketapLogger.debug("identify: \(userId)\n\(userProperties.prettyPrintedJSONString)")
             self.eventService.identify(userId: userId, userProperties: userProperties)
         }
     }
 
     func resetIdentity() {
         queue.async {
-            Logger.debug("resetIdentity")
+            MarketapLogger.debug("resetIdentity")
             self.eventService.flushUser()
         }
     }

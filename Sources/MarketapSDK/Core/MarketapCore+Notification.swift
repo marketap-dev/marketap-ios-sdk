@@ -51,10 +51,10 @@ extension MarketapCore {
     ) -> Bool {
         let info = response.notification.request.content.userInfo["marketap"] as? [String: Any]
         guard let info = info, let notification = MarketapNotification(info: info) else {
-            Logger.verbose("invalid info")
+            MarketapLogger.verbose("invalid info")
             return false
         }
-        Logger.debug("didReceive:\n\(info.prettyPrintedJSONString)")
+        MarketapLogger.debug("didReceive:\n\(info.prettyPrintedJSONString)")
         handleNotification(notification)
         completionHandler()
 
@@ -68,10 +68,10 @@ extension MarketapCore {
         guard let remoteNotification = launchOptions?[.remoteNotification] as? [AnyHashable: Any],
               let info = remoteNotification["marketap"] as? [String: Any],
               let notification = MarketapNotification(info: info) else {
-            Logger.verbose("invalid info")
+            MarketapLogger.verbose("invalid info")
             return
         }
-        Logger.debug("cold start notification:\n\(info.prettyPrintedJSONString)")
+        MarketapLogger.debug("cold start notification:\n\(info.prettyPrintedJSONString)")
 
         handleNotification(notification)
     }
@@ -107,10 +107,10 @@ extension MarketapNotificationClientProtocol {
 
         let info = notification.request.content.userInfo["marketap"] as? [String: Any]
         if MarketapNotification(info: info) == nil {
-            Logger.verbose("invalid info")
+            MarketapLogger.verbose("invalid info")
             return false
         }
-        Logger.debug("willPresent:\n\(info.prettyPrintedJSONString)")
+        MarketapLogger.debug("willPresent:\n\(info.prettyPrintedJSONString)")
 
         if #available(iOS 14.0, *) {
             completionHandler([.banner, .sound, .badge])

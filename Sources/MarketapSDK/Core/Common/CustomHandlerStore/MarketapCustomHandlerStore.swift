@@ -19,14 +19,14 @@ final class MarketapCustomHandlerStore: MarketapCustomHandlerStoreProtocol {
     func handleClick(_ event: MarketapClickEvent) {
         if customized {
             if let handler = clickHandler {
-                Logger.debug("custom handler: \(event.campaignType) clicked with url \(event.url ?? "null")")
+                MarketapLogger.debug("custom handler: \(event.campaignType) clicked with url \(event.url ?? "null")")
                 handler(event)
             } else {
-                Logger.debug("custom handler not set, store event: \(event.campaignType) \(event.url ?? "null")")
+                MarketapLogger.debug("custom handler not set, store event: \(event.campaignType) \(event.url ?? "null")")
                 storedEvent = event
             }
         } else {
-            Logger.debug("default handler: \(event.campaignType) clicked with url \(event.url ?? "null")")
+            MarketapLogger.debug("default handler: \(event.campaignType) clicked with url \(event.url ?? "null")")
             if let urlString = event.url, let url = URL(string: urlString) {
                 DispatchQueue.main.async {
                     UIApplication.shared.open(url, options: [:], completionHandler: nil)
@@ -37,7 +37,7 @@ final class MarketapCustomHandlerStore: MarketapCustomHandlerStoreProtocol {
 
     func setClickHandler(_ handler: @escaping (MarketapClickEvent) -> Void) {
         guard customized else {
-            Logger.warn("MarketapClickCustomized is not set. Please set this key in Info.plist to enable the custom click handler.")
+            MarketapLogger.warn("MarketapClickCustomized is not set. Please set this key in Info.plist to enable the custom click handler.")
             return
         }
 

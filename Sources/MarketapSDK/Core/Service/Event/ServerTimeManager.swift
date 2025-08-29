@@ -81,7 +81,7 @@ class ServerTimeManager: ServerTimeManagerProtocol {
                         }
 
                     case .failure(let error):
-                        Logger.warn("Failed to fetch server time: \(error.localizedDescription)")
+                        MarketapLogger.warn("Failed to fetch server time: \(error.localizedDescription)")
                         let fallback = Self._cache.lastFetchedTime ?? Date()
                         DispatchQueue.main.async {
                             completions.forEach { $0(fallback) }

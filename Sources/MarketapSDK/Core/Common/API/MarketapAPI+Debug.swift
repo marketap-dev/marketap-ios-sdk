@@ -10,7 +10,7 @@ import Foundation
 extension MarketapAPI {
     private func logJSON(_ title: String, _ data: Data?) {
         guard let data = data else {
-            Logger.verbose("\(title): No data")
+            MarketapLogger.verbose("\(title): No data")
             return
         }
 
@@ -19,45 +19,45 @@ extension MarketapAPI {
             let prettyData = try JSONSerialization.data(withJSONObject: jsonObject, options: .prettyPrinted)
 
             if let jsonString = String(data: prettyData, encoding: .utf8) {
-                Logger.verbose("\(title):\n\(jsonString)")
+                MarketapLogger.verbose("\(title):\n\(jsonString)")
             } else {
-                Logger.verbose("\(title): Unable to convert to string")
+                MarketapLogger.verbose("\(title): Unable to convert to string")
             }
         } catch {
-            Logger.verbose("\(title): Failed to parse JSON - \(error)")
+            MarketapLogger.verbose("\(title): Failed to parse JSON - \(error)")
         }
     }
 
     func logRequest(_ request: URLRequest, body: Encodable?) {
-        Logger.verbose("HTTP Request")
-        Logger.verbose("URL: \(request.url?.absoluteString ?? "Unknown URL")")
-        Logger.verbose("Method: \(request.httpMethod ?? "Unknown Method")")
+        MarketapLogger.verbose("HTTP Request")
+        MarketapLogger.verbose("URL: \(request.url?.absoluteString ?? "Unknown URL")")
+        MarketapLogger.verbose("Method: \(request.httpMethod ?? "Unknown Method")")
 
         if let headers = request.allHTTPHeaderFields {
-            Logger.verbose("Headers:\n\(headers.toJSONString())")
+            MarketapLogger.verbose("Headers:\n\(headers.toJSONString())")
         }
 
         if let body = body, let encodedBody = try? JSONEncoder().encode(body) {
             logJSON("Request Body", encodedBody)
         }
 
-        Logger.verbose("---------------------------------------------------")
+        MarketapLogger.verbose("---------------------------------------------------")
     }
 
     func logResponse(_ response: URLResponse?, data: Data?) {
         guard let httpResponse = response as? HTTPURLResponse else {
-            Logger.verbose("Invalid response received")
+            MarketapLogger.verbose("Invalid response received")
             return
         }
 
-        Logger.verbose("HTTP Response")
-        Logger.verbose("URL: \(httpResponse.url?.absoluteString ?? "Unknown URL")")
-        Logger.verbose("Status Code: \(httpResponse.statusCode)")
+        MarketapLogger.verbose("HTTP Response")
+        MarketapLogger.verbose("URL: \(httpResponse.url?.absoluteString ?? "Unknown URL")")
+        MarketapLogger.verbose("Status Code: \(httpResponse.statusCode)")
 
-        Logger.verbose("Headers:\n\(httpResponse.allHeaderFields.prettyPrintedJSONString)")
+        MarketapLogger.verbose("Headers:\n\(httpResponse.allHeaderFields.prettyPrintedJSONString)")
 
         logJSON("Response Body", data)
 
-        Logger.verbose("---------------------------------------------------")
+        MarketapLogger.verbose("---------------------------------------------------")
     }
 }
