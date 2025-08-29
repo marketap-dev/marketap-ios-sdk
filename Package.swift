@@ -9,6 +9,7 @@ let package = Package(
     products: [
         .library(
             name: "MarketapSDK",
+            type: .dynamic,
             targets: ["MarketapSDK"]
         ),
         .library(
