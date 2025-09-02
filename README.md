@@ -4,5 +4,4 @@
 [![License](https://img.shields.io/cocoapods/l/MarketapSDK.svg?style=flat)](https://cocoapods.org/pods/MarketapSDK)
 [![Platform](https://img.shields.io/cocoapods/p/MarketapSDK.svg?style=flat)](https://cocoapods.org/pods/MarketapSDK)
 
-
-https://marketap.gitbook.io/marketap-guide/developer/integration-guide/mobile-sdk/ios
+https://docs.marketap.io/t3ZS4WXNMj0HK27EtIMV/developer/push-notification/integration/ios
