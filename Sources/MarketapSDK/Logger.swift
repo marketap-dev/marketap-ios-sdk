@@ -6,25 +6,20 @@
 //
 
 import Foundation
-#if canImport(os)
 import os
-#endif
 
 public enum MarketapLogLevel: Int {
     case verbose, debug, info, warn, error, none
+}
 
+private extension MarketapLogLevel {
     var osLogType: OSLogType? {
         switch self {
-        case .verbose, .debug:
-            return .debug
-        case .info:
-            return .info
-        case .warn:
-            return .error
-        case .error:
-            return .fault
-        case .none:
-            return nil
+        case .verbose, .debug: return .debug
+        case .info:            return .info
+        case .warn:            return .error
+        case .error:           return .fault
+        case .none:            return nil
         }
     }
 }
@@ -32,80 +27,39 @@ public enum MarketapLogLevel: Int {
 enum MarketapLogger {
     static var level = MarketapLogLevel.info
     private static let subsystem = "com.marketap.sdk"
-    private static let prefix = "[MarketapSDK]"
+    private static let oslog = OSLog(subsystem: subsystem, category: "SDK")
 
-    static func error(
-        _ message: @autoclosure () -> String,
-        file: String = #file,
-        line: Int = #line
-    ) {
+    static func error(_ message: @autoclosure () -> String,
+                      file: String = #file, line: Int = #line) {
         log(message, file: file, line: line, level: .error)
     }
-
-    static func warn(
-        _ message: @autoclosure () -> String,
-        file: String = #file,
-        line: Int = #line
-    ) {
+    static func warn(_ message: @autoclosure () -> String,
+                     file: String = #file, line: Int = #line) {
         log(message, file: file, line: line, level: .warn)
     }
-
-    static func info(
-        _ message: @autoclosure () -> String,
-        file: String = #file,
-        line: Int = #line
-    ) {
+    static func info(_ message: @autoclosure () -> String,
+                     file: String = #file, line: Int = #line) {
         log(message, file: file, line: line, level: .info)
     }
-
-    static func debug(
-        _ message: @autoclosure () -> String,
-        file: String = #file,
-        line: Int = #line
-    ) {
+    static func debug(_ message: @autoclosure () -> String,
+                      file: String = #file, line: Int = #line) {
         log(message, file: file, line: line, level: .debug)
     }
-
-    static func verbose(
-        _ message: @autoclosure () -> String,
-        file: String = #file,
-        line: Int = #line
-    ) {
+    static func verbose(_ message: @autoclosure () -> String,
+                        file: String = #file, line: Int = #line) {
         log(message, file: file, line: line, level: .verbose)
     }
 
-    private static func log(
-        _ messageMaker: () -> String,
-        file: String,
-        line: Int,
-        level: MarketapLogLevel
-    ) {
+    private static func log(_ messageMaker: () -> String,
+                            file: String, line: Int, level: MarketapLogLevel) {
         if level.rawValue < Self.level.rawValue { return }
+
         let fileName = (file as NSString).lastPathComponent
         let tag = "[\(fileName):\(line)]"
         let message = "\(tag) \(messageMaker())"
 
-        #if canImport(os)
-        if #available(iOS 14.0, *) {
-            let logger = os.Logger(subsystem: subsystem, category: "\(level)")
-            switch level {
-            case .error:
-                logger.critical("\(message)")
-            case .info:
-                logger.info("\(message)")
-            case .debug:
-                logger.debug("\(message)")
-            case .warn:
-                logger.warning("\(message)")
-            default:
-                logger.log("\(message)")
-            }
-        } else if let osLogType = level.osLogType {
-            os_log("%{public}s %{public}s", type: osLogType, prefix, message)
-        }
-        #else
-        NSLog("%@", "\(prefix) \(message)")
-        #endif
+        guard let t = level.osLogType else { return } // .none
+        os_log("%{public}@", log: oslog, type: t, message)
     }
 }
 
