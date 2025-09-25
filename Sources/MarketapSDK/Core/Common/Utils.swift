@@ -26,7 +26,9 @@ extension Device {
             "max_touch_points": AnyCodable(maxTouchPoints),
             "locale": AnyCodable(locale),
             "model": AnyCodable(model),
-            "environment": AnyCodable(environment)
+            "environment": AnyCodable(environment),
+            "app_version": AnyCodable(appVersion),
+            "app_build_number": AnyCodable(appBuildNumber)
         ]
 
         return UpdateDeviceRequest(
