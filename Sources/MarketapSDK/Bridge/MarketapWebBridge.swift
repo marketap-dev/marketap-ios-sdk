@@ -10,8 +10,10 @@ import UIKit
 
 @objc public class MarketapWebBridge: NSObject, WKScriptMessageHandler {
     public static let name = "marketap"
+    private weak var webView: WKWebView?
 
     public func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+        self.webView = message.webView
         guard message.name == Self.name,
               let body = message.body as? [String: Any],
               let typeString = body["type"] as? String,
@@ -34,6 +36,8 @@ import UIKit
             handleIdentifyEvent(params: event.params)
         case .resetIdentity:
             Marketap.resetIdentity()
+        case .marketapBridgeCheck:
+            handleBridgeCheck()
         }
     }
 
@@ -51,5 +55,18 @@ import UIKit
         }
         let userProperties = params?["userProperties"] as? [String: Any]
         Marketap.identify(userId: userId, userProperties: userProperties)
+    }
+    
+    private func handleBridgeCheck() {
+        webView?.evaluateJavaScript("""
+            window.postMessage({ 
+                type: 'marketapBridgeAck',
+                metadata: {
+                    sdk_type: 'ios',
+                    sdk_version: '\(MarketapConfig.sdkVersion)',
+                    platform: 'ios'
+                }
+            }, '*');
+        """)
     }
 }
