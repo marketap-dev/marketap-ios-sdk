@@ -11,6 +11,7 @@ enum MarketapBridgeEventType: String {
     case track
     case identify
     case resetIdentity
+    case marketapBridgeCheck
 }
 
 struct MarketapBridgeEvent {
