@@ -57,4 +57,11 @@ extension MarketapCore: InAppMessageServiceDelegate {
     func trackEvent(eventName: String, eventProperties: [String : Any]?) {
         track(eventName: eventName, eventProperties: eventProperties, id: nil, timestamp: nil)
     }
+    
+    func setUserProperties(userProperties: [String : Any]) {
+        queue.async {
+            MarketapLogger.debug("setUserProperties:\n\(userProperties.prettyPrintedJSONString)")
+            self.eventService.setUserProperties(userProperties: userProperties, userId: nil)
+        }
+    }
 }

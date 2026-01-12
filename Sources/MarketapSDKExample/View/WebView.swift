@@ -20,9 +20,8 @@ struct WebView: UIViewRepresentable {
         let request = URLRequest(url: url)
         webView.load(request)
 
-        webView.configuration.userContentController.add(
-            MarketapWebBridge(),
-            name: MarketapWebBridge.name
-        )
+        let uc = webView.configuration.userContentController
+        uc.removeScriptMessageHandler(forName: MarketapWebBridge.name)
+        uc.add(MarketapWebBridge(), name: MarketapWebBridge.name)
     }
 }
