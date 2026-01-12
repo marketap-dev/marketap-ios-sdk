@@ -11,7 +11,13 @@ struct AnyCodable: Codable, Equatable {
     let value: Any?
 
     init(_ value: Any?) {
-        self.value = value
+        // Handle boolean values specifically to avoid NSCFBoolean -> Int conversion
+        if let value = value, CFGetTypeID(value as CFTypeRef) == CFBooleanGetTypeID() {
+            // This is definitely a CFBoolean (NSCFBoolean, Swift Bool)
+            self.value = (value as! CFBoolean) == kCFBooleanTrue
+        } else {
+            self.value = value
+        }
     }
 
     func encode(to encoder: Encoder) throws {
@@ -52,11 +58,11 @@ struct AnyCodable: Codable, Equatable {
 
         if let value = try? container.decode(String.self) {
             self.value = value
+        } else if let value = try? container.decode(Bool.self) {
+            self.value = value
         } else if let value = try? container.decode(Int.self) {
             self.value = value
         } else if let value = try? container.decode(Double.self) {
-            self.value = value
-        } else if let value = try? container.decode(Bool.self) {
             self.value = value
         } else if let value = try? container.decode([AnyCodable].self) {
             self.value = value.map { $0.value }
