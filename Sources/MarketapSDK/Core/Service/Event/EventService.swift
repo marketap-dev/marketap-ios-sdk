@@ -70,6 +70,19 @@ final class EventService: EventServiceProtocol {
             delegate?.handleUserIdChanged()
         }
     }
+    
+    func setUserProperties(
+        userProperties: [String : Any],
+        userId: String? = nil,
+    ) {
+        guard let currentUserId = userId ?? cache.userId else { return }
+        let request = UpdateProfileRequest(
+            userId: currentUserId,
+            properties: userProperties.toAnyCodable(),
+            device: cache.device.makeRequest()
+        )
+        updateProfile(request: request)
+    }
 
     func flushUser() {
         let userIdChanged = cache.userId != nil

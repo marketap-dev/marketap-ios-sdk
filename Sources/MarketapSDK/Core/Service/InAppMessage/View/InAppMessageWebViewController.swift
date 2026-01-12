@@ -12,6 +12,8 @@ protocol InAppMessageWebViewControllerDelegate: AnyObject, WKNavigationDelegate 
     func onClick(campaign: InAppCampaign, locationId: String, messageId: String, url: String?)
     func hideCampaign(campaignId: String, until: TimeInterval)
     func onImpression(campaign: InAppCampaign, messageId: String)
+    func onTrack(campaign: InAppCampaign, eventName: String, properties: [String: Any]?)
+    func onSetUserProperties(properties: [String: Any])
 }
 
 final class InAppMessageWebViewController: UIViewController {
@@ -120,6 +122,23 @@ final class InAppMessageWebViewController: UIViewController {
 
 extension InAppMessageWebViewController: WKScriptMessageHandler {
 
+    private func parseJSON(_ jsonString: String) throws -> [String: Any] {
+        guard let data = jsonString.data(using: .utf8) else {
+            throw MarketapError.decodingError(
+                DecodingError.dataCorrupted(
+                    DecodingError.Context(codingPath: [], debugDescription: "Failed to convert JSON string to Data")
+                )
+            )
+        }
+
+        do {
+            let decoded = try JSONDecoder().decode([String: AnyCodable].self, from: data)
+            return decoded.compactMapValues { $0.value }
+        } catch {
+            throw MarketapError.decodingError(error)
+        }
+    }
+
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
         MarketapLogger.verbose("receive message: \(campaign?.id ?? "null"), name: \(message.name), body: \(message.body)")
         guard let campaign = campaign, let jsEvent = MarketapJSMessage(rawValue: message.name) else {
@@ -139,6 +158,36 @@ extension InAppMessageWebViewController: WKScriptMessageHandler {
                 delegate?.hideCampaign(campaignId: campaign.id, until: hideType.hideDuration)
             } else {
                 delegate?.hideCampaign(campaignId: campaign.id, until: 0)
+            }
+        case .track:
+            guard let body = message.body as? [Any],
+                  let eventName = body.first as? String
+            else {
+                MarketapLogger.error("Invalid track message body: \(message.body)")
+                return
+            }
+            var properties: [String: Any]?
+            if body.count > 1, let propertiesJson = body[1] as? String {
+                do {
+                    properties = try parseJSON(propertiesJson)
+                } catch {
+                    MarketapLogger.error("Error parsing event properties JSON: \(propertiesJson)")
+                    return
+                }
+            }
+            
+            delegate?.onTrack(campaign: campaign,eventName: eventName, properties: properties)
+        case .setUserProperties:
+            if let body = message.body as? [String],
+               let propertiesJson = body.first {
+                do {
+                    let properties = try parseJSON(propertiesJson)
+                    delegate?.onSetUserProperties(properties: properties)
+                } catch {
+                    MarketapLogger.error("Error parsing user properties JSON: \(propertiesJson)")
+                }
+            } else {
+                MarketapLogger.warn("Invalid setUserProperties message body: \(message.body)")
             }
         }
     }

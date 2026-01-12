@@ -12,6 +12,7 @@ protocol EventServiceProtocol {
 
     func setPushToken(token: String)
     func identify(userId: String, userProperties: [String: Any]?)
+    func setUserProperties(userProperties: [String: Any], userId: String?)
     func flushUser()
     func trackEvent(eventName: String, eventProperties: [String: Any]?, userId: String?, id: String?, timestamp: Date?)
     func updateDevice(pushToken: String?, removeUserId: Bool)

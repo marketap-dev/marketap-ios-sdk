@@ -9,6 +9,7 @@ import WebKit
 
 protocol InAppMessageServiceDelegate: AnyObject {
     func trackEvent(eventName: String, eventProperties: [String: Any]?)
+    func setUserProperties(userProperties: [String: Any])
 }
 
 final class InAppMessageService: NSObject, InAppMessageServiceProtocol {

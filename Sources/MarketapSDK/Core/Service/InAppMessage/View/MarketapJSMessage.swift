@@ -10,6 +10,8 @@ import Foundation
 enum MarketapJSMessage: String, CaseIterable {
     case hide
     case click
+    case track
+    case setUserProperties
 
     var params: [String] {
         switch self {
@@ -17,6 +19,10 @@ enum MarketapJSMessage: String, CaseIterable {
             return ["hide_type"]
         case .click:
             return ["mkt_location_id", "url"]
+        case .track:
+            return ["event_name", "event_properties_json"]
+        case .setUserProperties:
+            return ["user_properties_json"]
         }
     }
 

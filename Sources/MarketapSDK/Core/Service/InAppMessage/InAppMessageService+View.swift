@@ -153,6 +153,14 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
         )
     }
 
+    func onTrack(campaign: InAppCampaign, eventName: String, properties: [String: Any]?) {
+        delegate?.trackEvent(eventName: eventName, eventProperties: properties)
+    }
+
+    func onSetUserProperties(properties: [String: Any]) {
+        delegate?.setUserProperties(userProperties: properties)
+    }
+
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         didFinishLoad = true
         if let pendingCampaign = pendingCampaign {
