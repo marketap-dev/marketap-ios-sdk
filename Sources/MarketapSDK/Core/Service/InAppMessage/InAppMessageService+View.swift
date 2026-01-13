@@ -52,13 +52,38 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
         UserDefaults.standard.set(Array(timestamps.suffix(100)), forKey: key)
     }
 
-    func showCampaignIfPossible(campaign: InAppCampaign) -> Bool {
+    func showCampaignIfPossible(
+        campaign: InAppCampaign,
+        eventName: String,
+        eventProperties: [String: Any]?
+    ) -> Bool {
         if isCampaignHiden(campaign: campaign) {
             return false
         }
 
         if isModalShown {
             return false
+        }
+
+        if campaign.html == nil {
+            MarketapLogger.verbose("fetching campaign html: \(campaign.id)")
+            fetchCampaign(
+                campaignId: campaign.id,
+                eventName: eventName,
+                eventProperties: eventProperties
+            ) { [weak self] fetchedCampaign in
+                guard let self = self else { return }
+                guard let fetchedCampaign = fetchedCampaign, fetchedCampaign.html != nil else {
+                    MarketapLogger.warn(
+                        "failed to fetch campaign html: \(campaign.id)"
+                    )
+                    return
+                }
+
+                self.logImpression(campaignId: fetchedCampaign.id)
+                self.presentCampaignModal(campaign: fetchedCampaign)
+            }
+            return true
         }
 
         logImpression(campaignId: campaign.id)
@@ -103,16 +128,21 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
     }
 
     func onEvent(eventRequest: IngestEventRequest) {
-        fetchCampaigns { [weak self] campaigns in
-            guard let self = self else { return }
-            for campaign in campaigns {
-                if self.isEventTriggered(condition: campaign.triggerEventCondition, event: eventRequest) {
-                    let didShowCampaign = self.showCampaignIfPossible(campaign: campaign)
+        let eventProperties = eventRequest.properties?.compactMapValues { $0.value }
+        fetchCampaigns(inTimeout: { [weak self] campaigns in
+                guard let self = self else { return }
+                for campaign in campaigns {
+                    if self.isEventTriggered(condition: campaign.triggerEventCondition, event: eventRequest) {
+                        let didShowCampaign = self.showCampaignIfPossible(
+                            campaign: campaign,
+                            eventName: eventRequest.name,
+                            eventProperties: eventProperties
+                        )
 
-                    if didShowCampaign { break }
+                        if didShowCampaign { break }
+                    }
                 }
-            }
-        }
+            })
     }
 
     func onImpression(campaign: InAppCampaign, messageId: String) {
