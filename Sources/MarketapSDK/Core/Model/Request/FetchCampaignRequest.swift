@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct FetchCampaignRequest: Encodable {
+struct FetchCampaignsRequest: Encodable {
     let projectId: String
     let userId: String?
     let device: UpdateDeviceRequest
@@ -16,5 +16,21 @@ struct FetchCampaignRequest: Encodable {
         case projectId = "project_id"
         case userId = "user_id"
         case device
+    }
+}
+
+struct FetchCampaignRequest: Encodable {
+    let projectId: String
+    let userId: String?
+    let device: UpdateDeviceRequest
+    let eventName: String?
+    let eventProperties: [String: AnyCodable]?
+    
+    enum CodingKeys: String, CodingKey {
+        case projectId = "project_id"
+        case userId = "user_id"
+        case device
+        case eventName = "event_name"
+        case eventProperties = "event_properties"
     }
 }

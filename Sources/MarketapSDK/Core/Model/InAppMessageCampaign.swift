@@ -95,5 +95,6 @@ struct InAppCampaign: Codable, Equatable {
     let id: String
     let layout: Layout
     let triggerEventCondition: EventTriggerCondition
-    let html: String
+    let html: String?
+    let updatedAt: String
 }

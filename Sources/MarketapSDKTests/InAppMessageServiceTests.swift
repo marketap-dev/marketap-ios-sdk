@@ -87,7 +87,8 @@ class InAppMessageServiceTests: XCTestCase {
                 frequencyCap: FrequencyCap(limit: 5, durationMinutes: 60),
                 delayMinutes: 10
             ),
-            html: "<html><body>Test Campaign</body></html>"
+            html: "<html><body>Test Campaign</body></html>",
+            updatedAt: "\(Date())"
         )
 
         let fetchResponse = InAppCampaignFetchResponse(
@@ -99,7 +100,7 @@ class InAppMessageServiceTests: XCTestCase {
 
         let expectation = self.expectation(description: "Campaigns fetched")
 
-        service.fetchCampaigns(force: true) { campaigns in
+        service.fetchCampaigns(force: true, inTimeout: nil) { campaigns in
             XCTAssertEqual(campaigns, [expectedCampaign])
             expectation.fulfill()
         }
@@ -119,7 +120,8 @@ class InAppMessageServiceTests: XCTestCase {
                 frequencyCap: FrequencyCap(limit: 5, durationMinutes: 60),
                 delayMinutes: 10
             ),
-            html: "<html><body>Cached Campaign</body></html>"
+            html: "<html><body>Cached Campaign</body></html>",
+            updatedAt: "\(Date())"
         )
 
         service.lastFetch = Date()
@@ -127,7 +129,7 @@ class InAppMessageServiceTests: XCTestCase {
 
         let expectation = self.expectation(description: "Campaigns loaded from cache")
 
-        service.fetchCampaigns(force: false) { campaigns in
+        service.fetchCampaigns(force: false, inTimeout: nil) { campaigns in
             XCTAssertEqual(campaigns, [cachedCampaign])
             expectation.fulfill()
         }
@@ -140,7 +142,7 @@ class InAppMessageServiceTests: XCTestCase {
 
         let expectation = self.expectation(description: "Fetch campaigns failed")
 
-        service.fetchCampaigns(force: true) { campaigns in
+        service.fetchCampaigns(force: true, inTimeout: nil) { campaigns in
             XCTAssertEqual(campaigns.count, 0) // 실패하면 빈 배열 반환
             expectation.fulfill()
         }

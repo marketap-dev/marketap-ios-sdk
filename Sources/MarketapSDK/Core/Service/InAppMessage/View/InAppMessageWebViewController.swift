@@ -19,8 +19,8 @@ protocol InAppMessageWebViewControllerDelegate: AnyObject, WKNavigationDelegate 
 final class InAppMessageWebViewController: UIViewController {
     var campaign: InAppCampaign? {
         didSet {
-            if let campaign = campaign {
-                self.updateCampaignContent(campaignHTML: campaign.html)
+            if let campaign = campaign, let html = campaign.html {
+                self.updateCampaignContent(campaignHTML: html)
             }
         }
     }

@@ -8,12 +8,20 @@
 import Foundation
 
 protocol InAppMessageServiceProtocol {
-    func fetchCampaigns(force: Bool, completion: (([InAppCampaign]) -> Void)?)
+    func fetchCampaigns(
+        force: Bool,
+        inTimeout: (([InAppCampaign]) -> Void)?,
+        completion: (([InAppCampaign]) -> Void)?,
+    )
     func onEvent(eventRequest: IngestEventRequest)
 }
 
 extension InAppMessageServiceProtocol {
     func fetchCampaigns(force: Bool = false) {
-        fetchCampaigns(force: force, completion: nil)
+        fetchCampaigns(force: force, inTimeout: nil, completion: nil)
+    }
+
+    func fetchCampaigns(force: Bool = false, completion: (([InAppCampaign]) -> Void)?) {
+        fetchCampaigns(force: force, inTimeout: nil, completion: completion)
     }
 }

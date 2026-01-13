@@ -28,6 +28,8 @@ class MockEventService: EventServiceProtocol {
         identifiedUserId = userId
         delegate?.handleUserIdChanged()
     }
+    
+    func setUserProperties(userProperties: [String: Any], userId: String?) { }
 
     func flushUser() {
         userFlushed = true
@@ -40,7 +42,7 @@ class MockInAppMessageService: InAppMessageServiceProtocol {
     var fetchCampaignsCalled = false
     var receivedEvent: IngestEventRequest?
 
-    func fetchCampaigns(force: Bool, completion: (([InAppCampaign]) -> Void)?) {
+    func fetchCampaigns(force: Bool, inTimeout: (([InAppCampaign]) -> Void)?, completion: (([InAppCampaign]) -> Void)?) {
         fetchCampaignsCalled = true
     }
 

@@ -11,3 +11,7 @@ struct InAppCampaignFetchResponse: Decodable, Equatable {
     let checksum: String
     let campaigns: [InAppCampaign]
 }
+
+struct InAppCampaignSingleFetchResponse: Decodable, Equatable {
+    let campaign: InAppCampaign?
+}
