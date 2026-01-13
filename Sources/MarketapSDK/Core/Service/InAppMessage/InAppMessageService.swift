@@ -55,14 +55,10 @@ private final class InAppMessageTimeoutController {
         workItem.cancel()
         return isFirst
     }
-
-    func isWithinTimeout() -> Bool {
-        return Date().timeIntervalSince(startTime) <= timeoutSeconds
-    }
 }
 
 final class InAppMessageService: NSObject, InAppMessageServiceProtocol {
-    static let cacheExpiration = Double(30)
+    static let cacheExpiration = Double(60 * 5)
     static let campaignCacheKey = "InAppMessageService_campaigns"
     static let lastFetchKey = "InAppMessageService_lastFetch"
 
@@ -118,20 +114,15 @@ final class InAppMessageService: NSObject, InAppMessageServiceProtocol {
         }
         timeoutController?.start()
 
-        func handleInTimeout(_ campaigns: [InAppCampaign]) {
-            guard let inTimeout = inTimeout else { return }
-            let shouldHandle = timeoutController?.isWithinTimeout() ?? false
-            guard shouldHandle else { return }
-            inTimeout(campaigns)
-        }
-
         if let lastFetch = lastFetch, !force, Date().timeIntervalSince(lastFetch) < Self.cacheExpiration {
             if self.campaigns == nil {
                 self.campaigns = cache.loadCodableObject(forKey: Self.campaignCacheKey)
             }
             let cachedCampaigns = campaigns ?? []
-            timeoutController?.markCompleted()
-            handleInTimeout(cachedCampaigns)
+            let didCompleteWithinTimeout = timeoutController?.markCompleted() ?? false
+            if didCompleteWithinTimeout {
+                inTimeout?(cachedCampaigns)
+            }
             completion?(cachedCampaigns)
             return
         }
@@ -147,7 +138,7 @@ final class InAppMessageService: NSObject, InAppMessageServiceProtocol {
         ) { [weak self] result in
             guard let self = self else { return }
 
-            timeoutController?.markCompleted()
+            let didCompleteWithinTimeout = timeoutController?.markCompleted() ?? false
 
             switch result {
             case .success(let response):
@@ -156,11 +147,15 @@ final class InAppMessageService: NSObject, InAppMessageServiceProtocol {
                 self.cache.saveCodableObject(campaigns, key: Self.campaignCacheKey)
                 self.cache.saveCodableObject(Date(), key: Self.lastFetchKey)
                 self.lastFetch = Date()
-                handleInTimeout(campaigns)
+                if didCompleteWithinTimeout {
+                    inTimeout?(campaigns)
+                }
                 completion?(campaigns)
             case .failure(_):
                 let cachedCampaigns = self.campaigns ?? []
-                handleInTimeout(cachedCampaigns)
+                if didCompleteWithinTimeout {
+                    inTimeout?(cachedCampaigns)
+                }
                 completion?(cachedCampaigns)
             }
         }
