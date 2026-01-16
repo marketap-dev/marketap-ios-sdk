@@ -77,7 +77,7 @@ final class InAppMessageService: NSObject, InAppMessageServiceProtocol {
 
     var campaigns: [InAppCampaign]?
     var lastFetch: Date?
-    let campaignViewController = InAppMessageWebViewController()
+    lazy var campaignViewController = InAppMessageWebViewController()
 
     init(
         customHandlerStore: MarketapCustomHandlerStoreProtocol,
@@ -90,11 +90,11 @@ final class InAppMessageService: NSObject, InAppMessageServiceProtocol {
 
         super.init()
 
-        campaignViewController.delegate = self
         self.lastFetch = cache.loadCodableObject(forKey: Self.lastFetchKey)
         fetchCampaigns()
 
         DispatchQueue.main.async {
+            self.campaignViewController.delegate = self
             self.campaignViewController.loadViewIfNeeded()
         }
     }
