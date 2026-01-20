@@ -20,7 +20,7 @@ class MockEventService: EventServiceProtocol {
         pushToken = token
     }
 
-    func trackEvent(eventName: String, eventProperties: [String : Any]?, userId: String?, id: String?, timestamp: Date?) {
+    func trackEvent(eventName: String, eventProperties: [String : Any]?, userId: String?, id: String?, timestamp: Date?, fromWebBridge: Bool) {
         trackedEvents.append(eventName)
     }
 
@@ -46,7 +46,7 @@ class MockInAppMessageService: InAppMessageServiceProtocol {
         fetchCampaignsCalled = true
     }
 
-    func onEvent(eventRequest: IngestEventRequest) {
+    func onEvent(eventRequest: IngestEventRequest, fromWebBridge: Bool) {
         receivedEvent = eventRequest
     }
 }
@@ -186,7 +186,7 @@ class MarketapCoreTests: XCTestCase {
         let eventRequest = IngestEventRequest(id: "1", name: "custom_event", userId: "user_789", device: MockDevice().toDevice().makeRequest(), properties: nil, timestamp: Date())
         let mockDevice = MockDevice().toDevice()
 
-        core.onEvent(eventRequest: eventRequest, device: mockDevice)
+        core.onEvent(eventRequest: eventRequest, device: mockDevice, fromWebBridge: false)
 
         let expectation = expectation(description: "OnEvent processed")
         DispatchQueue.global().asyncAfter(deadline: .now() + 0.5) {

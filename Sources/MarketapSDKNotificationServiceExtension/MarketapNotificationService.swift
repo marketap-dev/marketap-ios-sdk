@@ -13,7 +13,7 @@ public class MarketapNotificationService: NSObject {
     public static var client: MarketapNotificationServiceClientProtocol = MarketapNotificationServiceClient()
 
     private override init() {}
-    
+
     @objc public static func didReceive(_ request: UNNotificationRequest, withContentHandler contentHandler: @escaping (UNNotificationContent) -> Void) -> Bool {
         client.didReceive(request, withContentHandler: contentHandler)
     }
