@@ -20,13 +20,22 @@ protocol WebBridgeInAppMessageDelegate: AnyObject {
     /// 현재 활성화된 웹브릿지 인스턴스 (웹뷰가 살아있는 동안)
     private static weak var activeInstance: MarketapWebBridge?
 
+    /// 인앱 메시지를 웹뷰에서 처리할지 여부 (false면 네이티브에서 처리)
+    private let handleInAppInWebView: Bool
+
     /// 현재 진행 중인 웹 인앱 메시지의 캠페인 정보
     private var currentCampaign: InAppCampaign?
     private var currentMessageId: String?
 
+    /// MarketapWebBridge 초기화
+    /// - Parameter handleInAppInWebView: 인앱 메시지를 웹뷰에서 처리할지 여부 (기본값: true)
+    @objc public init(handleInAppInWebView: Bool = true) {
+        self.handleInAppInWebView = handleInAppInWebView
+        super.init()
+    }
+
     public func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
         self.webView = message.webView
-        Self.activeInstance = self
 
         guard message.name == Self.name,
               let body = message.body as? [String: Any],
@@ -69,6 +78,10 @@ protocol WebBridgeInAppMessageDelegate: AnyObject {
     private func handleTrackEvent(params: [String: Any]?) {
         guard let eventName = params?["eventName"] as? String else {
             return
+        }
+        // 웹뷰에서 인앱 메시지를 처리하는 경우에만 활성 인스턴스로 등록
+        if handleInAppInWebView {
+            Self.activeInstance = self
         }
         let eventProperties = params?["eventProperties"] as? [String: Any]
         // 웹브릿지 컨텍스트 표시하여 track 호출
@@ -263,7 +276,10 @@ extension MarketapWebBridge: WebBridgeInAppMessageDelegate {
     }
 
     /// 현재 활성화된 웹브릿지로 캠페인 전달
+    /// 전달 후 activeInstance를 클리어하여 다음 이벤트에서 올바른 웹브릿지를 사용하도록 함
     static func sendCampaignToActiveWeb(campaign: InAppCampaign, messageId: String) {
-        activeInstance?.sendCampaignToWeb(campaign: campaign, messageId: messageId)
+        let bridge = activeInstance
+        activeInstance = nil  // 전달 전에 클리어 (sendCampaignToWeb이 실패해도 클리어)
+        bridge?.sendCampaignToWeb(campaign: campaign, messageId: messageId)
     }
 }
