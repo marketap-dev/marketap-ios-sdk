@@ -83,4 +83,18 @@ extension Marketap {
     @objc public static func resetIdentity() {
         client?.resetIdentity()
     }
+
+    /// 유저 속성을 업데이트합니다.
+    /// - Parameter userProperties: 유저 속성
+    @objc public static func setUserProperties(userProperties: [String: Any]) {
+        client?.setUserProperties(userProperties: userProperties)
+    }
+
+    // MARK: - Internal Methods (WebBridge)
+
+    /// 웹브릿지에서 호출된 이벤트를 추적합니다 (내부 사용).
+    /// 인앱 캠페인이 웹으로 위임되어 처리됩니다.
+    static func trackFromWebBridge(eventName: String, eventProperties: [String: Any]? = nil) {
+        client?.trackFromWebBridge(eventName: eventName, eventProperties: eventProperties)
+    }
 }

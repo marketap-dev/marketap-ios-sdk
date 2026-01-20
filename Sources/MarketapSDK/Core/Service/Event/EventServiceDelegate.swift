@@ -9,5 +9,5 @@ import Foundation
 
 protocol EventServiceDelegate: AnyObject {
     func handleUserIdChanged()
-    func onEvent(eventRequest: IngestEventRequest, device: Device)
+    func onEvent(eventRequest: IngestEventRequest, device: Device, fromWebBridge: Bool)
 }

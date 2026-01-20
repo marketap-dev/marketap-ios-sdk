@@ -12,15 +12,15 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
         UNUserNotificationCenter.current().delegate = self
 
-        Marketap.setLogLevel(.verbose)
+        Marketap.setLogLevel(.debug)
         Marketap.initialize(projectId: "kx43pz7")
-        Marketap.setClickHandler { event in
-            if let urlString = event.url, let url = URL(string: urlString) {
-                DispatchQueue.main.async {
-                    UIApplication.shared.open(url, options: [:], completionHandler: nil)
-                }
-            }
-        }
+//        Marketap.setClickHandler { event in
+//            if let urlString = event.url, let url = URL(string: urlString) {
+//                DispatchQueue.main.async {
+//                    UIApplication.shared.open(url, options: [:], completionHandler: nil)
+//                }
+//            }
+//        }
         Marketap.application(application, didFinishLaunchingWithOptions: launchOptions)
         Marketap.requestAuthorizationForPushNotifications()
 

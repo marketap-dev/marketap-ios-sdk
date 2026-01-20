@@ -16,7 +16,7 @@ struct ContentView: View {
             }
 
 
-            WebView(url: URL(string: "https://marketap.cafe24.com/shop2")!)
+            WebView(url: URL(string: "http://localhost:8090/marketap-web-sdk/test_me.html?_ijt=qfmqoofflu4s3j5j7rn873l8cf&_ij_reload=RELOAD_ON_SAVE")!)
                 .tabItem {
                     Label("Web", systemImage: "safari")
                 }

@@ -44,10 +44,10 @@ extension MarketapCore: EventServiceDelegate {
         }
     }
 
-    func onEvent(eventRequest: IngestEventRequest, device: Device) {
+    func onEvent(eventRequest: IngestEventRequest, device: Device, fromWebBridge: Bool) {
         queue.async {
             if !["mkt_delivery_message", "mkt_click_message"].contains(eventRequest.name) {
-                self.inAppMessageService.onEvent(eventRequest: eventRequest)
+                self.inAppMessageService.onEvent(eventRequest: eventRequest, fromWebBridge: fromWebBridge)
             }
         }
     }

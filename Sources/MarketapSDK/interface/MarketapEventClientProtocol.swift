@@ -80,4 +80,17 @@ public protocol MarketapEventClientProtocol {
     /// Resets the user's identity by clearing their stored profile.
     /// This method is used for logging out a user or anonymizing their data for privacy compliance.
     func resetIdentity()
+
+    // MARK: - Internal Methods (WebBridge)
+
+    /// Tracks an event from the web bridge context.
+    /// In-app campaigns will be delegated to web for display.
+    /// - Parameters:
+    ///   - eventName: The name of the event to track.
+    ///   - eventProperties: Additional properties related to the event (optional).
+    func trackFromWebBridge(eventName: String, eventProperties: [String: Any]?)
+
+    /// Updates user properties without requiring a user ID.
+    /// - Parameter userProperties: A dictionary containing properties to update.
+    func setUserProperties(userProperties: [String: Any])
 }
