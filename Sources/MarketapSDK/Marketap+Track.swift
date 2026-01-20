@@ -90,11 +90,14 @@ extension Marketap {
         client?.setUserProperties(userProperties: userProperties)
     }
 
-    // MARK: - Internal Methods (WebBridge)
+    // MARK: - WebBridge Methods
 
-    /// 웹브릿지에서 호출된 이벤트를 추적합니다 (내부 사용).
+    /// 웹브릿지에서 호출된 이벤트를 추적합니다.
     /// 인앱 캠페인이 웹으로 위임되어 처리됩니다.
-    static func trackFromWebBridge(eventName: String, eventProperties: [String: Any]? = nil) {
+    /// - Parameters:
+    ///   - eventName: 추적할 이벤트 이름
+    ///   - eventProperties: 이벤트 속성 (선택)
+    @objc public static func trackFromWebBridge(eventName: String, eventProperties: [String: Any]? = nil) {
         client?.trackFromWebBridge(eventName: eventName, eventProperties: eventProperties)
     }
 }
