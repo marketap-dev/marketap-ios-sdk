@@ -97,4 +97,12 @@ struct InAppCampaign: Codable, Equatable {
     let triggerEventCondition: EventTriggerCondition
     let html: String?
     let updatedAt: String
+
+    func toDictionary() -> [String: Any] {
+        guard let data = try? JSONEncoder().encode(self),
+              let dict = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] else {
+            return [:]
+        }
+        return dict
+    }
 }

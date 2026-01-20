@@ -13,12 +13,20 @@ protocol WebBridgeInAppMessageDelegate: AnyObject {
     func sendCampaignToWeb(campaign: InAppCampaign, messageId: String)
 }
 
+/// 외부에서 인앱 메시지를 받기 위한 콜백 타입 (Flutter, React Native 등)
+public typealias ExternalInAppMessageCallback = (_ campaign: [String: Any], _ messageId: String, _ hasCustomClickHandler: Bool) -> Void
+
 @objc public class MarketapWebBridge: NSObject, WKScriptMessageHandler {
     public static let name = "marketap"
     private weak var webView: WKWebView?
 
     /// 현재 활성화된 웹브릿지 인스턴스 (웹뷰가 살아있는 동안)
     private static weak var activeInstance: MarketapWebBridge?
+
+    /// 외부 인앱 메시지 콜백 (Flutter, React Native 등에서 등록)
+    private static var externalInAppMessageCallback: ExternalInAppMessageCallback?
+    /// 외부 웹브릿지가 활성화되었는지 여부
+    private static var isExternalWebBridgeActive: Bool = false
 
     /// 인앱 메시지를 웹뷰에서 처리할지 여부 (false면 네이티브에서 처리)
     private let handleInAppInWebView: Bool
@@ -272,14 +280,42 @@ extension MarketapWebBridge: WebBridgeInAppMessageDelegate {
 
     /// 현재 활성화된 웹브릿지가 있는지 확인
     static func hasActiveWebBridge() -> Bool {
-        return activeInstance?.webView != nil
+        // 네이티브 웹브릿지 또는 외부 웹브릿지가 활성화되어 있는지 확인
+        return activeInstance?.webView != nil || isExternalWebBridgeActive
     }
 
     /// 현재 활성화된 웹브릿지로 캠페인 전달
     /// 전달 후 activeInstance를 클리어하여 다음 이벤트에서 올바른 웹브릿지를 사용하도록 함
     static func sendCampaignToActiveWeb(campaign: InAppCampaign, messageId: String) {
+        // 외부 웹브릿지가 활성화된 경우 외부로 전달
+        if isExternalWebBridgeActive {
+            isExternalWebBridgeActive = false  // 전달 후 클리어
+            if let callback = externalInAppMessageCallback {
+                // InAppCampaign을 Dictionary로 변환
+                let campaignDict = campaign.toDictionary()
+                let hasCustomClickHandler = Marketap.customHandlerStore.customized
+                callback(campaignDict, messageId, hasCustomClickHandler)
+            }
+            return
+        }
+
+        // 네이티브 웹브릿지로 전달
         let bridge = activeInstance
         activeInstance = nil  // 전달 전에 클리어 (sendCampaignToWeb이 실패해도 클리어)
         bridge?.sendCampaignToWeb(campaign: campaign, messageId: messageId)
+    }
+
+    // MARK: - External Bridge Support
+
+    /// 외부 인앱 메시지 콜백 등록 (Flutter, React Native 등에서 사용)
+    /// - Parameter callback: 인앱 메시지를 받을 콜백 함수
+    @objc public static func setExternalInAppMessageCallback(_ callback: ExternalInAppMessageCallback?) {
+        externalInAppMessageCallback = callback
+    }
+
+    /// 외부 웹브릿지 활성화 상태 설정
+    /// 외부에서 trackFromWebBridge 호출 시 true로 설정
+    @objc public static func setExternalWebBridgeActive(_ active: Bool) {
+        isExternalWebBridgeActive = active
     }
 }
