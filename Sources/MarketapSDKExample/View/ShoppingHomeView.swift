@@ -10,6 +10,8 @@ import MarketapSDK
 
 
 struct ShoppingHomeView: View {
+    @ObservedObject private var deepLinkManager = DeepLinkManager.shared
+
     @State private var selectedCategory: String = "전체"
     @State private var isShowingPurchase = false
     @State private var selectedProduct: (String, Double, String)? = nil
@@ -112,7 +114,38 @@ struct ShoppingHomeView: View {
                 Marketap.trackPageView(eventProperties: ["mkt_page_title": "홈"])
                 loadCartItems()
             }
+            .onChange(of: deepLinkManager.destination) { destination in
+                handleDeepLink(destination)
+            }
+            .onAppear {
+                // 앱 시작 시 대기 중인 딥링크 처리
+                handleDeepLink(deepLinkManager.destination)
+            }
         }
+    }
+
+    private func handleDeepLink(_ destination: DeepLinkDestination?) {
+        guard let destination = destination else { return }
+
+        switch destination {
+        case .cart:
+            isShowingCart = true
+        case .user:
+            isShowingUserInfo = true
+        case .product(let name):
+            if let product = products.first(where: { $0.0 == name }) {
+                selectedProduct = product
+                isShowingPurchase = true
+            }
+        case .category(let name):
+            if categories.contains(name) {
+                selectedCategory = name
+            }
+        default:
+            break
+        }
+
+        deepLinkManager.clearDestination()
     }
 
     private func formatPrice(_ price: Double) -> String {

@@ -54,6 +54,13 @@ extension MarketapCore {
         }
     }
 
+    func trackFromWebBridge(eventName: String, eventProperties: [String : Any]?) {
+        queue.async {
+            MarketapLogger.debug("trackFromWebBridge: \(eventName)\n\(eventProperties.prettyPrintedJSONString)")
+            self.eventService.trackEvent(eventName: eventName, eventProperties: eventProperties, fromWebBridge: true)
+        }
+    }
+
     func trackPurchase(revenue: Double, eventProperties: [String : Any]?) {
         queue.async {
             var eventProperties = eventProperties ?? [:]

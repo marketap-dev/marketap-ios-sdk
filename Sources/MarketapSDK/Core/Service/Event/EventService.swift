@@ -100,7 +100,8 @@ final class EventService: EventServiceProtocol {
         eventProperties: [String: Any]?,
         userId: String? = nil,
         id: String? = nil,
-        timestamp: Date? = nil
+        timestamp: Date? = nil,
+        fromWebBridge: Bool = false
     ) {
         let device = cache.device
         var properties = eventProperties ?? [:]
@@ -139,7 +140,7 @@ final class EventService: EventServiceProtocol {
         UserDefaults.standard.set(eventTimestamp.timeIntervalSince1970, forKey: "last_event_time")
 
         track(request: event)
-        delegate?.onEvent(eventRequest: event, device: device)
+        delegate?.onEvent(eventRequest: event, device: device, fromWebBridge: fromWebBridge)
     }
 
 

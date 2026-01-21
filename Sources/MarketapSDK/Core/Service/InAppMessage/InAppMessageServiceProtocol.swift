@@ -13,7 +13,7 @@ protocol InAppMessageServiceProtocol {
         inTimeout: (([InAppCampaign]) -> Void)?,
         completion: (([InAppCampaign]) -> Void)?,
     )
-    func onEvent(eventRequest: IngestEventRequest)
+    func onEvent(eventRequest: IngestEventRequest, fromWebBridge: Bool)
 }
 
 extension InAppMessageServiceProtocol {
@@ -23,5 +23,9 @@ extension InAppMessageServiceProtocol {
 
     func fetchCampaigns(force: Bool = false, completion: (([InAppCampaign]) -> Void)?) {
         fetchCampaigns(force: force, inTimeout: nil, completion: completion)
+    }
+
+    func onEvent(eventRequest: IngestEventRequest) {
+        onEvent(eventRequest: eventRequest, fromWebBridge: false)
     }
 }

@@ -12,6 +12,12 @@ enum MarketapBridgeEventType: String {
     case identify
     case resetIdentity
     case marketapBridgeCheck
+    // Web → Native: 웹에서 인앱 메시지 이벤트 전달
+    case inAppMessageImpression
+    case inAppMessageClick
+    case inAppMessageHide
+    case inAppMessageTrack
+    case inAppMessageSetUserProperties
 }
 
 struct MarketapBridgeEvent {

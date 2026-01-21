@@ -30,6 +30,6 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     }
 
     private func handleDeepLink(_ url: URL) {
-
+        DeepLinkManager.shared.handle(url: url)
     }
 }
