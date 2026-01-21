@@ -93,7 +93,7 @@ public typealias ExternalInAppMessageCallback = (_ campaign: [String: Any], _ me
         }
         let eventProperties = params?["eventProperties"] as? [String: Any]
         // 웹브릿지 컨텍스트 표시하여 track 호출
-        Marketap.trackFromWebBridge(eventName: eventName, eventProperties: eventProperties)
+        MarketapPlugin.trackEvent(eventName: eventName, eventProperties: eventProperties)
     }
 
     private func handleIdentifyEvent(params: [String: Any]?) {
@@ -128,7 +128,7 @@ public typealias ExternalInAppMessageCallback = (_ campaign: [String: Any], _ me
 
         // 캠페인 정보가 있으면 impression 이벤트 전송
         if let campaign = currentCampaign, campaign.id == campaignId {
-            Marketap.handleInAppImpression(
+            MarketapPlugin.trackInAppImpression(
                 campaignId: campaign.id,
                 messageId: messageId,
                 layoutSubType: campaign.layout.layoutSubType
@@ -148,7 +148,7 @@ public typealias ExternalInAppMessageCallback = (_ campaign: [String: Any], _ me
 
         // 캠페인 정보가 있으면 클릭 이벤트 처리
         if let campaign = currentCampaign, campaign.id == campaignId {
-            Marketap.handleInAppClick(
+            MarketapPlugin.trackInAppClick(
                 campaignId: campaign.id,
                 messageId: messageId,
                 locationId: locationId,
@@ -167,7 +167,7 @@ public typealias ExternalInAppMessageCallback = (_ campaign: [String: Any], _ me
         let hideTypeString = params?["hideType"] as? String
 
         // 캠페인 숨김 처리
-        Marketap.handleInAppHide(campaignId: campaignId, hideType: hideTypeString)
+        MarketapPlugin.hideInAppMessage(campaignId: campaignId, hideType: hideTypeString)
 
         // 현재 캠페인 정보 클리어
         if currentCampaign?.id == campaignId {
@@ -195,7 +195,7 @@ public typealias ExternalInAppMessageCallback = (_ campaign: [String: Any], _ me
         }
 
         MarketapLogger.debug("Web InApp SetUserProperties")
-        Marketap.setUserProperties(userProperties: userProperties)
+        MarketapPlugin.setUserProperties(userProperties: userProperties)
     }
 }
 
