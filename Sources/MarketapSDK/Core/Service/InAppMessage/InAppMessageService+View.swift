@@ -165,19 +165,12 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
     }
 
     func onImpression(campaign: InAppCampaign, messageId: String) {
-        delegate?.trackEvent(
-            eventName: "mkt_delivery_message",
-            eventProperties: [
-                "mkt_campaign_id": campaign.id,
-                "mkt_campaign_category": "ON_SITE",
-                "mkt_channel_type": "IN_APP_MESSAGE",
-                "mkt_sub_channel_type": campaign.layout.layoutSubType,
-                "mkt_result_status": 200000,
-                "mkt_result_message": "SUCCESS",
-                "mkt_is_success": true,
-                "mkt_message_id": messageId
-            ]
+        let props = InAppEventBuilder.impressionEventProperties(
+            campaignId: campaign.id,
+            messageId: messageId,
+            layoutSubType: campaign.layout.layoutSubType
         )
+        delegate?.trackEvent(eventName: "mkt_delivery_message", eventProperties: props)
     }
 
     func onClick(campaign: InAppCampaign, locationId: String, messageId: String, url: String?) {
@@ -186,20 +179,14 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
             MarketapClickEvent(campaignType: .inAppMessage, campaignId: campaign.id, url: url)
         )
 
-        delegate?.trackEvent(
-            eventName: "mkt_click_message",
-            eventProperties: [
-                "mkt_campaign_id": campaign.id,
-                "mkt_campaign_category": "ON_SITE",
-                "mkt_channel_type": "IN_APP_MESSAGE",
-                "mkt_sub_channel_type": campaign.layout.layoutSubType,
-                "mkt_result_status": 200000,
-                "mkt_result_message": "SUCCESS",
-                "mkt_location_id": locationId,
-                "mkt_is_success": true,
-                "mkt_message_id": messageId
-            ]
+        let props = InAppEventBuilder.clickEventProperties(
+            campaignId: campaign.id,
+            messageId: messageId,
+            locationId: locationId,
+            url: url,
+            layoutSubType: campaign.layout.layoutSubType
         )
+        delegate?.trackEvent(eventName: "mkt_click_message", eventProperties: props)
     }
 
     func onTrack(campaign: InAppCampaign, eventName: String, properties: [String: Any]?) {

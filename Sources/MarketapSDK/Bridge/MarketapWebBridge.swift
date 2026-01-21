@@ -126,24 +126,12 @@ public typealias ExternalInAppMessageCallback = (_ campaign: [String: Any], _ me
             return
         }
 
-        MarketapLogger.debug("Web InApp Impression: campaignId=\(campaignId), messageId=\(messageId)")
-
         // 캠페인 정보가 있으면 impression 이벤트 전송
         if let campaign = currentCampaign, campaign.id == campaignId {
-            Marketap.client?.track(
-                eventName: "mkt_delivery_message",
-                eventProperties: [
-                    "mkt_campaign_id": campaign.id,
-                    "mkt_campaign_category": "ON_SITE",
-                    "mkt_channel_type": "IN_APP_MESSAGE",
-                    "mkt_sub_channel_type": campaign.layout.layoutSubType,
-                    "mkt_result_status": 200000,
-                    "mkt_result_message": "SUCCESS",
-                    "mkt_is_success": true,
-                    "mkt_message_id": messageId
-                ],
-                id: nil,
-                timestamp: nil
+            Marketap.handleInAppImpression(
+                campaignId: campaign.id,
+                messageId: messageId,
+                layoutSubType: campaign.layout.layoutSubType
             )
         }
     }
@@ -157,31 +145,15 @@ public typealias ExternalInAppMessageCallback = (_ campaign: [String: Any], _ me
         }
 
         let url = params?["url"] as? String
-        MarketapLogger.debug("Web InApp Click: campaignId=\(campaignId), locationId=\(locationId), url=\(url ?? "nil")")
 
-        // 클릭 핸들러 호출
+        // 캠페인 정보가 있으면 클릭 이벤트 처리
         if let campaign = currentCampaign, campaign.id == campaignId {
-            if Marketap.customHandlerStore.customized {
-                Marketap.customHandlerStore.handleClick(
-                    MarketapClickEvent(campaignType: .inAppMessage, campaignId: campaign.id, url: url)
-                )
-            }
-
-            Marketap.client?.track(
-                eventName: "mkt_click_message",
-                eventProperties: [
-                    "mkt_campaign_id": campaign.id,
-                    "mkt_campaign_category": "ON_SITE",
-                    "mkt_channel_type": "IN_APP_MESSAGE",
-                    "mkt_sub_channel_type": campaign.layout.layoutSubType,
-                    "mkt_result_status": 200000,
-                    "mkt_result_message": "SUCCESS",
-                    "mkt_location_id": locationId,
-                    "mkt_is_success": true,
-                    "mkt_message_id": messageId
-                ],
-                id: nil,
-                timestamp: nil
+            Marketap.handleInAppClick(
+                campaignId: campaign.id,
+                messageId: messageId,
+                locationId: locationId,
+                url: url,
+                layoutSubType: campaign.layout.layoutSubType
             )
         }
     }
@@ -193,19 +165,9 @@ public typealias ExternalInAppMessageCallback = (_ campaign: [String: Any], _ me
         }
 
         let hideTypeString = params?["hideType"] as? String
-        MarketapLogger.debug("Web InApp Hide: campaignId=\(campaignId), hideType=\(hideTypeString ?? "nil")")
 
         // 캠페인 숨김 처리
-        if let hideTypeString = hideTypeString,
-           let hideType = CampaignHideType(rawValue: hideTypeString) {
-            let hideDuration = hideType.hideDuration
-            if hideDuration > 0 {
-                UserDefaults.standard.set(
-                    Date().timeIntervalSince1970 + hideDuration,
-                    forKey: "hide_campaign_\(campaignId)"
-                )
-            }
-        }
+        Marketap.handleInAppHide(campaignId: campaignId, hideType: hideTypeString)
 
         // 현재 캠페인 정보 클리어
         if currentCampaign?.id == campaignId {

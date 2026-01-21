@@ -7,55 +7,36 @@
 
 import Foundation
 
-// MARK: - Internal Methods (Flutter/React Native)
+// MARK: - 인앱 이벤트 속성 빌더
 
-extension Marketap {
+enum InAppEventBuilder {
 
-    // MARK: - 외부 웹브릿지 인앱 이벤트 처리
-
-    /// 외부 웹브릿지에서 인앱 메시지 노출 이벤트 처리
-    static func handleExternalInAppImpression(
+    /// 인앱 메시지 노출 이벤트 속성 생성
+    static func impressionEventProperties(
         campaignId: String,
         messageId: String,
         layoutSubType: String?
-    ) {
-        MarketapLogger.debug("handleExternalInAppImpression: campaignId=\(campaignId), messageId=\(messageId)")
-        client?.track(
-            eventName: "mkt_delivery_message",
-            eventProperties: [
-                "mkt_campaign_id": campaignId,
-                "mkt_campaign_category": "ON_SITE",
-                "mkt_channel_type": "IN_APP_MESSAGE",
-                "mkt_sub_channel_type": layoutSubType ?? "MODAL",
-                "mkt_result_status": 200000,
-                "mkt_result_message": "SUCCESS",
-                "mkt_is_success": true,
-                "mkt_message_id": messageId
-            ],
-            id: nil,
-            timestamp: nil
-        )
+    ) -> [String: Any] {
+        return [
+            "mkt_campaign_id": campaignId,
+            "mkt_campaign_category": "ON_SITE",
+            "mkt_channel_type": "IN_APP_MESSAGE",
+            "mkt_sub_channel_type": layoutSubType ?? "MODAL",
+            "mkt_result_status": 200000,
+            "mkt_result_message": "SUCCESS",
+            "mkt_is_success": true,
+            "mkt_message_id": messageId
+        ]
     }
 
-    /// 외부 웹브릿지에서 인앱 메시지 클릭 이벤트 처리
-    /// 클릭 핸들러 호출 + 이벤트 트래킹
-    static func handleExternalInAppClick(
+    /// 인앱 메시지 클릭 이벤트 속성 생성
+    static func clickEventProperties(
         campaignId: String,
         messageId: String,
         locationId: String,
         url: String?,
         layoutSubType: String?
-    ) {
-        MarketapLogger.debug("handleExternalInAppClick: campaignId=\(campaignId), locationId=\(locationId), url=\(url ?? "nil")")
-
-        // 클릭 핸들러 호출
-        if let url = url, customHandlerStore.customized {
-            customHandlerStore.handleClick(
-                MarketapClickEvent(campaignType: .inAppMessage, campaignId: campaignId, url: url)
-            )
-        }
-
-        // 클릭 이벤트 트래킹
+    ) -> [String: Any] {
         var props: [String: Any] = [
             "mkt_campaign_id": campaignId,
             "mkt_campaign_category": "ON_SITE",
@@ -70,12 +51,63 @@ extension Marketap {
         if let url = url {
             props["mkt_url"] = url
         }
+        return props
+    }
+}
+
+// MARK: - Internal Methods (Flutter/React Native)
+
+extension Marketap {
+
+    // MARK: - 인앱 이벤트 처리 (공통 로직)
+
+    /// 인앱 메시지 노출 이벤트 처리
+    static func handleInAppImpression(
+        campaignId: String,
+        messageId: String,
+        layoutSubType: String?
+    ) {
+        MarketapLogger.debug("handleInAppImpression: campaignId=\(campaignId), messageId=\(messageId)")
+        let props = InAppEventBuilder.impressionEventProperties(
+            campaignId: campaignId,
+            messageId: messageId,
+            layoutSubType: layoutSubType
+        )
+        client?.track(eventName: "mkt_delivery_message", eventProperties: props, id: nil, timestamp: nil)
+    }
+
+    /// 인앱 메시지 클릭 이벤트 처리
+    /// 클릭 핸들러 호출 + 이벤트 트래킹
+    static func handleInAppClick(
+        campaignId: String,
+        messageId: String,
+        locationId: String,
+        url: String?,
+        layoutSubType: String?
+    ) {
+        MarketapLogger.debug("handleInAppClick: campaignId=\(campaignId), locationId=\(locationId), url=\(url ?? "nil")")
+
+        // 클릭 핸들러 호출
+        if let url = url, customHandlerStore.customized {
+            customHandlerStore.handleClick(
+                MarketapClickEvent(campaignType: .inAppMessage, campaignId: campaignId, url: url)
+            )
+        }
+
+        // 클릭 이벤트 트래킹
+        let props = InAppEventBuilder.clickEventProperties(
+            campaignId: campaignId,
+            messageId: messageId,
+            locationId: locationId,
+            url: url,
+            layoutSubType: layoutSubType
+        )
         client?.track(eventName: "mkt_click_message", eventProperties: props, id: nil, timestamp: nil)
     }
 
-    /// 외부 웹브릿지에서 인앱 메시지 숨김 처리
-    static func handleExternalInAppHide(campaignId: String, hideType: String?) {
-        MarketapLogger.debug("handleExternalInAppHide: campaignId=\(campaignId), hideType=\(hideType ?? "nil")")
+    /// 인앱 메시지 숨김 처리
+    static func handleInAppHide(campaignId: String, hideType: String?) {
+        MarketapLogger.debug("handleInAppHide: campaignId=\(campaignId), hideType=\(hideType ?? "nil")")
         if let hideTypeString = hideType,
            let hideType = CampaignHideType(rawValue: hideTypeString) {
             let hideDuration = hideType.hideDuration
@@ -107,7 +139,6 @@ extension Marketap {
 }
 
 /// MarketapInternal - Flutter/React Native 플러그인에서 사용하는 내부 API
-/// 일반 고객사에서는 사용하지 않습니다.
 @objcMembers
 public class MarketapInternal: NSObject {
 
@@ -121,7 +152,7 @@ public class MarketapInternal: NSObject {
         messageId: String,
         layoutSubType: String?
     ) {
-        Marketap.handleExternalInAppImpression(
+        Marketap.handleInAppImpression(
             campaignId: campaignId,
             messageId: messageId,
             layoutSubType: layoutSubType
@@ -137,7 +168,7 @@ public class MarketapInternal: NSObject {
         url: String?,
         layoutSubType: String?
     ) {
-        Marketap.handleExternalInAppClick(
+        Marketap.handleInAppClick(
             campaignId: campaignId,
             messageId: messageId,
             locationId: locationId,
@@ -148,7 +179,7 @@ public class MarketapInternal: NSObject {
 
     /// 외부 웹브릿지에서 인앱 메시지 숨김 처리
     public static func handleExternalInAppHide(campaignId: String, hideType: String?) {
-        Marketap.handleExternalInAppHide(campaignId: campaignId, hideType: hideType)
+        Marketap.handleInAppHide(campaignId: campaignId, hideType: hideType)
     }
 
     // MARK: - 웹브릿지 이벤트 처리
