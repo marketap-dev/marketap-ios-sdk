@@ -1,4 +1,5 @@
 .swiftpm/
 **/xcuserdata/
 .build/
+Sources/build/
 
