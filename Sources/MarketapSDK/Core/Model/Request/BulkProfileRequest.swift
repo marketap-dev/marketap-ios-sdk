@@ -33,6 +33,7 @@ struct BulkProfile: Codable {
 
         if let timestamp = timestamp {
             let dateFormatter = ISO8601DateFormatter()
+            dateFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
             let timestampString = dateFormatter.string(from: timestamp)
             try container.encode(timestampString, forKey: .timestamp)
         }
@@ -46,7 +47,13 @@ struct BulkProfile: Codable {
 
         if let timestampString = try container.decodeIfPresent(String.self, forKey: .timestamp) {
             let dateFormatter = ISO8601DateFormatter()
-            timestamp = dateFormatter.date(from: timestampString)
+            dateFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            if let date = dateFormatter.date(from: timestampString) {
+                timestamp = date
+            } else {
+                dateFormatter.formatOptions = [.withInternetDateTime]
+                timestamp = dateFormatter.date(from: timestampString)
+            }
         } else {
             timestamp = nil
         }

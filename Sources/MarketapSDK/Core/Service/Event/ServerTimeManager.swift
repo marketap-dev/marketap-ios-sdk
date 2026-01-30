@@ -17,14 +17,14 @@ class ServerTimeManager: ServerTimeManagerProtocol {
     private var q: DispatchQueue { Self.timeSyncQueue }
 
     private struct Cache {
-        var lastFetchedTime: Date?
-        var lastFetchedAt: Date?
+        var lastFetchedTimeMs: Int?
+        var lastFetchedAtMs: Int?
     }
     private static var _cache = Cache()
     private static var _isFetching = false
     private static var _pending: [((Date?) -> Void)] = []
 
-    private var cacheDuration: TimeInterval { 300 }
+    private var cacheDurationMs: Int { 300_000 }
     private let api: MarketapAPIProtocol
 
     init(api: MarketapAPIProtocol) {
@@ -35,10 +35,13 @@ class ServerTimeManager: ServerTimeManagerProtocol {
         q.async { [weak self] in
             guard let self = self else { return }
 
-            if let last = Self._cache.lastFetchedTime,
-               let at = Self._cache.lastFetchedAt,
-               Date().timeIntervalSince(at) < self.cacheDuration {
-                return DispatchQueue.main.async { completion(last) }
+            if let lastMs = Self._cache.lastFetchedTimeMs,
+               let atMs = Self._cache.lastFetchedAtMs,
+               Date().unixTime - atMs < self.cacheDurationMs {
+                let elapsedMs = Date().unixTime - atMs
+                let estimatedMs = lastMs + elapsedMs
+                let estimated = Date(timeIntervalSince1970: Double(estimatedMs) / 1000)
+                return DispatchQueue.main.async { completion(estimated) }
             }
 
             if Self._isFetching {
@@ -73,8 +76,8 @@ class ServerTimeManager: ServerTimeManagerProtocol {
                         let adjustedMs = Date().unixTime + data.serverTimeOffset - rttMs / 2
                         let adjustedDate = Date(timeIntervalSince1970: Double(adjustedMs) / 1000)
 
-                        Self._cache.lastFetchedTime = adjustedDate
-                        Self._cache.lastFetchedAt = Date()
+                        Self._cache.lastFetchedTimeMs = adjustedMs
+                        Self._cache.lastFetchedAtMs = Date().unixTime
 
                         DispatchQueue.main.async {
                             completions.forEach { $0(adjustedDate) }
@@ -82,7 +85,8 @@ class ServerTimeManager: ServerTimeManagerProtocol {
 
                     case .failure(let error):
                         MarketapLogger.warn("Failed to fetch server time: \(error.localizedDescription)")
-                        let fallback = Self._cache.lastFetchedTime ?? Date()
+                        let fallbackMs = Self._cache.lastFetchedTimeMs ?? Date().unixTime
+                        let fallback = Date(timeIntervalSince1970: Double(fallbackMs) / 1000)
                         DispatchQueue.main.async {
                             completions.forEach { $0(fallback) }
                         }

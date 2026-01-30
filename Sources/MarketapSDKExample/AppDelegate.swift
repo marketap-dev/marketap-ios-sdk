@@ -12,7 +12,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
         UNUserNotificationCenter.current().delegate = self
 
-        Marketap.setLogLevel(.debug)
+        Marketap.setLogLevel(.verbose)
         Marketap.initialize(projectId: "kx43pz7")
         Marketap.setClickHandler { event in
             if let urlString = event.url, let url = URL(string: urlString) {

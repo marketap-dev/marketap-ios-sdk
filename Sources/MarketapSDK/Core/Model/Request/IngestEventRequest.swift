@@ -35,6 +35,7 @@ struct IngestEventRequest: Encodable {
         
         if let timestamp = timestamp {
             let dateFormatter = ISO8601DateFormatter()
+            dateFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
             let timestampString = dateFormatter.string(from: timestamp)
             try container.encode(timestampString, forKey: .timestamp)
         }
