@@ -17,7 +17,7 @@ extension Device {
             return "app_local_id:\(appLocalId)"
         }()
 
-        let properties: [String: AnyCodable] = [
+        var properties: [String: AnyCodable] = [
             "os": AnyCodable(os),
             "os_version": AnyCodable(osVersion),
             "library_version": AnyCodable(libraryVersion),
@@ -30,6 +30,9 @@ extension Device {
             "app_version": AnyCodable(appVersion),
             "app_build_number": AnyCodable(appBuildNumber)
         ]
+        if let optIn = optIn {
+            properties["opt_in"] = AnyCodable(optIn)
+        }
 
         return UpdateDeviceRequest(
             deviceId: deviceId,
@@ -38,7 +41,6 @@ extension Device {
             appLocalId: appLocalId,
             platform: platform,
             token: token,
-            optIn: optIn,
             properties: properties,
             removeUserId: removeUserId
         )
