@@ -25,6 +25,7 @@ class MockMarketapCache: MarketapCacheProtocol {
         model: "iPhone",
         manufacturer: "Apple",
         token: nil,
+        optIn: nil,
         appVersion: "1.0",
         appBuildNumber: "100",
         timezone: "Asia/Seoul",
@@ -43,9 +44,12 @@ class MockMarketapCache: MarketapCacheProtocol {
         self.userId = userId
     }
 
-    func updateDevice(pushToken: String? = nil) {
+    func updateDevice(pushToken: String? = nil, optIn: Bool? = nil) {
         if let pushToken = pushToken {
             device.token = pushToken
+        }
+        if let optIn = optIn {
+            device.optIn = optIn
         }
     }
 

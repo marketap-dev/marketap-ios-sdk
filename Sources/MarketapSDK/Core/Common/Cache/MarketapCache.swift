@@ -15,6 +15,7 @@ final class MarketapCache: MarketapCacheProtocol {
         static let deviceKey = "MarketapCache_device"
         static let localIdKey = "MarketapCache_localId"
         static let pushTokenKey = "MarketapCache_pushToken"
+        static let optInKey = "MarketapCache_optIn"
         static let deviceRequestKey = "MarketapCache_deviceRequest"
     }
 
@@ -98,12 +99,16 @@ final class MarketapCache: MarketapCacheProtocol {
         self.userId = userId
     }
 
-    func updateDevice(pushToken: String? = nil) {
+    func updateDevice(pushToken: String? = nil, optIn: Bool? = nil) {
         deviceQueue.async(flags: .barrier){
-            var updatedDevice = self.getDeviceInfo(pushToken: pushToken)
+            var updatedDevice = self.getDeviceInfo(pushToken: pushToken, optIn: optIn)
             if let pushToken = pushToken {
                 updatedDevice.token = pushToken
                 self.saveCodableObject(pushToken, key: CacheKey.pushTokenKey)
+            }
+            if let optIn = optIn {
+                updatedDevice.optIn = optIn
+                self.saveCodableObject(optIn, key: CacheKey.optInKey)
             }
             MarketapLogger.verbose("updating device info:\n\(updatedDevice.toJSONString())")
             self._device = updatedDevice

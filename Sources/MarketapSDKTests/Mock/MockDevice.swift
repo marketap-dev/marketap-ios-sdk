@@ -46,6 +46,7 @@ class MockDevice {
             model: model,
             manufacturer: manufacturer,
             token: token,
+            optIn: nil,
             appVersion: appVersion,
             appBuildNumber: appBuildNumber,
             timezone: timezone,

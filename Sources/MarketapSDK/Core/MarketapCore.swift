@@ -23,7 +23,7 @@ final class MarketapCore: MarketapClientProtocol, MarketapNotificationHandlerPro
         self.eventService = eventService
 
         queue.async {
-            self.eventService.updateDevice(pushToken: nil, removeUserId: false)
+            self.eventService.updateDevice(pushToken: nil, optIn: nil, removeUserId: false)
             if !UserDefaults.standard.bool(forKey: "first_visit") {
                 UserDefaults.standard.set(true, forKey: "first_visit")
                 self.eventService.trackEvent(eventName: "mkt_first_visit", eventProperties: nil)

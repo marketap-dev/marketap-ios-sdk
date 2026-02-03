@@ -14,9 +14,10 @@ struct UpdateDeviceRequest: Codable, Equatable {
     let appLocalId: String
     let platform: String
     let token: String?
+    let optIn: Bool?
     let properties: [String: AnyCodable]?
     let removeUserId: Bool
-    
+
     enum CodingKeys: String, CodingKey {
         case deviceId = "device_id"
         case idfa
@@ -24,6 +25,7 @@ struct UpdateDeviceRequest: Codable, Equatable {
         case appLocalId = "app_local_id"
         case platform
         case token
+        case optIn = "opt_in"
         case properties
         case removeUserId = "remove_user_id"
     }

@@ -55,6 +55,10 @@ final class EventService: EventServiceProtocol {
         updateDevice(pushToken: token)
     }
 
+    func setDeviceOptIn(optIn: Bool) {
+        updateDevice(optIn: optIn)
+    }
+
     func identify(userId: String, userProperties: [String: Any]?) {
         let userIdChanged = cache.userId != userId
         cache.saveUserId(userId)
@@ -144,8 +148,8 @@ final class EventService: EventServiceProtocol {
     }
 
 
-    func updateDevice(pushToken: String? = nil, removeUserId: Bool = false) {
-        cache.updateDevice(pushToken: pushToken)
+    func updateDevice(pushToken: String? = nil, optIn: Bool? = nil, removeUserId: Bool = false) {
+        cache.updateDevice(pushToken: pushToken, optIn: optIn)
         let updatedDevice = cache.device.makeRequest(removeUserId: removeUserId)
         let cachedRequest: UpdateDeviceRequest? = cache.loadCodableObject(forKey: Self.deviceRequestKey)
 

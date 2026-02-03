@@ -15,6 +15,13 @@ extension MarketapCore {
         }
     }
 
+    func setDeviceOptIn(optIn: Bool) {
+        queue.async {
+            MarketapLogger.debug("setDeviceOptIn: \(optIn)")
+            self.eventService.setDeviceOptIn(optIn: optIn)
+        }
+    }
+
     func signup(
         userId: String,
         userProperties: [String: Any]? = nil,

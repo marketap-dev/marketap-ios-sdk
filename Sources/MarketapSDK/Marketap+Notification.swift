@@ -19,6 +19,15 @@ import UIKit
         client.setPushToken(token: token)
     }
 
+    /// 디바이스의 푸시 수신동의 여부를 설정합니다.
+    /// - Parameter optIn: 수신동의 여부 (`true` 또는 `false`)
+    @objc public static func setDeviceOptIn(optIn: Bool) {
+        guard let client = _client else {
+            return coldStartNotificationHandler.setDeviceOptIn(optIn: optIn)
+        }
+        client.setDeviceOptIn(optIn: optIn)
+    }
+
     /// UNUserNotificationCenterDelegate 함수에 추가해주세요.
     ///
     /// - Returns: Marketap SDK가 해당 알림을 처리했으면 `true`, 그렇지 않으면 `false`

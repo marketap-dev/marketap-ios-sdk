@@ -38,6 +38,7 @@ extension Device {
             appLocalId: appLocalId,
             platform: platform,
             token: token,
+            optIn: optIn,
             properties: properties,
             removeUserId: removeUserId
         )

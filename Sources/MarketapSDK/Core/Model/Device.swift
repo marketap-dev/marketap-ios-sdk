@@ -19,6 +19,7 @@ struct Device: Codable {
     let model: String?
     let manufacturer: String?
     var token: String?
+    var optIn: Bool?
 
     let appVersion: String?
     let appBuildNumber: String?
@@ -37,6 +38,7 @@ struct Device: Codable {
         case osVersion = "os_version"
         case libraryVersion = "library_version"
         case model, manufacturer, token
+        case optIn = "opt_in"
         case appVersion = "app_version"
         case appBuildNumber = "app_build_number"
         case maxTouchPoints = "max_touch_points"

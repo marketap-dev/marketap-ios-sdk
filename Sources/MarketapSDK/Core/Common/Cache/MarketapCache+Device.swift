@@ -45,7 +45,7 @@ extension MarketapCache {
         )
     }
 
-    func getDeviceInfo(pushToken: String? = nil) -> Device {
+    func getDeviceInfo(pushToken: String? = nil, optIn: Bool? = nil) -> Device {
         let device = UIDevice.current
 
         let result = Device(
@@ -59,6 +59,7 @@ extension MarketapCache {
             model: device.model,
             manufacturer: "Apple",
             token: pushToken ?? loadCodableObject(forKey: CacheKey.pushTokenKey),
+            optIn: optIn ?? loadCodableObject(forKey: CacheKey.optInKey),
             appVersion: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String,
             appBuildNumber: Bundle.main.infoDictionary?["CFBundleVersion"] as? String,
             timezone: TimeZone.current.identifier,

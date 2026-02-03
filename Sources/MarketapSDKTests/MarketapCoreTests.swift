@@ -12,12 +12,17 @@ class MockEventService: EventServiceProtocol {
     weak var delegate: EventServiceDelegate?
 
     var pushToken: String?
+    var optIn: Bool?
     var trackedEvents: [String] = []
     var identifiedUserId: String?
     var userFlushed = false
 
     func setPushToken(token: String) {
         pushToken = token
+    }
+
+    func setDeviceOptIn(optIn: Bool) {
+        self.optIn = optIn
     }
 
     func trackEvent(eventName: String, eventProperties: [String : Any]?, userId: String?, id: String?, timestamp: Date?, fromWebBridge: Bool) {
@@ -35,7 +40,7 @@ class MockEventService: EventServiceProtocol {
         userFlushed = true
     }
 
-    func updateDevice(pushToken: String? = nil, removeUserId: Bool = false) { }
+    func updateDevice(pushToken: String? = nil, optIn: Bool? = nil, removeUserId: Bool = false) { }
 }
 
 class MockInAppMessageService: InAppMessageServiceProtocol {

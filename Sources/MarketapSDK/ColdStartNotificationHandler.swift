@@ -10,11 +10,17 @@ import UIKit
 /// MarketapClient 가 initialize 되기 이전에 발생한 노티피케이션 관련 액션을 관리합니다.
 final class ColdStartNotificationHandler: MarketapNotificationClientProtocol {
     var token: Data?
+    var optIn: Bool?
     var notification: MarketapNotification?
 
     func setPushToken(token: Data) {
         MarketapLogger.verbose("store token")
         self.token = token
+    }
+
+    func setDeviceOptIn(optIn: Bool) {
+        MarketapLogger.verbose("store optIn")
+        self.optIn = optIn
     }
 
     func userNotificationCenter(
@@ -56,6 +62,11 @@ final class ColdStartNotificationHandler: MarketapNotificationClientProtocol {
         if let token = token {
             client.setPushToken(token: token)
             self.token = nil
+        }
+
+        if let optIn = optIn {
+            client.setDeviceOptIn(optIn: optIn)
+            self.optIn = nil
         }
 
         if let notification = notification {
