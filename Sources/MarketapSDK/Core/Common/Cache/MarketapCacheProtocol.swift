@@ -14,7 +14,7 @@ protocol MarketapCacheProtocol: AnyObject {
     var sessionId: String { get set }
 
     func saveUserId(_ userId: String?)
-    func updateDevice(pushToken: String?, optIn: Bool?)
+    func updateDevice(pushToken: String?, optIn: Bool?, clearOptIn: Bool)
     func saveCodableObject<T: Codable>(_ object: T, key: String)
     func loadCodableObject<T: Codable>(forKey key: String) -> T?
     func clearObject(forKey key: String)

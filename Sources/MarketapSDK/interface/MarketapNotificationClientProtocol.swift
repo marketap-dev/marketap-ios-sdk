@@ -18,8 +18,8 @@ public protocol MarketapNotificationClientProtocol {
     func setPushToken(token: Data)
 
     /// 디바이스의 푸시 수신동의 여부를 설정합니다.
-    /// - Parameter optIn: 수신동의 여부 (`true` 또는 `false`)
-    func setDeviceOptIn(optIn: Bool)
+    /// - Parameter optIn: 수신동의 여부 (`true`, `false`, 또는 `nil`)
+    func setDeviceOptIn(optIn: Bool?)
 
     // MARK: - Foreground Notification Handling
 

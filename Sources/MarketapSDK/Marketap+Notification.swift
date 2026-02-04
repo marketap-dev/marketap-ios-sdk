@@ -20,8 +20,8 @@ import UIKit
     }
 
     /// 디바이스의 푸시 수신동의 여부를 설정합니다.
-    /// - Parameter optIn: 수신동의 여부 (`true` 또는 `false`)
-    @objc public static func setDeviceOptIn(optIn: Bool) {
+    /// - Parameter optIn: 수신동의 여부 (`true`, `false`, 또는 `nil`)
+    @nonobjc public static func setDeviceOptIn(optIn: Bool?) {
         guard let client = _client else {
             return coldStartNotificationHandler.setDeviceOptIn(optIn: optIn)
         }

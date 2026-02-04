@@ -13,7 +13,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         UNUserNotificationCenter.current().delegate = self
 
         Marketap.setLogLevel(.verbose)
-        Marketap.setDeviceOptIn(optIn: true)
+        Marketap.setDeviceOptIn(optIn: nil)
         Marketap.initialize(projectId: "kx43pz7")
         Marketap.setClickHandler { event in
             if let urlString = event.url, let url = URL(string: urlString) {

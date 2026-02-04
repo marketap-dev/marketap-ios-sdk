@@ -11,6 +11,7 @@ import UIKit
 final class ColdStartNotificationHandler: MarketapNotificationClientProtocol {
     var token: Data?
     var optIn: Bool?
+    var optInSet = false
     var notification: MarketapNotification?
 
     func setPushToken(token: Data) {
@@ -18,9 +19,10 @@ final class ColdStartNotificationHandler: MarketapNotificationClientProtocol {
         self.token = token
     }
 
-    func setDeviceOptIn(optIn: Bool) {
+    func setDeviceOptIn(optIn: Bool?) {
         MarketapLogger.verbose("store optIn")
         self.optIn = optIn
+        self.optInSet = true
     }
 
     func userNotificationCenter(
@@ -64,9 +66,10 @@ final class ColdStartNotificationHandler: MarketapNotificationClientProtocol {
             self.token = nil
         }
 
-        if let optIn = optIn {
+        if optInSet {
             client.setDeviceOptIn(optIn: optIn)
             self.optIn = nil
+            self.optInSet = false
         }
 
         if let notification = notification {
