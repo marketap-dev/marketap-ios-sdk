@@ -80,6 +80,8 @@ public typealias ExternalInAppMessageCallback = (_ campaign: [String: Any], _ me
             handleInAppTrack(params: event.params)
         case .inAppMessageSetUserProperties:
             handleInAppSetUserProperties(params: event.params)
+        case .setDeviceOptIn:
+            handleSetDeviceOptIn(params: event.params)
         }
     }
 
@@ -186,6 +188,11 @@ public typealias ExternalInAppMessageCallback = (_ campaign: [String: Any], _ me
         MarketapLogger.debug("Web InApp Track: eventName=\(eventName)")
 
         Marketap.client?.track(eventName: eventName, eventProperties: eventProperties, id: nil, timestamp: nil)
+    }
+
+    private func handleSetDeviceOptIn(params: [String: Any]?) {
+        let optIn = params?["optIn"] as? Bool
+        Marketap.setDeviceOptIn(optIn: optIn)
     }
 
     private func handleInAppSetUserProperties(params: [String: Any]?) {
