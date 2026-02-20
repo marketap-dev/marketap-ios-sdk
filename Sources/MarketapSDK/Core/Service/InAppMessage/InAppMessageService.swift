@@ -61,6 +61,7 @@ final class InAppMessageService: NSObject, InAppMessageServiceProtocol {
     static let cacheExpiration = Double(60 * 5)
     static let campaignCacheKey = "InAppMessageService_campaigns"
     static let lastFetchKey = "InAppMessageService_lastFetch"
+    static let checksumKey = "InAppMessageService_checksum"
 
     let customHandlerStore: MarketapCustomHandlerStoreProtocol
     private let api: MarketapAPIProtocol
@@ -129,11 +130,12 @@ final class InAppMessageService: NSObject, InAppMessageServiceProtocol {
 
         let userId = cache.userId
         let device = cache.device
+        let cachedChecksum: String? = cache.loadCodableObject(forKey: Self.checksumKey)
 
         api.request(
             baseURL: .crm,
             path: "/api/v2/campaigns",
-            body: FetchCampaignsRequest(projectId: projectId, userId: userId, device: device.makeRequest()),
+            body: FetchCampaignsRequest(projectId: projectId, userId: userId, device: device.makeRequest(), checksum: cachedChecksum),
             responseType: InAppCampaignFetchResponse.self
         ) { [weak self] result in
             guard let self = self else { return }
@@ -142,9 +144,15 @@ final class InAppMessageService: NSObject, InAppMessageServiceProtocol {
 
             switch result {
             case .success(let response):
-                let campaigns = response.campaigns
-                self.campaigns = campaigns
-                self.cache.saveCodableObject(campaigns, key: Self.campaignCacheKey)
+                let campaigns: [InAppCampaign]
+                if let newCampaigns = response.campaigns {
+                    campaigns = newCampaigns
+                    self.campaigns = campaigns
+                    self.cache.saveCodableObject(campaigns, key: Self.campaignCacheKey)
+                } else {
+                    campaigns = self.campaigns ?? self.cache.loadCodableObject(forKey: Self.campaignCacheKey) ?? []
+                }
+                self.cache.saveCodableObject(response.checksum, key: Self.checksumKey)
                 self.cache.saveCodableObject(Date(), key: Self.lastFetchKey)
                 self.lastFetch = Date()
                 if didCompleteWithinTimeout {

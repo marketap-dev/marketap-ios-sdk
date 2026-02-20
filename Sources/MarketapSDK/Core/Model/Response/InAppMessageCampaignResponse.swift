@@ -9,7 +9,7 @@ import Foundation
 
 struct InAppCampaignFetchResponse: Decodable, Equatable {
     let checksum: String
-    let campaigns: [InAppCampaign]
+    let campaigns: [InAppCampaign]?
 }
 
 struct InAppCampaignSingleFetchResponse: Decodable, Equatable {
