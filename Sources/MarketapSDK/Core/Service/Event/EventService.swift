@@ -8,7 +8,6 @@
 import Foundation
 
 final class EventService: EventServiceProtocol {
-    static let deviceRequestKey = "EventService_deviceRequest"
     static let failedEventsKey = "EventService_failedEvents"
     static let failedUsersKey = "EventService_failedUsers"
 
@@ -17,6 +16,7 @@ final class EventService: EventServiceProtocol {
     let api: MarketapAPIProtocol
     private let cache: MarketapCacheProtocol
     weak var delegate: EventServiceDelegate?
+    private var lastSentDeviceRequest: UpdateDeviceRequest?
 
     private var projectId: String {
         cache.projectId
@@ -155,10 +155,7 @@ final class EventService: EventServiceProtocol {
     func updateDevice(pushToken: String? = nil, optIn: Bool? = nil, removeUserId: Bool = false, clearOptIn: Bool = false) {
         cache.updateDevice(pushToken: pushToken, optIn: optIn, clearOptIn: clearOptIn)
         let updatedDevice = cache.device.makeRequest(removeUserId: removeUserId)
-        let cachedRequest: UpdateDeviceRequest? = cache.loadCodableObject(forKey: Self.deviceRequestKey)
-
-        guard updatedDevice != cachedRequest else { return }
-        cache.saveCodableObject(updatedDevice, key: Self.deviceRequestKey)
+        guard updatedDevice != lastSentDeviceRequest else { return }
 
         api.requestWithoutResponse(
             baseURL: .event,
@@ -167,6 +164,7 @@ final class EventService: EventServiceProtocol {
         )  { [weak self] result in
             switch result {
             case .success:
+                self?.lastSentDeviceRequest = updatedDevice
                 self?.requestDidSuccess()
             case .failure:
                 break
