@@ -24,8 +24,14 @@ final class MarketapCore: MarketapClientProtocol, MarketapNotificationHandlerPro
 
         queue.async {
             self.eventService.updateDevice(pushToken: nil, optIn: nil, removeUserId: false, clearOptIn: false)
-            if !UserDefaults.standard.bool(forKey: "first_visit") {
-                UserDefaults.standard.set(true, forKey: "first_visit")
+
+            // 기존 키 마이그레이션
+            if UserDefaults.standard.bool(forKey: "first_visit") {
+                UserDefaults.standard.set(true, forKey: "marketap_first_visit")
+            }
+
+            if !UserDefaults.standard.bool(forKey: "marketap_first_visit") {
+                UserDefaults.standard.set(true, forKey: "marketap_first_visit")
                 self.eventService.trackEvent(eventName: "mkt_first_visit", eventProperties: nil)
             }
         }

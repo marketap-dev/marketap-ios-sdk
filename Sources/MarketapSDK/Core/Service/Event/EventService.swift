@@ -115,7 +115,7 @@ final class EventService: EventServiceProtocol {
         var properties = eventProperties ?? [:]
 
         let currentTime = Date()
-        let lastEventTimestamp = UserDefaults.standard.double(forKey: "last_event_time")
+        let lastEventTimestamp = UserDefaults.standard.double(forKey: "marketap_last_event_time")
         let timeInterval = currentTime.timeIntervalSince1970 - lastEventTimestamp
 
         if timeInterval > 1800 || lastEventTimestamp == 0 {
@@ -145,7 +145,7 @@ final class EventService: EventServiceProtocol {
             timestamp: eventTimestamp
         )
 
-        UserDefaults.standard.set(eventTimestamp.timeIntervalSince1970, forKey: "last_event_time")
+        UserDefaults.standard.set(eventTimestamp.timeIntervalSince1970, forKey: "marketap_last_event_time")
 
         track(request: event)
         delegate?.onEvent(eventRequest: event, device: device, fromWebBridge: fromWebBridge)
