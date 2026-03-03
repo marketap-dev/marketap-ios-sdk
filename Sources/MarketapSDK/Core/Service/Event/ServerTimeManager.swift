@@ -33,7 +33,10 @@ class ServerTimeManager: ServerTimeManagerProtocol {
 
     func withServerTime(completion: @escaping (Date?) -> Void) {
         q.async { [weak self] in
-            guard let self = self else { return }
+            guard let self = self else {
+                DispatchQueue.main.async { completion(nil) }
+                return
+            }
 
             if let lastMs = Self._cache.lastFetchedTimeMs,
                let atMs = Self._cache.lastFetchedAtMs,
@@ -61,12 +64,11 @@ class ServerTimeManager: ServerTimeManagerProtocol {
                 path: "/api/v1/meta/server-info",
                 queryItems: [URLQueryItem(name: "client_time", value: String(localMs))],
                 responseType: SyncDateResponse.self
-            ) { [weak self] result in
-                guard let self = self else { return }
+            ) { result in
                 let endMs = Date().unixTime
                 let rttMs = endMs - startMs
 
-                self.q.async {
+                Self.timeSyncQueue.async {
                     let completions = Self._pending
                     Self._pending.removeAll()
                     Self._isFetching = false
