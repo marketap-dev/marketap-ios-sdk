@@ -13,6 +13,8 @@
 		B4D6A0DD2D64616D00557EAC /* MarketapSDK.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = B47948B02D5B3F4E00A76A65 /* MarketapSDK.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		B4D6A0E12D64618100557EAC /* MarketapSDKNotificationServiceExtension.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B4D69E472D5DBE4000557EAC /* MarketapSDKNotificationServiceExtension.framework */; };
 		B4D6A0E22D64618100557EAC /* MarketapSDKNotificationServiceExtension.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = B4D69E472D5DBE4000557EAC /* MarketapSDKNotificationServiceExtension.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		C4F100092DFE000000557EAC /* MarketapSDK.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B47948B02D5B3F4E00A76A65 /* MarketapSDK.framework */; };
+		C4F1000A2DFE000000557EAC /* MarketapSDK.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = B47948B02D5B3F4E00A76A65 /* MarketapSDK.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -43,6 +45,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = B4D69E462D5DBE4000557EAC;
 			remoteInfo = MarketapSDKNotificationServiceExtension;
+		};
+		C4F1000B2DFE000000557EAC /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B47948A72D5B3F4E00A76A65 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B47948AF2D5B3F4E00A76A65;
+			remoteInfo = MarketapSDK;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -90,6 +99,17 @@
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		C4F100082DFE000000557EAC /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				C4F1000A2DFE000000557EAC /* MarketapSDK.framework in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
@@ -98,6 +118,7 @@
 		B4D6A02C2D61F5DB00557EAC /* MarketapSDKExample.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MarketapSDKExample.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B4D6A06B2D61FDDD00557EAC /* MarketapSDKExampleNotificationServiceExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = MarketapSDKExampleNotificationServiceExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		B4D6A0A22D631EDD00557EAC /* MarketapSDKTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MarketapSDKTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		C4F100012DFE000000557EAC /* MarketapSDKObjCExample.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MarketapSDKObjCExample.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -147,6 +168,13 @@
 			);
 			target = B4D6A02B2D61F5DB00557EAC /* MarketapSDKExample */;
 		};
+		C4F100032DFE000000557EAC /* Exceptions for "MarketapSDKObjCExample" folder in "MarketapSDKObjCExample" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = C4F100042DFE000000557EAC /* MarketapSDKObjCExample */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -186,6 +214,14 @@
 		B4D6A0A32D631EDD00557EAC /* MarketapSDKTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = MarketapSDKTests;
+			sourceTree = "<group>";
+		};
+		C4F100022DFE000000557EAC /* MarketapSDKObjCExample */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				C4F100032DFE000000557EAC /* Exceptions for "MarketapSDKObjCExample" folder in "MarketapSDKObjCExample" target */,
+			);
+			path = MarketapSDKObjCExample;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -229,6 +265,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		C4F100062DFE000000557EAC /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C4F100092DFE000000557EAC /* MarketapSDK.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -237,6 +281,7 @@
 			children = (
 				B47948B22D5B3F4E00A76A65 /* MarketapSDK */,
 				B4D6A02D2D61F5DB00557EAC /* MarketapSDKExample */,
+				C4F100022DFE000000557EAC /* MarketapSDKObjCExample */,
 				B4D6A06C2D61FDDD00557EAC /* MarketapSDKExampleNotificationServiceExtension */,
 				B4D6A0A32D631EDD00557EAC /* MarketapSDKTests */,
 				B47948B12D5B3F4E00A76A65 /* Products */,
@@ -253,6 +298,7 @@
 				B4D6A02C2D61F5DB00557EAC /* MarketapSDKExample.app */,
 				B4D6A06B2D61FDDD00557EAC /* MarketapSDKExampleNotificationServiceExtension.appex */,
 				B4D6A0A22D631EDD00557EAC /* MarketapSDKTests.xctest */,
+				C4F100012DFE000000557EAC /* MarketapSDKObjCExample.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -402,6 +448,30 @@
 			productReference = B4D6A0A22D631EDD00557EAC /* MarketapSDKTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
+		C4F100042DFE000000557EAC /* MarketapSDKObjCExample */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C4F1000F2DFE000000557EAC /* Build configuration list for PBXNativeTarget "MarketapSDKObjCExample" */;
+			buildPhases = (
+				C4F100052DFE000000557EAC /* Sources */,
+				C4F100062DFE000000557EAC /* Frameworks */,
+				C4F100072DFE000000557EAC /* Resources */,
+				C4F100082DFE000000557EAC /* Embed Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				C4F1000C2DFE000000557EAC /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				C4F100022DFE000000557EAC /* MarketapSDKObjCExample */,
+			);
+			name = MarketapSDKObjCExample;
+			packageProductDependencies = (
+			);
+			productName = MarketapSDKObjCExample;
+			productReference = C4F100012DFE000000557EAC /* MarketapSDKObjCExample.app */;
+			productType = "com.apple.product-type.application";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -428,6 +498,9 @@
 					B4D6A0A12D631EDD00557EAC = {
 						CreatedOnToolsVersion = 16.1;
 					};
+					C4F100042DFE000000557EAC = {
+						CreatedOnToolsVersion = 16.1;
+					};
 				};
 			};
 			buildConfigurationList = B47948AA2D5B3F4E00A76A65 /* Build configuration list for PBXProject "MarketapSDK" */;
@@ -447,6 +520,7 @@
 				B47948AF2D5B3F4E00A76A65 /* MarketapSDK */,
 				B4D69E462D5DBE4000557EAC /* MarketapSDKNotificationServiceExtension */,
 				B4D6A02B2D61F5DB00557EAC /* MarketapSDKExample */,
+				C4F100042DFE000000557EAC /* MarketapSDKObjCExample */,
 				B4D6A06A2D61FDDD00557EAC /* MarketapSDKExampleNotificationServiceExtension */,
 				B4D6A0A12D631EDD00557EAC /* MarketapSDKTests */,
 			);
@@ -483,6 +557,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		B4D6A0A02D631EDD00557EAC /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C4F100072DFE000000557EAC /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -527,6 +608,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		C4F100052DFE000000557EAC /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -549,6 +637,11 @@
 			isa = PBXTargetDependency;
 			target = B4D69E462D5DBE4000557EAC /* MarketapSDKNotificationServiceExtension */;
 			targetProxy = B4D6A0E32D64618100557EAC /* PBXContainerItemProxy */;
+		};
+		C4F1000C2DFE000000557EAC /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B47948AF2D5B3F4E00A76A65 /* MarketapSDK */;
+			targetProxy = C4F1000B2DFE000000557EAC /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -581,7 +674,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				SKIP_INSTALL = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_INSTALL_OBJC_HEADER = NO;
+				SWIFT_INSTALL_OBJC_HEADER = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -615,7 +708,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				SKIP_INSTALL = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_INSTALL_OBJC_HEADER = NO;
+				SWIFT_INSTALL_OBJC_HEADER = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -775,7 +868,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_INSTALL_OBJC_HEADER = NO;
+				SWIFT_INSTALL_OBJC_HEADER = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -811,7 +904,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_INSTALL_OBJC_HEADER = NO;
+				SWIFT_INSTALL_OBJC_HEADER = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -961,6 +1054,60 @@
 			};
 			name = Release;
 		};
+		C4F1000D2DFE000000557EAC /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = MarketapSDKObjCExample/MarketapSDKObjCExample.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = QY56ZW92FY;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = MarketapSDKObjCExample/Info.plist;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "marketap.Marketap-test.MarketapSDKObjCExample";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		C4F1000E2DFE000000557EAC /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = MarketapSDKObjCExample/MarketapSDKObjCExample.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = QY56ZW92FY;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = MarketapSDKObjCExample/Info.plist;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "marketap.Marketap-test.MarketapSDKObjCExample";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -1014,6 +1161,15 @@
 			buildConfigurations = (
 				B4D6A0AA2D631EDD00557EAC /* Debug */,
 				B4D6A0AB2D631EDD00557EAC /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C4F1000F2DFE000000557EAC /* Build configuration list for PBXNativeTarget "MarketapSDKObjCExample" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C4F1000D2DFE000000557EAC /* Debug */,
+				C4F1000E2DFE000000557EAC /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
