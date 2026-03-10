@@ -226,10 +226,10 @@ extension MarketapWebBridge: WebBridgeInAppMessageDelegate {
             return
         }
 
-        // 커스텀 클릭 핸들러 등록 여부
-        let hasCustomClickHandler = Marketap.customHandlerStore.customized
+        // URL 라우팅 정책 계산
+        let shouldHandleUrlRouting = !Marketap.customHandlerStore.customized && ServerTimeManager.useWebClickRouting
 
-        MarketapLogger.debug("Sending campaign to web: \(campaign.id), hasCustomClickHandler: \(hasCustomClickHandler)")
+        MarketapLogger.debug("Sending campaign to web: \(campaign.id), shouldHandleUrlRouting: \(shouldHandleUrlRouting)")
 
         DispatchQueue.main.async {
             webView.evaluateJavaScript("""
@@ -237,7 +237,7 @@ extension MarketapWebBridge: WebBridgeInAppMessageDelegate {
                     type: 'marketapShowInAppMessage',
                     campaign: \(campaignJson),
                     messageId: '\(messageId)',
-                    hasCustomClickHandler: \(hasCustomClickHandler)
+                    shouldHandleUrlRouting: \(shouldHandleUrlRouting)
                 }, '*');
             """) { _, error in
                 if let error = error {
@@ -262,8 +262,8 @@ extension MarketapWebBridge: WebBridgeInAppMessageDelegate {
             if let callback = externalInAppMessageCallback {
                 // InAppCampaign을 Dictionary로 변환
                 let campaignDict = campaign.toDictionary()
-                let hasCustomClickHandler = Marketap.customHandlerStore.customized
-                callback(campaignDict, messageId, hasCustomClickHandler)
+                let shouldHandleUrlRouting = !Marketap.customHandlerStore.customized && ServerTimeManager.useWebClickRouting
+                callback(campaignDict, messageId, shouldHandleUrlRouting)
             }
             return
         }

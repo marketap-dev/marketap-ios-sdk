@@ -32,7 +32,7 @@ final class EventService: EventServiceProtocol {
     init(api: MarketapAPIProtocol, cache: MarketapCacheProtocol, serverTimeManager: ServerTimeManagerProtocol? = nil) {
         self.api = api
         self.cache = cache
-        self.serverTimeManager = serverTimeManager ?? ServerTimeManager(api: api)
+        self.serverTimeManager = serverTimeManager ?? ServerTimeManager(api: api, projectId: cache.projectId)
 
         self.failedEventsStorage = DataStorageManager<BulkEvent>(
             cache: cache,
@@ -49,6 +49,7 @@ final class EventService: EventServiceProtocol {
 
         sendFailedEventsIfNeeded()
         sendFailedUsersIfNeeded()
+        self.serverTimeManager.withServerTime { _ in }
     }
 
     func setPushToken(token: String) {

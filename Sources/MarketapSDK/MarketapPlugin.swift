@@ -86,13 +86,14 @@ public class MarketapPlugin: NSObject {
         url: String?,
         layoutSubType: String?
     ) {
-        MarketapLogger.debug("trackInAppClick: campaignId=\(campaignId), locationId=\(locationId), url=\(url ?? "nil")")
+        MarketapLogger.debug("trackInAppClick: campaignId=\(campaignId), locationId=\(locationId), url=\(url ?? "nil"), customized=\(Marketap.customHandlerStore.customized), useWebUrlClickRouting=\(ServerTimeManager.useWebClickRouting)")
 
-        // 클릭 핸들러 호출 (커스텀 핸들러가 등록된 경우에만)
-        if let url = url, Marketap.customHandlerStore.customized {
-            Marketap.customHandlerStore.handleClick(
-                MarketapClickEvent(campaignType: .inAppMessage, campaignId: campaignId, url: url)
-            )
+        if let url = url {
+            if Marketap.customHandlerStore.customized || !ServerTimeManager.useWebClickRouting {
+                Marketap.customHandlerStore.handleClick(
+                    MarketapClickEvent(campaignType: .inAppMessage, campaignId: campaignId, url: url)
+                )
+            }
         }
 
         // 클릭 이벤트 트래킹
