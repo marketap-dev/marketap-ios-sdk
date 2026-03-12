@@ -69,6 +69,7 @@ public class Marketap: NSObject {
         inAppMessageService.delegate = core
         client = core
         _currentProjectId = projectId
+        SdkIntegrationState.isClickHandlerCustomized = customHandlerStore.customized
         MarketapLogger.info("Marketap SDK initialized successfully with projectId: \(projectId)")
 
         coldStartNotificationHandler.didInitializeClient(client: core)
@@ -77,6 +78,7 @@ public class Marketap: NSObject {
     public static func setClickHandler(_ handler: @escaping (MarketapClickEvent) -> Void) {
         MarketapLogger.info("setClickHandler")
         customHandlerStore.setClickHandler(handler)
+        SdkIntegrationState.isClickHandlerSet = true
     }
 
     public static func setLogLevel(_ level: MarketapLogLevel) {

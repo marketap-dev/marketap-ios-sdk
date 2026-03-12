@@ -40,6 +40,7 @@ public typealias ExternalInAppMessageCallback = (_ campaign: [String: Any], _ me
     @objc public init(handleInAppInWebView: Bool = true) {
         self.handleInAppInWebView = handleInAppInWebView
         super.init()
+        MarketapPlugin.onWebBridgeConnected(handleInAppInWebView: handleInAppInWebView)
     }
 
     public func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
@@ -117,6 +118,8 @@ public typealias ExternalInAppMessageCallback = (_ campaign: [String: Any], _ me
                 }
             }, '*');
         """)
+
+        MarketapPlugin.onWebSdkInitialized()
     }
 
     // MARK: - 인앱 메시지 이벤트 핸들러

@@ -133,4 +133,14 @@ public class MarketapPlugin: NSObject {
     public static func setUserProperties(userProperties: [String: Any]) {
         Marketap.client?.setUserProperties(userProperties: userProperties)
     }
+
+    // MARK: - 웹브릿지 상태 동기화 (플러그인용)
+
+    public static func onWebBridgeConnected(handleInAppInWebView: Bool) {
+        SdkIntegrationState.handleInAppInWebView = handleInAppInWebView
+    }
+
+    public static func onWebSdkInitialized() {
+        SdkIntegrationState.isWebSdkInitialized = true
+    }
 }

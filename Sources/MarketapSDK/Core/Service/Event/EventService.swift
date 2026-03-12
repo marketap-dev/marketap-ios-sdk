@@ -114,6 +114,7 @@ final class EventService: EventServiceProtocol {
     ) {
         let device = cache.device
         var properties = eventProperties ?? [:]
+        let sdkIntegrationState = SdkIntegrationState.toJsonString()
 
         let currentTime = Date()
         let lastEventTimestamp = UserDefaults.standard.double(forKey: "marketap_last_event_time")
@@ -129,12 +130,16 @@ final class EventService: EventServiceProtocol {
                 name: "mkt_session_start",
                 userId: userId ?? cache.userId,
                 device: device.makeRequest(),
-                properties: ["mkt_session_id": AnyCodable(newSessionId)]
+                properties: [
+                    "mkt_session_id": AnyCodable(newSessionId),
+                    "sdk_integration_state": AnyCodable(sdkIntegrationState)
+                ]
             )
             track(request: event)
         }
 
         properties["mkt_session_id"] = cache.sessionId
+        properties["sdk_integration_state"] = sdkIntegrationState
         let eventTimestamp = timestamp ?? Date()
 
         let event = IngestEventRequest(
