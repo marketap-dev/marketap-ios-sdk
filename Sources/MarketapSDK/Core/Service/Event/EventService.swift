@@ -10,6 +10,9 @@ import Foundation
 final class EventService: EventServiceProtocol {
     static let failedEventsKey = "EventService_failedEvents"
     static let failedUsersKey = "EventService_failedUsers"
+    static let lastSentDeviceRequestKey = "EventService_lastSentDeviceRequest"
+    static let lastSentDeviceRequestAtKey = "EventService_lastSentDeviceRequestAt"
+    static let deviceRequestTTL: TimeInterval = 24 * 60 * 60
 
     static let failedDataSize = 100
 
@@ -161,7 +164,20 @@ final class EventService: EventServiceProtocol {
     func updateDevice(pushToken: String? = nil, optIn: Bool? = nil, removeUserId: Bool = false, clearOptIn: Bool = false) {
         cache.updateDevice(pushToken: pushToken, optIn: optIn, clearOptIn: clearOptIn)
         let updatedDevice = cache.device.makeRequest(removeUserId: removeUserId)
-        guard updatedDevice != lastSentDeviceRequest else { return }
+
+        if updatedDevice == lastSentDeviceRequest {
+            return
+        }
+
+        let storedRequest: UpdateDeviceRequest? = cache.loadCodableObject(forKey: Self.lastSentDeviceRequestKey)
+        let storedAt = UserDefaults.standard.double(forKey: Self.lastSentDeviceRequestAtKey)
+        let isExpired = Date().timeIntervalSince1970 - storedAt > Self.deviceRequestTTL
+
+        if !isExpired && updatedDevice == storedRequest {
+            MarketapLogger.debug("Device info unchanged and within TTL, skipping update")
+            lastSentDeviceRequest = updatedDevice
+            return
+        }
 
         api.requestWithoutResponse(
             baseURL: .event,
@@ -171,6 +187,8 @@ final class EventService: EventServiceProtocol {
             switch result {
             case .success:
                 self?.lastSentDeviceRequest = updatedDevice
+                self?.cache.saveCodableObject(updatedDevice, key: Self.lastSentDeviceRequestKey)
+                UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: Self.lastSentDeviceRequestAtKey)
                 self?.requestDidSuccess()
             case .failure:
                 break
