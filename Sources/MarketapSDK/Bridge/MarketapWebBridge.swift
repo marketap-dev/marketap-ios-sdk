@@ -117,7 +117,7 @@ public typealias ExternalInAppMessageCallback = (_ campaign: [String: Any], _ me
                     sdk_type: 'ios',
                     sdk_version: '\(MarketapConfig.nativeSdkVersion)',
                     platform: 'ios',
-                    projectId: '\(projectId)'
+                    project_id: '\(projectId)'
                 }
             }, '*');
         """)
