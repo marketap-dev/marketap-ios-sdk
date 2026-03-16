@@ -19,16 +19,21 @@ class ServerTimeManager: ServerTimeManagerProtocol {
     private struct Cache {
         var lastFetchedTimeMs: Int?
         var lastFetchedAtMs: Int?
+        var useWebClickRouting: Bool = false
     }
     private static var _cache = Cache()
     private static var _isFetching = false
     private static var _pending: [((Date?) -> Void)] = []
 
+    static var useWebClickRouting: Bool { _cache.useWebClickRouting }
+
     private var cacheDurationMs: Int { 300_000 }
     private let api: MarketapAPIProtocol
+    private let projectId: String
 
-    init(api: MarketapAPIProtocol) {
+    init(api: MarketapAPIProtocol, projectId: String) {
         self.api = api
+        self.projectId = projectId
     }
 
     func withServerTime(completion: @escaping (Date?) -> Void) {
@@ -61,8 +66,11 @@ class ServerTimeManager: ServerTimeManagerProtocol {
 
             self.api.get(
                 baseURL: .crm,
-                path: "/api/v1/meta/server-info",
-                queryItems: [URLQueryItem(name: "client_time", value: String(localMs))],
+                path: "/api/v2/meta/server-info",
+                queryItems: [
+                    URLQueryItem(name: "project_id", value: self.projectId),
+                    URLQueryItem(name: "client_time", value: String(localMs))
+                ],
                 responseType: SyncDateResponse.self
             ) { result in
                 let endMs = Date().unixTime
@@ -80,6 +88,7 @@ class ServerTimeManager: ServerTimeManagerProtocol {
 
                         Self._cache.lastFetchedTimeMs = adjustedMs
                         Self._cache.lastFetchedAtMs = Date().unixTime
+                        Self._cache.useWebClickRouting = data.useWebClickRouting
 
                         DispatchQueue.main.async {
                             completions.forEach { $0(adjustedDate) }

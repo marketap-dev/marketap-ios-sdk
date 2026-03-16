@@ -18,6 +18,8 @@ class MockMarketapCache: MarketapCacheProtocol {
         idfa: nil,
         idfv: "mock_idfv",
         appLocalId: "mock_app_local_id",
+        sdkType: "ios",
+        sdkVersion: "1.0.0",
         platform: "iOS",
         os: "iOS",
         osVersion: "16.0",

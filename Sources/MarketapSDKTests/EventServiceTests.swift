@@ -116,6 +116,8 @@ class EventServiceTests: XCTestCase {
         mockDelegate = MockEventServiceDelegate()
         eventService = EventService(api: mockAPI, cache: mockCache, serverTimeManager: mockServerTimeManager)
         eventService.delegate = mockDelegate
+        // 초기화 시 dispatched된 checkUserQueue/checkDeviceQueue 완료 대기
+        eventService.userQueue.sync {}
     }
 
     override func tearDown() {
@@ -140,6 +142,8 @@ class EventServiceTests: XCTestCase {
     func testUpdateDevice() {
         let testToken = "test_push_token"
         eventService.updateDevice(pushToken: testToken)
+        // userQueue에서 checkDeviceQueue 완료 대기
+        eventService.userQueue.sync {}
 
         XCTAssertEqual(mockCache.device.token, testToken, "Device의 푸시 토큰이 업데이트되지 않음")
         XCTAssertEqual(mockAPI.lastRequestPath, "/v1/client/profile/device?project_id=mock_project")
@@ -174,68 +178,43 @@ class EventServiceTests: XCTestCase {
         let userId = "testUser_fail"
         let userProperties: [String: Any] = ["age": 30, "gender": "male"]
 
+        // 실패 시 pendingUserProfile이 cache에 복구되어야 함
         mockAPI.shouldFail = true
         eventService.identify(userId: userId, userProperties: userProperties)
+        eventService.userQueue.sync {}
 
-        XCTAssertEqual(self.eventService.failedUsersStorage.getStoredData().count, 1, "identify 실패 시 failedUsersStorage에 저장되지 않음")
+        let pending: UpdateProfileRequest? = mockCache.loadCodableObject(forKey: EventService.pendingUserProfileKey)
+        XCTAssertNotNil(pending, "identify 실패 시 pendingUserProfile이 cache에 저장되어야 함")
+        XCTAssertEqual(pending?.userId, userId)
 
+        // 성공 시 pendingUserProfile이 제거되어야 함
         mockAPI.shouldFail = false
         eventService.identify(userId: "testUser_success", userProperties: nil)
+        eventService.userQueue.sync {}
 
-        XCTAssertEqual(self.eventService.failedUsersStorage.getStoredData().count, 0, "identify 성공 후 failedUsersStorage가 비워지지 않음")
+        let pendingAfterSuccess: UpdateProfileRequest? = mockCache.loadCodableObject(forKey: EventService.pendingUserProfileKey)
+        XCTAssertNil(pendingAfterSuccess, "identify 성공 후 pendingUserProfile이 제거되어야 함")
     }
 
-    func testFailedUsersAreSentInBulk() {
-        let users = (1...5).map {
-            BulkProfile(
-                userId: "failed_user_\($0)",
-                properties: ["test_key": "test_value"].toAnyCodable(),
-                device: mockCache.device.makeRequest(),
-                timestamp: Date()
-            )
-        }
-
-        users.forEach { eventService.failedUsersStorage.saveData($0) }
-        eventService.sendFailedUsersIfNeeded()
-
-        XCTAssertEqual(self.mockAPI.lastRequestPath, "/v1/client/profile/user/bulk?project_id=mock_project")
-        XCTAssertEqual(self.eventService.failedUsersStorage.getStoredData().count, 0, "벌크 유저 프로필이 정상적으로 전송되지 않음")
-    }
-
-    func testUpdateProfileClearsFailedUsersStorage() {
-        let failedUser = BulkProfile(
-            userId: "testUser",
+    func testPendingUserProfileIsSentOnNextRequest() {
+        // pending으로 저장된 user profile이 다음 요청 시 전송되어야 함
+        let pendingRequest = UpdateProfileRequest(
+            userId: "pending_user",
             properties: ["key": "value"].toAnyCodable(),
-            device: mockCache.device.makeRequest(),
-            timestamp: Date()
+            device: mockCache.device.makeRequest()
         )
-        eventService.failedUsersStorage.saveData(failedUser)
-        let event = BulkEvent(
-            id: "event_1",
-            userId: "testUser",
-            name: "test_event",
-            timestamp: Date(),
-            properties: ["key": "value"].toAnyCodable()
-        )
-        eventService.failedEventsStorage.saveData(event)
+        mockCache.saveCodableObject(pendingRequest, key: EventService.pendingUserProfileKey)
 
-        XCTAssertEqual(eventService.failedEventsStorage.getStoredData().count, 1, "updateProfile 전에 failedEventsStorage에 데이터가 있어야 함")
-        XCTAssertEqual(eventService.failedUsersStorage.getStoredData().count, 1, "updateProfile 전에 failedUsersStorage에 데이터가 있어야 함")
+        // identify 호출 시 checkUserQueue가 트리거되어 pending도 처리됨
+        eventService.identify(userId: "new_user", userProperties: nil)
+        eventService.userQueue.sync {}
 
-        mockAPI.shouldFail = false
-        eventService.identify(userId: "foo", userProperties: nil)
-
-        XCTAssertEqual(eventService.failedUsersStorage.getStoredData().count, 0, "updateProfile 후 failedUsersStorage가 비워지지 않음")
-        XCTAssertEqual(eventService.failedEventsStorage.getStoredData().count, 0, "updateProfile 후 failedEventsStorage가 비워지지 않음")    }
+        // pending이 처리되어 cache에서 제거되어야 함
+        let remaining: UpdateProfileRequest? = mockCache.loadCodableObject(forKey: EventService.pendingUserProfileKey)
+        XCTAssertNil(remaining, "pending user profile이 전송 후 제거되어야 함")
+    }
 
     func testTrackEventClearsFailedEventsStorage() {
-        let failedUser = BulkProfile(
-            userId: "testUser",
-            properties: ["key": "value"].toAnyCodable(),
-            device: mockCache.device.makeRequest(),
-            timestamp: Date()
-        )
-        eventService.failedUsersStorage.saveData(failedUser)
         let event = BulkEvent(
             id: "event_1",
             userId: "testUser",
@@ -246,11 +225,9 @@ class EventServiceTests: XCTestCase {
         eventService.failedEventsStorage.saveData(event)
 
         XCTAssertEqual(eventService.failedEventsStorage.getStoredData().count, 1, "trackEvent 전에 failedEventsStorage에 데이터가 있어야 함")
-        XCTAssertEqual(eventService.failedUsersStorage.getStoredData().count, 1, "trackEvent 전에 failedUsersStorage에 데이터가 있어야 함")
 
         mockAPI.shouldFail = false
         eventService.trackEvent(eventName: "foo", eventProperties: nil)
-        XCTAssertEqual(eventService.failedUsersStorage.getStoredData().count, 0, "trackEvent 후 failedUsersStorage가 비워지지 않음")
         XCTAssertEqual(eventService.failedEventsStorage.getStoredData().count, 0, "trackEvent 후 failedEventsStorage가 비워지지 않음")
     }
 

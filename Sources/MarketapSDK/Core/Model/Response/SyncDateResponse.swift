@@ -9,4 +9,5 @@ import Foundation
 
 struct SyncDateResponse: Decodable {
     let serverTimeOffset: Int
+    let useWebClickRouting: Bool
 }

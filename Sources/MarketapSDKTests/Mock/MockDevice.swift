@@ -39,6 +39,8 @@ class MockDevice {
             idfa: idfa,
             idfv: idfv,
             appLocalId: appLocalId,
+            sdkType: "ios",
+            sdkVersion: "1.0.0",
             platform: platform,
             os: os,
             osVersion: osVersion,

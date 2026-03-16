@@ -11,6 +11,8 @@ struct Device: Codable {
     let idfa: String?
     let idfv: String?
     let appLocalId: String
+    let sdkType: String?
+    let sdkVersion: String?
 
     let platform: String
     let os: String
@@ -34,6 +36,8 @@ struct Device: Codable {
     
     enum CodingKeys: String, CodingKey {
         case idfa, idfv
+        case sdkType = "sdk_type"
+        case sdkVersion = "sdk_version"
         case platform, os, timezone, locale, screen, environment
         case osVersion = "os_version"
         case libraryVersion = "library_version"

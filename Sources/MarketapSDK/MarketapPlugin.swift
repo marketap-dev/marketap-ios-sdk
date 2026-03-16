@@ -61,6 +61,14 @@ public class MarketapPlugin: NSObject {
 
     private override init() {}
 
+    public static func initialize(projectId: String, integrationInfo: MarketapIntegrationInfo) {
+        MarketapLogger.verbose(
+            "Marketap Plugin initialize with projectId=\(projectId), " +
+            "sdkType=\(integrationInfo.sdkType), sdkVersion=\(integrationInfo.sdkVersion)"
+        )
+        Marketap.initialize(config: SdkMetadataProvider.createConfig(projectId: projectId, integrationInfo: integrationInfo))
+    }
+
     // MARK: - 인앱 이벤트 처리 (플러그인용)
 
     /// 인앱 메시지 노출 이벤트 처리
@@ -86,13 +94,14 @@ public class MarketapPlugin: NSObject {
         url: String?,
         layoutSubType: String?
     ) {
-        MarketapLogger.debug("trackInAppClick: campaignId=\(campaignId), locationId=\(locationId), url=\(url ?? "nil")")
+        MarketapLogger.debug("trackInAppClick: campaignId=\(campaignId), locationId=\(locationId), url=\(url ?? "nil"), customized=\(Marketap.customHandlerStore.customized), useWebUrlClickRouting=\(ServerTimeManager.useWebClickRouting)")
 
-        // 클릭 핸들러 호출 (커스텀 핸들러가 등록된 경우에만)
-        if let url = url, Marketap.customHandlerStore.customized {
-            Marketap.customHandlerStore.handleClick(
-                MarketapClickEvent(campaignType: .inAppMessage, campaignId: campaignId, url: url)
-            )
+        if let url = url {
+            if Marketap.customHandlerStore.customized || !ServerTimeManager.useWebClickRouting {
+                Marketap.customHandlerStore.handleClick(
+                    MarketapClickEvent(campaignType: .inAppMessage, campaignId: campaignId, url: url)
+                )
+            }
         }
 
         // 클릭 이벤트 트래킹
@@ -131,5 +140,15 @@ public class MarketapPlugin: NSObject {
     /// 유저 속성을 업데이트합니다.
     public static func setUserProperties(userProperties: [String: Any]) {
         Marketap.client?.setUserProperties(userProperties: userProperties)
+    }
+
+    // MARK: - 웹브릿지 상태 동기화 (플러그인용)
+
+    public static func onWebBridgeConnected(handleInAppInWebView: Bool) {
+        SdkIntegrationState.handleInAppInWebView = handleInAppInWebView
+    }
+
+    public static func onWebSdkInitialized() {
+        SdkIntegrationState.isWebSdkInitialized = true
     }
 }

@@ -18,6 +18,8 @@ extension Device {
         }()
 
         var properties: [String: AnyCodable] = [
+            "sdk_type": AnyCodable(sdkType),
+            "sdk_version": AnyCodable(sdkVersion),
             "os": AnyCodable(os),
             "os_version": AnyCodable(osVersion),
             "library_version": AnyCodable(libraryVersion),
