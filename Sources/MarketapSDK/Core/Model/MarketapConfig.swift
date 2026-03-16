@@ -7,7 +7,10 @@
 
 import Foundation
 
-struct MarketapConfig: Codable {
-    static let sdkVersion = "1.3.4"
+struct MarketapConfig: Codable, Equatable {
+    static let nativeSdkVersion = "1.3.4"
+    static let nativeSdkType = "ios"
     let projectId: String
+    let sdkType: String
+    let sdkVersion: String
 }

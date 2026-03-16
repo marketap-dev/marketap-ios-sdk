@@ -12,7 +12,8 @@ import Foundation
 public class Marketap: NSObject {
 
     private override init() {}
-    private static var _currentProjectId: String?
+    private static var _currentConfig: MarketapConfig?
+    static var currentProjectId: String? { _currentConfig?.projectId }
     static var _client: MarketapClientProtocol? {
         didSet {
             if let _client = _client {
@@ -55,11 +56,14 @@ public class Marketap: NSObject {
     ///
     /// - Important: `initialize`를 호출하기 전에는 `client`를 사용할 수 없습니다.
     @objc public static func initialize(projectId: String) {
-        if _client != nil && _currentProjectId == projectId {
-            MarketapLogger.info("Marketap SDK is already initialized with projectId: \(projectId). Skipping re-initialization.")
+        initialize(config: SdkMetadataProvider.createNativeConfig(projectId: projectId))
+    }
+
+    static func initialize(config: MarketapConfig) {
+        if _client != nil && _currentConfig?.projectId == config.projectId {
+            MarketapLogger.info("Marketap SDK is already initialized with projectId: \(config.projectId). Skipping re-initialization.")
             return
         }
-        let config = MarketapConfig(projectId: projectId)
         let api = MarketapAPI()
         let cache = MarketapCache(config: config)
         let eventService = EventService(api: api, cache: cache)
@@ -68,9 +72,9 @@ public class Marketap: NSObject {
         eventService.delegate = core
         inAppMessageService.delegate = core
         client = core
-        _currentProjectId = projectId
+        _currentConfig = config
         SdkIntegrationState.isClickHandlerCustomized = customHandlerStore.customized
-        MarketapLogger.info("Marketap SDK initialized successfully with projectId: \(projectId)")
+        MarketapLogger.info("Marketap SDK initialized successfully with projectId: \(config.projectId)")
 
         coldStartNotificationHandler.didInitializeClient(client: core)
     }

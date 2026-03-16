@@ -108,13 +108,16 @@ public typealias ExternalInAppMessageCallback = (_ campaign: [String: Any], _ me
     }
 
     private func handleBridgeCheck() {
+        let projectId = Marketap.currentProjectId ?? "undefined"
+
         webView?.evaluateJavaScript("""
             window.postMessage({
                 type: 'marketapBridgeAck',
                 metadata: {
                     sdk_type: 'ios',
-                    sdk_version: '\(MarketapConfig.sdkVersion)',
-                    platform: 'ios'
+                    sdk_version: '\(MarketapConfig.nativeSdkVersion)',
+                    platform: 'ios',
+                    projectId: '\(projectId)'
                 }
             }, '*');
         """)
