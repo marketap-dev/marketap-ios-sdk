@@ -113,7 +113,7 @@ extension MarketapNotificationClientProtocol {
         MarketapLogger.debug("willPresent:\n\(info.prettyPrintedJSONString)")
 
         if #available(iOS 14.0, *) {
-            completionHandler([.banner, .sound, .badge])
+            completionHandler([.banner, .sound, .badge, .list])
         } else {
             completionHandler([.alert, .sound, .badge])
         }
