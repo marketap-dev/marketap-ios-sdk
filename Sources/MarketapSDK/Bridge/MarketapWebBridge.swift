@@ -17,7 +17,7 @@ protocol WebBridgeInAppMessageDelegate: AnyObject {
 public typealias ExternalInAppMessageCallback = (_ campaign: [String: Any], _ messageId: String, _ hasCustomClickHandler: Bool) -> Void
 
 @objc public class MarketapWebBridge: NSObject, WKScriptMessageHandler {
-    public static let name = "marketap"
+    @objc public static let name = "marketap"
     private weak var webView: WKWebView?
 
     /// 현재 활성화된 웹브릿지 인스턴스 (웹뷰가 살아있는 동안)

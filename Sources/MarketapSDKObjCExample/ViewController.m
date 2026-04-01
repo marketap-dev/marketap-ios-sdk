@@ -1,9 +1,11 @@
 #import "ViewController.h"
+#import "WebBridgeViewController.h"
 @import MarketapSDK;
 
 typedef NS_ENUM(NSInteger, ExampleSection) {
     ExampleSectionTracking = 0,
     ExampleSectionUser,
+    ExampleSectionWebBridge,
     ExampleSectionCount
 };
 
@@ -18,11 +20,12 @@ typedef NS_ENUM(NSInteger, ExampleSection) {
     [super viewDidLoad];
     self.title = @"MarketapSDK ObjC Example";
 
-    self.sectionTitles = @[@"Event Tracking", @"User"];
+    self.sectionTitles = @[@"Event Tracking", @"User", @"Web Bridge"];
 
     self.menuItems = @[
         @[@"Track Event", @"Track Purchase", @"Track Page View", @"Track Revenue"],
-        @[@"Identify", @"Login", @"Signup", @"Logout", @"Reset Identity"]
+        @[@"Identify", @"Login", @"Signup", @"Logout", @"Reset Identity"],
+        @[@"Open Web Bridge Demo"]
     ];
 
     [self.tableView registerClass:[UITableViewCell class] forCellReuseIdentifier:@"Cell"];
@@ -62,6 +65,9 @@ typedef NS_ENUM(NSInteger, ExampleSection) {
             break;
         case ExampleSectionUser:
             [self handleUserAction:indexPath.row];
+            break;
+        case ExampleSectionWebBridge:
+            [self handleWebBridgeAction:indexPath.row];
             break;
     }
 }
@@ -131,6 +137,18 @@ typedef NS_ENUM(NSInteger, ExampleSection) {
             [Marketap resetIdentity];
             [self showAlert:@"Reset Identity" message:@"Identity has been reset"];
             break;
+    }
+}
+
+#pragma mark - Web Bridge Actions
+
+- (void)handleWebBridgeAction:(NSInteger)row {
+    switch (row) {
+        case 0: {
+            WebBridgeViewController *viewController = [[WebBridgeViewController alloc] init];
+            [self.navigationController pushViewController:viewController animated:YES];
+            break;
+        }
     }
 }
 
