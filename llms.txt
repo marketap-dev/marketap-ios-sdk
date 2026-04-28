@@ -1,0 +1,24 @@
+# Marketap iOS SDK
+
+> Native iOS SDK for Marketap analytics, identity, push notification handling, in-app campaigns, and web bridge integrations.
+
+This file intentionally omits Xcode user state, example applications, and generated workspace metadata. It focuses on the install targets and public iOS entrypoints.
+
+## Documentation
+- [README](https://raw.githubusercontent.com/marketap-dev/marketap-ios-sdk/main/README.md): Repository overview and the starting point for iOS integration.
+- [Official iOS Guide](https://docs.marketap.io/t3ZS4WXNMj0HK27EtIMV/developer/push-notification/integration/ios): Hosted Marketap documentation for iOS push and SDK integration.
+
+## Installation
+- [Swift Package](https://raw.githubusercontent.com/marketap-dev/marketap-ios-sdk/main/Package.swift): Swift Package Manager manifest for the main SDK and notification service extension targets.
+- [CocoaPods SDK Spec](https://raw.githubusercontent.com/marketap-dev/marketap-ios-sdk/main/MarketapSDK.podspec): CocoaPods package definition for the main iOS SDK.
+- [Notification Extension Podspec](https://raw.githubusercontent.com/marketap-dev/marketap-ios-sdk/main/MarketapSDKNotificationServiceExtension.podspec): CocoaPods package definition for the notification service extension target.
+
+## API
+- [Marketap Entrypoint](https://raw.githubusercontent.com/marketap-dev/marketap-ios-sdk/main/Sources/MarketapSDK/Marketap.swift): Primary iOS entrypoint for initialization and access to the shared SDK client.
+- [Tracking API](https://raw.githubusercontent.com/marketap-dev/marketap-ios-sdk/main/Sources/MarketapSDK/Marketap%2BTrack.swift): Identity, event tracking, page-view, purchase, and revenue APIs exposed to host apps.
+- [Notification API](https://raw.githubusercontent.com/marketap-dev/marketap-ios-sdk/main/Sources/MarketapSDK/Marketap%2BNotification.swift): Push token, notification delegate, and authorization APIs exposed to host apps.
+
+## Bridge And Extensions
+- [Marketap Web Bridge](https://raw.githubusercontent.com/marketap-dev/marketap-ios-sdk/main/Sources/MarketapSDK/Bridge/MarketapWebBridge.swift): WKWebView bridge for forwarding web events and routing in-app campaigns to web content.
+- [Marketap Plugin API](https://raw.githubusercontent.com/marketap-dev/marketap-ios-sdk/main/Sources/MarketapSDK/MarketapPlugin.swift): Plugin-facing APIs used by wrapper SDKs for in-app tracking and bridge coordination.
+- [Notification Service](https://raw.githubusercontent.com/marketap-dev/marketap-ios-sdk/main/Sources/MarketapSDKNotificationServiceExtension/MarketapNotificationService.swift): Notification service extension implementation for handling Marketap push payloads on iOS.
