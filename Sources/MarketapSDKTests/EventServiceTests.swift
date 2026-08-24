@@ -233,7 +233,7 @@ class EventServiceTests: XCTestCase {
 
     func testNewSessionCreatedIfLastEventTimeIsMoreThan30Minutes() {
         let thirtyOneMinutesAgo = Date().addingTimeInterval(-1860).timeIntervalSince1970
-        UserDefaults.standard.set(thirtyOneMinutesAgo, forKey: "last_event_time")
+        UserDefaults.standard.set(thirtyOneMinutesAgo, forKey: "marketap_last_event_time")
         let previousSessionId = "existing-session-id"
         mockCache.sessionId = previousSessionId
 
@@ -249,7 +249,7 @@ class EventServiceTests: XCTestCase {
         let fiveMinutesAgo = Date().addingTimeInterval(-300).timeIntervalSince1970
         let previousSessionId = "existing-session-id"
         mockCache.sessionId = previousSessionId
-        UserDefaults.standard.set(fiveMinutesAgo, forKey: "last_event_time")
+        UserDefaults.standard.set(fiveMinutesAgo, forKey: "marketap_last_event_time")
 
         eventService.trackEvent(
             eventName: "test_event",
@@ -265,7 +265,7 @@ class EventServiceTests: XCTestCase {
             eventProperties: ["key": "value"]
         )
 
-        let lastEventTimestamp = UserDefaults.standard.double(forKey: "last_event_time")
+        let lastEventTimestamp = UserDefaults.standard.double(forKey: "marketap_last_event_time")
         let currentTime = Date().timeIntervalSince1970
 
         XCTAssertTrue(currentTime - lastEventTimestamp < 1, "Last event timestamp should be updated to the current time.")
