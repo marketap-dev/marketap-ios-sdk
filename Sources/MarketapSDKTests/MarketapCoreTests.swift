@@ -21,7 +21,7 @@ class MockEventService: EventServiceProtocol {
         pushToken = token
     }
 
-    func setDeviceOptIn(optIn: Bool) {
+    func setDeviceOptIn(optIn: Bool?) {
         self.optIn = optIn
     }
 
@@ -40,7 +40,7 @@ class MockEventService: EventServiceProtocol {
         userFlushed = true
     }
 
-    func updateDevice(pushToken: String? = nil, optIn: Bool? = nil, removeUserId: Bool = false) { }
+    func updateDevice(pushToken: String? = nil, optIn: Bool? = nil, removeUserId: Bool = false, clearOptIn: Bool = false) { }
 }
 
 class MockInAppMessageService: InAppMessageServiceProtocol {
