@@ -275,6 +275,22 @@ class InAppFallthroughTests: XCTestCase {
         XCTAssertEqual(service.pendingCampaign?.id, "closed", "닫기만 한 캠페인은 다시 뜰 수 있어야 한다")
     }
 
+    func testDismissalReleasesTheDisplayClaim() {
+        // 표시 권리 해제가 JS 의 hide 메시지에만 묶여 있으면, 그 경로를 안 타고 닫히는 순간
+        // (호스트 앱이 상위 VC 를 dismiss, UIKit 이 present 를 거절 등) 권리가 영구히 남아
+        // 이후 인앱이 하나도 안 뜬다. 화면에서 내려갔다는 신호로도 풀려야 한다.
+        service.didFinishLoad = true
+        runFallthrough([campaign("first", html: "<div>1</div>")])
+        XCTAssertTrue(service.isModalShown, "첫 캠페인이 표시 권리를 가져가야 한다")
+
+        service.onDismissed()
+        XCTAssertFalse(service.isModalShown, "내려갔으면 권리를 반납해야 한다")
+
+        // 반납됐으니 다음 캠페인이 다시 뜰 수 있어야 한다.
+        runFallthrough([campaign("second", html: "<div>2</div>")])
+        XCTAssertTrue(service.isModalShown)
+    }
+
     func testFetchBudgetCapsAtFive() {
         // 7개 후보가 전부 빈 응답 → 요청 증폭을 막는 상한(5)에서 멈춘다.
         let candidates = (1...7).map { campaign("c\($0)") }

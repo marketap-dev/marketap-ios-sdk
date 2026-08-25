@@ -98,6 +98,10 @@ final class InAppMessageService: NSObject, InAppMessageServiceProtocol {
     let defaults: UserDefaults
     weak var delegate: InAppMessageServiceDelegate?
 
+    /// 표시 상태(isModalShown/didFinishLoad/pendingCampaign)를 지키는 락.
+    /// 파일 전역이 아니라 인스턴스 소유다 — 지키는 상태가 인스턴스별이라, 전역으로 두면
+    /// 인스턴스가 둘일 때 서로 배제해주지도 못하면서 경합만 늘린다.
+    let displayLock = NSLock()
     var isModalShown: Bool = false
     var didFinishLoad = false
     var pendingCampaign: InAppCampaign?
@@ -106,8 +110,24 @@ final class InAppMessageService: NSObject, InAppMessageServiceProtocol {
         cache.projectId
     }
 
-    var campaigns: [InAppCampaign]?
-    var lastFetch: Date?
+    /// campaigns / lastFetch 는 세 스레드에서 만진다: 코어 시리얼큐(onEvent), URLSession
+    /// 델리게이트 스레드(응답), 그리고 타임아웃 글로벌큐(캐시 강등). Swift 배열은 한쪽이 쓰는
+    /// 동안 다른 쪽이 읽으면 CoW 버퍼가 찢어져 크래시가 난다. 락으로 감싼다.
+    ///
+    /// 타이머 QoS 를 .userInitiated 로 올리면서 타임아웃이 제때(1초) 뜨게 됐는데, 하필 그게
+    /// 1초 안팎에 오는 응답과 정면으로 겹친다. 예전엔 타임아웃이 늘 늦어서 안 부딪혔을 뿐이다.
+    private let stateLock = NSLock()
+    private var _campaigns: [InAppCampaign]?
+    private var _lastFetch: Date?
+
+    var campaigns: [InAppCampaign]? {
+        get { stateLock.lock(); defer { stateLock.unlock() }; return _campaigns }
+        set { stateLock.lock(); _campaigns = newValue; stateLock.unlock() }
+    }
+    var lastFetch: Date? {
+        get { stateLock.lock(); defer { stateLock.unlock() }; return _lastFetch }
+        set { stateLock.lock(); _lastFetch = newValue; stateLock.unlock() }
+    }
     lazy var campaignViewController = InAppMessageWebViewController()
 
     init(

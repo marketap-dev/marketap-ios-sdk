@@ -25,15 +25,6 @@ private func inAppMonotonicNow() -> TimeInterval {
     ProcessInfo.processInfo.systemUptime
 }
 
-/// 표시 상태(isModalShown / didFinishLoad / pendingCampaign)를 지키는 락.
-///
-/// 이 셋은 원래 메인큐(present 완료 콜백, webView didFinish)와 호출 스레드에서 동시에
-/// 읽고 쓰였다. 폴스루가 들어오면서 후보마다 present 를 시도할 수 있게 됐고(이벤트당 1회 →
-/// 최대 6회), 그것도 코어 시리얼큐·URLSession 델리게이트큐·타임아웃 글로벌큐 세 군데서
-/// 들어온다. "이미 떠 있나?" 를 보고 나중에 present 하는 검사-후-사용 구조라 두 후보가
-/// 동시에 통과할 수 있었다. 검사와 선점을 한 번에 처리한다.
-private let inAppDisplayLock = NSLock()
-
 extension InAppMessageService: InAppMessageWebViewControllerDelegate {
 
     func isCampaignHiden(campaign: InAppCampaign) -> Bool {
@@ -105,9 +96,9 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
         fromWebBridge: Bool
     ) {
         // 앞 후보가 떴거나 다른 경로가 이미 띄웠으면 멈춘다.
-        inAppDisplayLock.lock()
+        displayLock.lock()
         let alreadyShown = isModalShown
-        inAppDisplayLock.unlock()
+        displayLock.unlock()
         if alreadyShown { return }
         guard index < candidates.count else { return }
 
@@ -177,8 +168,8 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
     /// 아직 웹뷰 로딩 전이면 pendingCampaign 에 적재하고 false 를 준다(로딩이 끝나면
     /// webView(_:didFinish:) 가 다시 이 경로로 태운다).
     private func claimDisplay(campaign: InAppCampaign) -> Bool {
-        inAppDisplayLock.lock()
-        defer { inAppDisplayLock.unlock() }
+        displayLock.lock()
+        defer { displayLock.unlock() }
 
         if isModalShown { return false }
         guard didFinishLoad else {
@@ -192,31 +183,45 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
 
     /// 선점했다가 실제로 못 띄웠을 때 되돌린다.
     private func releaseDisplay() {
-        inAppDisplayLock.lock()
+        displayLock.lock()
         isModalShown = false
-        inAppDisplayLock.unlock()
+        displayLock.unlock()
     }
 
     private func presentCampaignModal(campaign: InAppCampaign) {
         guard claimDisplay(campaign: campaign) else { return }
 
-        // 띄우기로 확정된 뒤에 기록한다. 예전엔 present 성공 여부와 무관하게 먼저 찍어서,
-        // topViewController 를 못 찾거나 UIKit 이 중복 present 를 거절하면 사용자는 아무것도
-        // 못 봤는데 빈도수만 소진됐다(그 캠페인이 이후로 막힘).
-        logImpression(campaignId: campaign.id)
-
         DispatchQueue.main.async {
             self.campaignViewController.campaign = campaign
-            if let topViewController = self.getTopViewController() {
-                MarketapLogger.verbose("presenting campaign: \(campaign.id)")
-                topViewController.present(self.campaignViewController, animated: false) {
-                    MarketapLogger.verbose("presented campaign: \(campaign.id)")
-                }
-            } else {
+            guard let topViewController = self.getTopViewController() else {
                 MarketapLogger.warn("failed to find topViewController: \(campaign.id)")
+                self.releaseDisplay()
+                return
+            }
+
+            MarketapLogger.verbose("presenting campaign: \(campaign.id)")
+            topViewController.present(self.campaignViewController, animated: false) {
+                MarketapLogger.verbose("presented campaign: \(campaign.id)")
+                // 화면에 실제로 올라간 뒤에 기록한다. present 가 거절되면 이 블록은 안 불리고,
+                // 그러면 빈도수도 소진되지 않아야 한다(안 본 캠페인이 막히면 안 된다).
+                self.logImpression(campaignId: campaign.id)
+            }
+
+            // UIKit 은 present 를 조용히 거절할 수 있다(이미 present 중, 전환 중, 뷰가 아직
+            // 윈도우에 없음). 그때는 completion 도 viewDidDisappear 도 안 불려서, 선점이
+            // 영구히 남고 이후 인앱이 하나도 안 뜬다. 실제로 올라갔는지 확인해 되돌린다.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                guard self.campaignViewController.presentingViewController == nil else { return }
+                MarketapLogger.warn("presentation was refused: \(campaign.id)")
                 self.releaseDisplay()
             }
         }
+    }
+
+    /// 모달이 내려갔다. hideCampaign(JS 의 "오늘 하루 보지 않기" 등)을 거치지 않고 닫히는
+    /// 경로가 있어서 여기서도 표시 권리를 되돌린다. 중복 해제는 무해하다.
+    func onDismissed() {
+        releaseDisplay()
     }
 
     private func getTopViewController() -> UIViewController? {
@@ -287,11 +292,11 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        inAppDisplayLock.lock()
+        displayLock.lock()
         didFinishLoad = true
         let drained = pendingCampaign
         pendingCampaign = nil
-        inAppDisplayLock.unlock()
+        displayLock.unlock()
 
         if let drained = drained {
             presentCampaignModal(campaign: drained)

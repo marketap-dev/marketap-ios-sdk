@@ -14,6 +14,10 @@ protocol InAppMessageWebViewControllerDelegate: AnyObject, WKNavigationDelegate 
     func onImpression(campaign: InAppCampaign, messageId: String)
     func onTrack(campaign: InAppCampaign, eventName: String, properties: [String: Any]?)
     func onSetUserProperties(properties: [String: Any])
+    /// 모달이 화면에서 내려갔다. JS 의 hide 메시지 말고도 내려가는 경로가 있어서
+    /// (호스트 앱이 상위 VC 를 dismiss, 윈도우 rootViewController 교체 등) 표시 권리를
+    /// 되돌릴 신뢰 가능한 신호가 필요하다.
+    func onDismissed()
 }
 
 final class InAppMessageWebViewController: UIViewController {
@@ -79,6 +83,11 @@ final class InAppMessageWebViewController: UIViewController {
         webView.loadHTMLString(htmlContent, baseURL: nil)
     }
 
+
+    override func viewDidDisappear(_ animated: Bool) {
+        super.viewDidDisappear(animated)
+        delegate?.onDismissed()
+    }
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
