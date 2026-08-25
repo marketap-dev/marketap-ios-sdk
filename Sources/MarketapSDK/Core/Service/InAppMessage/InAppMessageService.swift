@@ -60,7 +60,11 @@ private final class InAppMessageTimeoutController {
 
     func start() {
         selfRetain = self
-        DispatchQueue.global(qos: .utility).asyncAfter(
+        // .utility 가 아니라 .userInitiated 다. 이 타이머는 사용자에게 보일 팝업을 가로막는
+        // 관문이라(타임아웃이 떠야 다음 후보로 넘어간다) 백그라운드 우선순위로 두면 안 된다.
+        // 실측: 갓 부팅한 시뮬레이터에서 .utility 는 1초짜리 타이머가 16초 넘게 밀렸고,
+        // 그 사이 시간 예산(2초)이 끝나 폴스루가 통째로 무산됐다. .userInitiated 로는 1.03초.
+        DispatchQueue.global(qos: .userInitiated).asyncAfter(
             deadline: .now() + timeoutSeconds,
             execute: workItem
         )
