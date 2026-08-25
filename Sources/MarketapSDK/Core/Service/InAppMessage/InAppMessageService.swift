@@ -30,14 +30,17 @@ private final class InAppMessageTimeoutController {
     private lazy var workItem: DispatchWorkItem = {
         DispatchWorkItem { [weak self] in
             guard let self = self else { return }
-            var shouldLog = false
+            var shouldFire = false
             self.stateQueue.sync {
                 if self.didComplete { return }
                 self.didComplete = true
-                shouldLog = true
+                // 수명 해제도 didComplete 와 같은 전이 안에서 한다. 밖에서 하면 진 쪽과
+                // 이긴 쪽이 같은 strong 프로퍼티를 동시에 써서 이중 해제가 난다.
+                // self 는 이 클로저의 강한 지역변수라 여기서 해제해도 안전하다.
+                self.selfRetain = nil
+                shouldFire = true
             }
-            defer { self.selfRetain = nil }
-            guard shouldLog else { return }
+            guard shouldFire else { return }
             MarketapLogger.warn(self.logMessage)
             self.onTimeout?()
         }
@@ -68,10 +71,11 @@ private final class InAppMessageTimeoutController {
         stateQueue.sync {
             if didComplete { return }
             didComplete = true
+            selfRetain = nil
             isFirst = true
         }
+        // 진 쪽(이미 타임아웃이 끝낸 경우)은 이긴 쪽의 수명을 건드리지 않는다.
         workItem.cancel()
-        selfRetain = nil
         return isFirst
     }
 }
@@ -125,11 +129,22 @@ final class InAppMessageService: NSObject, InAppMessageServiceProtocol {
         completion: (([InAppCampaign]) -> Void)? = nil,
     ) {
         let timeoutSeconds: TimeInterval = 1
-        let timeoutController = inTimeout.map {
-            _ in InAppMessageTimeoutController(
+        let timeoutController = inTimeout.map { handler in
+            InAppMessageTimeoutController(
                 timeoutSeconds: timeoutSeconds,
                 queueLabel: "com.marketap.fetchCampaigns.timeout",
-                logMessage: "fetchCampaigns timeout"
+                logMessage: "fetchCampaigns timeout",
+                // 목록 요청이 1초를 넘기면 응답이 와도 markCompleted()==false 라 inTimeout 이
+                // 안 불린다. 그러면 후보 폴스루가 시작조차 못 하고 이벤트가 통째로 버려진다.
+                // (단건 fetch 에서 고친 것과 같은 구멍이 한 층 위에 그대로 있었다.)
+                // 캐시로 강등해서라도 체인을 깨운다.
+                onTimeout: { [weak self] in
+                    guard let self = self else { return }
+                    let cached = self.campaigns
+                        ?? self.cache.loadCodableObject(forKey: Self.campaignCacheKey)
+                        ?? []
+                    handler(cached)
+                }
             )
         }
         timeoutController?.start()

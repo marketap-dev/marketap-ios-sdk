@@ -113,6 +113,9 @@ class InAppFallthroughTests: XCTestCase {
 
         // a 를 시도하고 실패했으니 b 까지 fetch 해야 한다.
         XCTAssertEqual(api.fetchedCampaignIds, ["a", "b"])
+        // 요청이 나갔다는 것만으로는 부족하다. 이 버그의 증상은 "화면에 아무것도 안 뜸"이므로
+        // 실제로 노출까지 갔는지 본다. didFinishLoad=false 라 pendingCampaign 에 적재된다.
+        XCTAssertEqual(service.pendingCampaign?.id, "b")
     }
 
     func testStopWhenFirstShows() {
@@ -121,6 +124,7 @@ class InAppFallthroughTests: XCTestCase {
 
         // a 가 떴으면 b 는 시도하지 않는다.
         XCTAssertEqual(api.fetchedCampaignIds, ["a"])
+        XCTAssertEqual(service.pendingCampaign?.id, "a")
     }
 
     func testStaticCampaignDoesNotFetch() {
@@ -128,6 +132,7 @@ class InAppFallthroughTests: XCTestCase {
         runFallthrough([campaign("static", html: "<div>static</div>"), campaign("b")])
 
         XCTAssertEqual(api.fetchedCampaignIds, [])
+        XCTAssertEqual(service.pendingCampaign?.id, "static")
     }
 
     func testHiddenCandidateIsSkippedWithoutFetch() {
@@ -164,15 +169,41 @@ class InAppFallthroughTests: XCTestCase {
         api.hangingIds = ["slow"]
         api.singleResponses = ["b": campaign("b", html: "<div>b</div>")]
 
-        let advanced = expectation(description: "느린 후보를 넘어 다음 후보를 시도한다")
-        api.onRequest = { path in
-            if path.hasSuffix("/b") { advanced.fulfill() }
+        // 요청이 나간 시점에 fulfill 하면 체인이 아직 진행 중인데 wait 가 풀려서, 남은 작업이
+        // tearDown 이나 다음 테스트로 새어 나간다. 최종 상태(노출)를 기다린다.
+        let shown = expectation(description: "느린 후보를 넘어 다음 후보가 노출된다")
+        DispatchQueue.global().asyncAfter(deadline: .now() + 1.6) {
+            if self.service.pendingCampaign?.id == "b" { shown.fulfill() }
         }
 
         runFallthrough([campaign("slow"), campaign("b")])
 
-        wait(for: [advanced], timeout: 3)
+        wait(for: [shown], timeout: 4)
         XCTAssertEqual(api.fetchedCampaignIds, ["slow", "b"])
+        XCTAssertEqual(service.pendingCampaign?.id, "b")
+    }
+
+    func testCampaignListTimeoutStillStartsFallthrough() {
+        // 단건 fetch 뿐 아니라 목록(/api/v2/campaigns) 요청이 느릴 때도 체인이 시작돼야 한다.
+        // 예전엔 목록 타임아웃이면 inTimeout 이 영영 안 불려 이벤트가 통째로 버려졌다.
+        let cached = campaign("cached", html: "<div>cached</div>")
+        service.campaigns = [cached]      // 캐시는 있지만 lastFetch 는 nil → 네트워크 경로를 탄다
+        service.lastFetch = nil
+
+        let shown = expectation(description: "목록 타임아웃 후에도 캐시로 노출까지 간다")
+        DispatchQueue.global().asyncAfter(deadline: .now() + 1.6) {
+            if self.service.pendingCampaign?.id == "cached" { shown.fulfill() }
+        }
+
+        service.onEvent(
+            eventRequest: IngestEventRequest(
+                id: "e1", name: "mkt_home_view", userId: "u",
+                device: MockMarketapCache().device.makeRequest(), properties: nil, timestamp: Date()
+            ),
+            fromWebBridge: false
+        )
+
+        wait(for: [shown], timeout: 4)
     }
 
     func testFetchBudgetCapsAtFive() {
@@ -182,5 +213,6 @@ class InAppFallthroughTests: XCTestCase {
 
         XCTAssertEqual(api.fetchedCampaignIds.count, 5)
         XCTAssertEqual(api.fetchedCampaignIds, ["c1", "c2", "c3", "c4", "c5"])
+        XCTAssertNil(service.pendingCampaign, "아무것도 못 띄웠어야 한다")
     }
 }
