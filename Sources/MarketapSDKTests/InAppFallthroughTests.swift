@@ -98,14 +98,17 @@ class InAppFallthroughTests: XCTestCase {
         )
     }
 
-    private func runFallthrough(_ candidates: [InAppCampaign]) {
+    private func runFallthrough(
+        _ candidates: [InAppCampaign],
+        budgetSeconds: TimeInterval = 2
+    ) {
         service.tryShowCampaigns(
             candidates: candidates,
             index: 0,
             fetches: 0,
             // 프로덕션이 단조시계로 비교하므로 여기도 같은 시계를 써야 한다.
             // 벽시계 epoch(~1.7e9)를 넣으면 예산이 사실상 무한이 되어 검사가 헛돈다.
-            deadline: ProcessInfo.processInfo.systemUptime + 2,
+            deadline: ProcessInfo.processInfo.systemUptime + budgetSeconds,
             eventName: "mkt_home_view",
             eventProperties: nil,
             fromWebBridge: false
@@ -176,7 +179,11 @@ class InAppFallthroughTests: XCTestCase {
 
         // 요청이 나간 시점에 fulfill 하면 체인이 아직 진행 중인데 wait 가 풀려서, 남은 작업이
         // tearDown 이나 다음 테스트로 새어 나간다. 최종 상태(노출)를 기다린다.
-        runFallthrough([campaign("slow"), campaign("b")])
+        // 예산을 넉넉히 준다. 이 테스트가 보는 건 "타임아웃이 나면 다음 후보로 가는가"이지
+        // 예산이 아니다. 기본 2초는 1초짜리 fetch 타임아웃이 절반을 먹어서 여유가 1초뿐인데,
+        // CI 처럼 타이머가 조금만 밀리면 예산이 먼저 끊어 폴스루가 아니라 예산을 시험하게 된다.
+        // (예산 자체는 testExpiredDeadline / testFetchBudgetCapsAtFive 가 따로 본다)
+        runFallthrough([campaign("slow"), campaign("b")], budgetSeconds: 30)
 
         // ivar 를 백그라운드에서 건드리지 않는다. tearDown 이 nil 로 만든 뒤 폴링이 한 번 더
         // 돌면 암묵적 언랩이 터진다. 인스턴스를 먼저 붙잡아 둔다.
@@ -207,6 +214,11 @@ class InAppFallthroughTests: XCTestCase {
         waitUntil(self, "목록 타임아웃 후에도 캐시로 노출까지 간다") {
             service.pendingCampaign?.id == "cached"
         }
+        // 실패했을 때 "타임아웃이 아예 안 떴는지" vs "떴는데 체인이 안 갔는지" 를 구분한다.
+        XCTAssertEqual(
+            service.pendingCampaign?.id, "cached",
+            "요청 경로=\(api.fetchedCampaignIds), 캠페인 캐시=\(service.campaigns?.map(\.id) ?? [])"
+        )
     }
 
     func testAlreadyShownStopsFallthrough() {
