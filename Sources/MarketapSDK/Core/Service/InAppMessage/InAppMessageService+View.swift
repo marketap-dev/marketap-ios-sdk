@@ -18,6 +18,13 @@ private let inAppMaxFallthroughFetches = 5
 /// 이벤트가 난 지 한참 뒤에 팝업이 튀어나온다. fetch 당 1초 타임아웃이라 이 값이면 약 2회에서 찬다.
 private let inAppFallthroughBudgetSeconds: TimeInterval = 2
 
+/// 경과 시간 측정용 단조 시계. 벽시계(Date)는 NTP 보정이나 사용자의 시간 변경으로
+/// 앞뒤로 튈 수 있어서, 뒤로 튀면 예산이 사실상 무한이 되고 앞으로 튀면 즉시 끊긴다.
+/// 기간을 재는 데는 절대 시각이 아니라 단조 증가 값을 쓴다. (web SDK 의 performance.now 와 같은 이유)
+private func inAppMonotonicNow() -> TimeInterval {
+    ProcessInfo.processInfo.systemUptime
+}
+
 extension InAppMessageService: InAppMessageWebViewControllerDelegate {
 
     func isCampaignHiden(campaign: InAppCampaign) -> Bool {
@@ -108,7 +115,7 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
             MarketapLogger.verbose("reached fetch budget (\(inAppMaxFallthroughFetches)), stopping fallthrough")
             return
         }
-        if Date().timeIntervalSince1970 >= deadline {
+        if inAppMonotonicNow() >= deadline {
             MarketapLogger.verbose("reached time budget, stopping fallthrough")
             return
         }
@@ -191,7 +198,7 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
                     candidates: candidates,
                     index: 0,
                     fetches: 0,
-                    deadline: Date().timeIntervalSince1970 + inAppFallthroughBudgetSeconds,
+                    deadline: inAppMonotonicNow() + inAppFallthroughBudgetSeconds,
                     eventName: eventRequest.name,
                     eventProperties: eventProperties,
                     fromWebBridge: fromWebBridge

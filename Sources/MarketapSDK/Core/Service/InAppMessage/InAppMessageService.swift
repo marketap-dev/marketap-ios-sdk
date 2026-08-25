@@ -16,7 +16,16 @@ private final class InAppMessageTimeoutController {
     private let timeoutSeconds: TimeInterval
     private let stateQueue: DispatchQueue
     private let logMessage: String
+    /// 타임아웃이 이겼을 때 한 번만 불린다. 응답이 늦게 와도 markCompleted() 가 false 라
+    /// 호출자 콜백이 영영 안 불리므로, 대기 중인 쪽에 "끝났다"를 알려줄 통로가 필요하다.
+    private let onTimeout: (() -> Void)?
     private var didComplete = false
+    /// 타임아웃이 뜰 때까지 자기 자신을 붙잡는다.
+    ///
+    /// 이게 없으면 컨트롤러의 수명이 "응답 클로저를 누가 붙잡고 있느냐"에 달린다. 요청이
+    /// 클로저를 놓아버리면(동기 실패 등) 컨트롤러가 해제되고 workItem 의 weak self 가 nil 이
+    /// 되어 **타임아웃이 아예 안 뜬다** — 대기 중인 호출자는 영영 콜백을 못 받는다.
+    private var selfRetain: InAppMessageTimeoutController?
     private let startTime = Date()
     private lazy var workItem: DispatchWorkItem = {
         DispatchWorkItem { [weak self] in
@@ -27,18 +36,27 @@ private final class InAppMessageTimeoutController {
                 self.didComplete = true
                 shouldLog = true
             }
+            defer { self.selfRetain = nil }
             guard shouldLog else { return }
             MarketapLogger.warn(self.logMessage)
+            self.onTimeout?()
         }
     }()
 
-    init(timeoutSeconds: TimeInterval, queueLabel: String, logMessage: String) {
+    init(
+        timeoutSeconds: TimeInterval,
+        queueLabel: String,
+        logMessage: String,
+        onTimeout: (() -> Void)? = nil
+    ) {
         self.timeoutSeconds = timeoutSeconds
         self.stateQueue = DispatchQueue(label: queueLabel)
         self.logMessage = logMessage
+        self.onTimeout = onTimeout
     }
 
     func start() {
+        selfRetain = self
         DispatchQueue.global(qos: .utility).asyncAfter(
             deadline: .now() + timeoutSeconds,
             execute: workItem
@@ -53,6 +71,7 @@ private final class InAppMessageTimeoutController {
             isFirst = true
         }
         workItem.cancel()
+        selfRetain = nil
         return isFirst
     }
 }
@@ -179,7 +198,11 @@ final class InAppMessageService: NSObject, InAppMessageServiceProtocol {
         let timeoutController = InAppMessageTimeoutController(
             timeoutSeconds: timeoutSeconds,
             queueLabel: "com.marketap.fetchCampaign.timeout",
-            logMessage: "fetchCampaign timeout: \(campaignId)"
+            logMessage: "fetchCampaign timeout: \(campaignId)",
+            // 타임아웃이 이기면 뒤늦게 온 응답은 버려지고 콜백이 영영 안 불린다.
+            // 그러면 후보 폴스루가 여기서 조용히 멈춰 아무 캠페인도 안 뜬다. nil 로 깨워
+            // 다음 후보로 넘어가게 한다. (Android 는 withTimeoutOrNull 로 이미 같은 동작)
+            onTimeout: { completion?(nil) }
         )
         timeoutController.start()
 
