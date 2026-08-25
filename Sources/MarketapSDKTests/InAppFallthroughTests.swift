@@ -206,6 +206,33 @@ class InAppFallthroughTests: XCTestCase {
         wait(for: [shown], timeout: 4)
     }
 
+    func testAlreadyShownStopsFallthrough() {
+        // 이미 떠 있으면 후보를 하나도 건드리지 않는다(요청도, 노출도 없음).
+        service.isModalShown = true
+        api.singleResponses = ["a": campaign("a", html: "<div>a</div>")]
+
+        runFallthrough([campaign("a"), campaign("b")])
+
+        XCTAssertEqual(api.fetchedCampaignIds, [])
+        XCTAssertNil(service.pendingCampaign)
+    }
+
+    func testDisplayIsClaimedOnlyOnce() {
+        // 표시 권리는 원자적으로 선점된다. 두 체인이 동시에 통과해 둘 다 띄우면 안 된다.
+        // (웹뷰 로딩이 끝난 상태 = pendingCampaign 적재가 아니라 실제 선점 경로)
+        service.didFinishLoad = true
+
+        runFallthrough([campaign("first", html: "<div>1</div>")])
+        XCTAssertTrue(service.isModalShown, "첫 후보가 표시 권리를 가져가야 한다")
+
+        // 두 번째 체인은 선점에 실패해야 하고, impression 도 남기면 안 된다.
+        let before = UserDefaults.standard.object(forKey: "impression_second") as? [TimeInterval] ?? []
+        runFallthrough([campaign("second", html: "<div>2</div>")])
+        let after = UserDefaults.standard.object(forKey: "impression_second") as? [TimeInterval] ?? []
+
+        XCTAssertEqual(before.count, after.count, "못 띄웠으면 빈도수를 소진하면 안 된다")
+    }
+
     func testFetchBudgetCapsAtFive() {
         // 7개 후보가 전부 빈 응답 → 요청 증폭을 막는 상한(5)에서 멈춘다.
         let candidates = (1...7).map { campaign("c\($0)") }
