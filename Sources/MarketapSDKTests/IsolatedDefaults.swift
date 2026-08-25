@@ -29,7 +29,9 @@ func makeIsolatedDefaults(_ testCase: XCTestCase, function: String = #function) 
 /// 시점에 확인해서 산발적으로 실패한다(실제로 그렇게 깨졌다). 최종 상태를 기다린다.
 func waitUntil(
     _ testCase: XCTestCase,
-    timeout: TimeInterval = 4,
+    // CI 러너는 로컬보다 한참 느리고 .utility QoS 작업이 밀린다. 성공 경로에선 조건이
+    // 충족되는 즉시 끝나므로 상한을 넉넉히 잡아도 시간 손해가 없다(실패할 때만 기다린다).
+    timeout: TimeInterval = 15,
     _ description: String,
     condition: @escaping () -> Bool
 ) {
