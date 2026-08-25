@@ -55,6 +55,14 @@ extension MarketapCore: EventServiceDelegate {
         }
     }
 
+    /// 인앱 캠페인 숨김 기록. 웹브릿지/플러그인 경로에서 들어온다.
+    ///
+    /// 숨김 키는 InAppMessageService 가 자기 저장소에서 읽으므로, 기록도 반드시 같은 곳에
+    /// 남겨야 한다. 예전엔 플러그인이 UserDefaults.standard 를 직접 찔러서 저장소가 갈렸다.
+    public func hideInAppMessage(campaignId: String, until: TimeInterval) {
+        inAppMessageService.recordHidden(campaignId: campaignId, until: until)
+    }
+
     func onEvent(eventRequest: IngestEventRequest, device: Device, fromWebBridge: Bool) {
         queue.async {
             if !["mkt_delivery_message", "mkt_click_message"].contains(eventRequest.name) {

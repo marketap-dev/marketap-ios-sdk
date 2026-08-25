@@ -49,12 +49,21 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
         return false
     }
 
+    /// 네이티브 모달을 닫았을 때. 숨김 기록 + 표시 권리 반납.
     func hideCampaign(campaignId: String, until: TimeInterval) {
         MarketapLogger.debug("hide \(campaignId) until: \(until)")
         releaseDisplay()
-        if until > 0 {
-            defaults.set(Date().timeIntervalSince1970 + until, forKey: "hide_campaign_\(campaignId)")
-        }
+        recordHidden(campaignId: campaignId, until: until)
+    }
+
+    /// 숨김 기록만 남긴다(표시 상태는 건드리지 않는다).
+    ///
+    /// 웹브릿지·플러그인 경로용. 거기서 닫힌 건 우리 네이티브 모달이 아니라 호스트 앱
+    /// 웹뷰가 띄운 것이라, 여기서 표시 권리까지 반납하면 실제로 떠 있는 네이티브 모달 위에
+    /// 다른 캠페인이 올라올 수 있다.
+    func recordHidden(campaignId: String, until: TimeInterval) {
+        guard until > 0 else { return }
+        defaults.set(Date().timeIntervalSince1970 + until, forKey: "hide_campaign_\(campaignId)")
     }
 
     func canShowCampaign(campaignId: String, frequencyCap: FrequencyCap) -> Bool {

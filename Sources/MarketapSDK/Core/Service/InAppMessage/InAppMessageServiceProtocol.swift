@@ -14,6 +14,7 @@ protocol InAppMessageServiceProtocol {
         completion: (([InAppCampaign]) -> Void)?,
     )
     func onEvent(eventRequest: IngestEventRequest, fromWebBridge: Bool)
+    func recordHidden(campaignId: String, until: TimeInterval)
 }
 
 extension InAppMessageServiceProtocol {

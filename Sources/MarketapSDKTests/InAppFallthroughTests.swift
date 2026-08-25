@@ -232,6 +232,33 @@ class InAppFallthroughTests: XCTestCase {
         XCTAssertEqual(before.count, after.count, "못 띄웠으면 빈도수를 소진하면 안 된다")
     }
 
+    func testRecordedHideIsHonoredByTheSameService() {
+        // 웹브릿지/플러그인이 남긴 숨김 기록을, 숨김 여부를 읽는 쪽이 실제로 본다.
+        // (쓰는 저장소와 읽는 저장소가 갈리면 숨김이 조용히 무시된다 — 플러그인이 예전에
+        //  UserDefaults.standard 를 직접 찌르던 게 정확히 그 구조였다)
+        service.recordHidden(campaignId: "muted", until: 3600)
+
+        api.singleResponses = ["b": campaign("b", html: "<div>b</div>")]
+        runFallthrough([campaign("muted"), campaign("b")])
+
+        XCTAssertEqual(api.fetchedCampaignIds, ["b"], "숨긴 후보는 요청조차 하면 안 된다")
+        XCTAssertEqual(service.pendingCampaign?.id, "b")
+    }
+
+    func testRecordHiddenIgnoresNonPositiveDuration() {
+        // CLOSE(=0) 는 "이번만 닫기"라 영구 기록을 남기면 안 된다.
+        service.recordHidden(campaignId: "closed", until: 0)
+
+        // 동작만 보면 가드를 빼도 통과한다(now+0 은 곧바로 과거라 어차피 안 숨겨짐).
+        // 가드 자체를 검증하려면 키가 안 써졌는지를 봐야 한다.
+        XCTAssertNil(defaults.object(forKey: "hide_campaign_closed"), "CLOSE 는 기록을 남기지 않는다")
+
+        api.singleResponses = ["closed": campaign("closed", html: "<div>c</div>")]
+        runFallthrough([campaign("closed")])
+
+        XCTAssertEqual(service.pendingCampaign?.id, "closed", "닫기만 한 캠페인은 다시 뜰 수 있어야 한다")
+    }
+
     func testFetchBudgetCapsAtFive() {
         // 7개 후보가 전부 빈 응답 → 요청 증폭을 막는 상한(5)에서 멈춘다.
         let candidates = (1...7).map { campaign("c\($0)") }

@@ -54,6 +54,11 @@ class MockInAppMessageService: InAppMessageServiceProtocol {
     func onEvent(eventRequest: IngestEventRequest, fromWebBridge: Bool) {
         receivedEvent = eventRequest
     }
+
+    var hiddenCampaigns: [(id: String, until: TimeInterval)] = []
+    func recordHidden(campaignId: String, until: TimeInterval) {
+        hiddenCampaigns.append((campaignId, until))
+    }
 }
 
 class MarketapCoreTests: XCTestCase {
@@ -190,6 +195,16 @@ class MarketapCoreTests: XCTestCase {
             expectation.fulfill()
         }
         wait(for: [expectation], timeout: 1.0)
+    }
+
+    func testHideInAppMessageReachesTheService() {
+        // 숨김 기록은 반드시 서비스(=숨김 키를 읽는 쪽)로 흘러야 한다. 예전엔 플러그인이
+        // UserDefaults.standard 를 직접 찔러서, 서비스가 다른 저장소를 보면 숨김이 무시됐다.
+        core.hideInAppMessage(campaignId: "c1", until: 3600)
+
+        XCTAssertEqual(mockInAppService.hiddenCampaigns.count, 1)
+        XCTAssertEqual(mockInAppService.hiddenCampaigns.first?.id, "c1")
+        XCTAssertEqual(mockInAppService.hiddenCampaigns.first?.until, 3600)
     }
 
     func testOnEvent() {

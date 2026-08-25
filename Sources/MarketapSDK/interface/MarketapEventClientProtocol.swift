@@ -32,6 +32,9 @@ public protocol MarketapEventClientProtocol {
     /// - Parameter eventProperties: Additional properties related to the logout event (optional).
     func logout(eventProperties: [String: Any]?)
 
+    /// 인앱 캠페인을 지정한 시간(초)만큼 숨긴다. 0 이하면 아무것도 기록하지 않는다.
+    func hideInAppMessage(campaignId: String, until: TimeInterval)
+
     // MARK: - Event Tracking
 
     /// Tracks a custom event with optional metadata.

@@ -118,16 +118,12 @@ public class MarketapPlugin: NSObject {
     /// 인앱 메시지 숨김 처리
     public static func hideInAppMessage(campaignId: String, hideType: String?) {
         MarketapLogger.debug("hideInAppMessage: campaignId=\(campaignId), hideType=\(hideType ?? "nil")")
-        if let hideTypeString = hideType,
-           let hideType = CampaignHideType(rawValue: hideTypeString) {
-            let hideDuration = hideType.hideDuration
-            if hideDuration > 0 {
-                UserDefaults.standard.set(
-                    Date().timeIntervalSince1970 + hideDuration,
-                    forKey: "hide_campaign_\(campaignId)"
-                )
-            }
-        }
+        guard let hideTypeString = hideType,
+              let hideType = CampaignHideType(rawValue: hideTypeString) else { return }
+
+        // 저장소를 직접 찌르지 않는다. 숨김 키를 읽는 쪽(InAppMessageService)과 다른 곳에
+        // 쓰면 숨김이 조용히 무시되기 때문. 이 파일의 다른 메서드와 같은 통로를 탄다.
+        Marketap.client?.hideInAppMessage(campaignId: campaignId, until: hideType.hideDuration)
     }
 
     // MARK: - 이벤트 처리 (플러그인용)
