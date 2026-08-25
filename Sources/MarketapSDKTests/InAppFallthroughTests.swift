@@ -65,16 +65,22 @@ private class RecordingAPIForFallthrough: MarketapAPIProtocol {
 class InAppFallthroughTests: XCTestCase {
     private var service: InAppMessageService!
     private var api: RecordingAPIForFallthrough!
+    private var defaults: UserDefaults!
 
     override func setUp() {
         super.setUp()
         api = RecordingAPIForFallthrough()
-        service = InAppMessageService(customHandlerStore: CustomHandlerStor(), api: api, cache: MockMarketapCache())
+        defaults = makeIsolatedDefaults(self)
+        service = InAppMessageService(
+            customHandlerStore: CustomHandlerStor(), api: api,
+            cache: MockMarketapCache(), defaults: defaults
+        )
     }
 
     override func tearDown() {
         service = nil
         api = nil
+        defaults = nil
         super.tearDown()
     }
 
@@ -137,8 +143,7 @@ class InAppFallthroughTests: XCTestCase {
 
     func testHiddenCandidateIsSkippedWithoutFetch() {
         // 오늘 하루 안 보기 등으로 숨겨진 후보는 요청 없이 건너뛰고 다음 후보를 시도한다.
-        UserDefaults.standard.set(Date().timeIntervalSince1970 + 3600, forKey: "hide_campaign_hidden")
-        defer { UserDefaults.standard.removeObject(forKey: "hide_campaign_hidden") }
+        defaults.set(Date().timeIntervalSince1970 + 3600, forKey: "hide_campaign_hidden")
 
         api.singleResponses = ["b": campaign("b", html: "<div>b</div>")]
         runFallthrough([campaign("hidden"), campaign("b")])
@@ -171,14 +176,11 @@ class InAppFallthroughTests: XCTestCase {
 
         // 요청이 나간 시점에 fulfill 하면 체인이 아직 진행 중인데 wait 가 풀려서, 남은 작업이
         // tearDown 이나 다음 테스트로 새어 나간다. 최종 상태(노출)를 기다린다.
-        let shown = expectation(description: "느린 후보를 넘어 다음 후보가 노출된다")
-        DispatchQueue.global().asyncAfter(deadline: .now() + 1.6) {
-            if self.service.pendingCampaign?.id == "b" { shown.fulfill() }
-        }
-
         runFallthrough([campaign("slow"), campaign("b")])
 
-        wait(for: [shown], timeout: 4)
+        waitUntil(self, "느린 후보를 넘어 다음 후보가 노출된다") {
+            self.service.pendingCampaign?.id == "b"
+        }
         XCTAssertEqual(api.fetchedCampaignIds, ["slow", "b"])
         XCTAssertEqual(service.pendingCampaign?.id, "b")
     }
@@ -190,11 +192,6 @@ class InAppFallthroughTests: XCTestCase {
         service.campaigns = [cached]      // 캐시는 있지만 lastFetch 는 nil → 네트워크 경로를 탄다
         service.lastFetch = nil
 
-        let shown = expectation(description: "목록 타임아웃 후에도 캐시로 노출까지 간다")
-        DispatchQueue.global().asyncAfter(deadline: .now() + 1.6) {
-            if self.service.pendingCampaign?.id == "cached" { shown.fulfill() }
-        }
-
         service.onEvent(
             eventRequest: IngestEventRequest(
                 id: "e1", name: "mkt_home_view", userId: "u",
@@ -203,7 +200,9 @@ class InAppFallthroughTests: XCTestCase {
             fromWebBridge: false
         )
 
-        wait(for: [shown], timeout: 4)
+        waitUntil(self, "목록 타임아웃 후에도 캐시로 노출까지 간다") {
+            self.service.pendingCampaign?.id == "cached"
+        }
     }
 
     func testAlreadyShownStopsFallthrough() {
@@ -226,9 +225,9 @@ class InAppFallthroughTests: XCTestCase {
         XCTAssertTrue(service.isModalShown, "첫 후보가 표시 권리를 가져가야 한다")
 
         // 두 번째 체인은 선점에 실패해야 하고, impression 도 남기면 안 된다.
-        let before = UserDefaults.standard.object(forKey: "impression_second") as? [TimeInterval] ?? []
+        let before = defaults.object(forKey: "impression_second") as? [TimeInterval] ?? []
         runFallthrough([campaign("second", html: "<div>2</div>")])
-        let after = UserDefaults.standard.object(forKey: "impression_second") as? [TimeInterval] ?? []
+        let after = defaults.object(forKey: "impression_second") as? [TimeInterval] ?? []
 
         XCTAssertEqual(before.count, after.count, "못 띄웠으면 빈도수를 소진하면 안 된다")
     }

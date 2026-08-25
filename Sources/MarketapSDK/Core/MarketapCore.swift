@@ -9,6 +9,9 @@ import Foundation
 
 final class MarketapCore: MarketapClientProtocol, MarketapNotificationHandlerProtocol {
     let customHandlerStore: MarketapCustomHandlerStoreProtocol
+    /// 최초 방문 플래그 저장소. 기본은 표준 저장소, 테스트만 격리 suite 를 넣어
+    /// 매 실행이 동일한 초기 상태에서 시작하게 한다.
+    private let defaults: UserDefaults
     let eventService: EventServiceProtocol
     let inAppMessageService: InAppMessageServiceProtocol
     let queue = DispatchQueue(label: "com.marketap.core")
@@ -16,22 +19,24 @@ final class MarketapCore: MarketapClientProtocol, MarketapNotificationHandlerPro
     init(
         customHandlerStore: MarketapCustomHandlerStoreProtocol,
         eventService: EventServiceProtocol,
-        inAppMessageService: InAppMessageServiceProtocol
+        inAppMessageService: InAppMessageServiceProtocol,
+        defaults: UserDefaults = .standard
     ) {
         self.customHandlerStore = customHandlerStore
         self.inAppMessageService = inAppMessageService
         self.eventService = eventService
+        self.defaults = defaults
 
         queue.async {
             self.eventService.updateDevice(pushToken: nil, optIn: nil, removeUserId: false, clearOptIn: false)
 
             // 기존 키 마이그레이션
-            if UserDefaults.standard.bool(forKey: "first_visit") {
-                UserDefaults.standard.set(true, forKey: "marketap_first_visit")
+            if defaults.bool(forKey: "first_visit") {
+                defaults.set(true, forKey: "marketap_first_visit")
             }
 
-            if !UserDefaults.standard.bool(forKey: "marketap_first_visit") {
-                UserDefaults.standard.set(true, forKey: "marketap_first_visit")
+            if !defaults.bool(forKey: "marketap_first_visit") {
+                defaults.set(true, forKey: "marketap_first_visit")
                 self.eventService.trackEvent(eventName: "mkt_first_visit", eventProperties: nil)
             }
         }

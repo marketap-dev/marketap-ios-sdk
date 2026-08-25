@@ -37,7 +37,7 @@ private let inAppDisplayLock = NSLock()
 extension InAppMessageService: InAppMessageWebViewControllerDelegate {
 
     func isCampaignHiden(campaign: InAppCampaign) -> Bool {
-        if UserDefaults.standard.double(forKey: "hide_campaign_\(campaign.id)") > Date().timeIntervalSince1970 {
+        if defaults.double(forKey: "hide_campaign_\(campaign.id)") > Date().timeIntervalSince1970 {
             return true
         }
 
@@ -53,7 +53,7 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
         MarketapLogger.debug("hide \(campaignId) until: \(until)")
         releaseDisplay()
         if until > 0 {
-            UserDefaults.standard.set(Date().timeIntervalSince1970 + until, forKey: "hide_campaign_\(campaignId)")
+            defaults.set(Date().timeIntervalSince1970 + until, forKey: "hide_campaign_\(campaignId)")
         }
     }
 
@@ -61,7 +61,7 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
         let key = "impression_\(campaignId)"
         let now = Date().timeIntervalSince1970
 
-        let timestamps = UserDefaults.standard.object(forKey: key) as? [TimeInterval] ?? []
+        let timestamps = defaults.object(forKey: key) as? [TimeInterval] ?? []
         let validTimestamps = timestamps.filter { now - $0 <= TimeInterval(frequencyCap.durationMinutes * 60) }
 
         return validTimestamps.count < frequencyCap.limit
@@ -71,10 +71,10 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
         let key = "impression_\(campaignId)"
         let now = Date().timeIntervalSince1970
 
-        var timestamps = UserDefaults.standard.object(forKey: key) as? [TimeInterval] ?? []
+        var timestamps = defaults.object(forKey: key) as? [TimeInterval] ?? []
         timestamps.append(now)
 
-        UserDefaults.standard.set(Array(timestamps.suffix(100)), forKey: key)
+        defaults.set(Array(timestamps.suffix(100)), forKey: key)
     }
 
     /// 후보를 우선순위 순으로 **하나가 뜰 때까지** 시도한다.

@@ -65,7 +65,12 @@ class MarketapCoreTests: XCTestCase {
         super.setUp()
         mockEventService = MockEventService()
         mockInAppService = MockInAppMessageService()
-        core = MarketapCore(customHandlerStore: CustomHandlerStor(), eventService: mockEventService, inAppMessageService: mockInAppService)
+        // 격리 suite 라 매 실행이 "첫 방문"으로 동일하게 시작한다(예전엔 최초 1회만
+        // mkt_first_visit 이 발생해 실행 이력에 따라 결과가 달라졌다).
+        core = MarketapCore(
+            customHandlerStore: CustomHandlerStor(), eventService: mockEventService,
+            inAppMessageService: mockInAppService, defaults: makeIsolatedDefaults(self)
+        )
         mockEventService.delegate = core
     }
 

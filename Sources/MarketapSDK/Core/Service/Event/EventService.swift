@@ -19,6 +19,8 @@ final class EventService: EventServiceProtocol {
 
     let api: MarketapAPIProtocol
     private let cache: MarketapCacheProtocol
+    /// 세션 타이밍(마지막 이벤트 시각 등) 저장소. 기본은 표준 저장소, 테스트만 격리 suite.
+    let defaults: UserDefaults
     weak var delegate: EventServiceDelegate?
     private var lastSentDeviceRequest: UpdateDeviceRequest?
 
@@ -33,9 +35,15 @@ final class EventService: EventServiceProtocol {
     let failedEventsStorage: DataStorageManager<BulkEvent>
     let serverTimeManager: ServerTimeManagerProtocol
 
-    init(api: MarketapAPIProtocol, cache: MarketapCacheProtocol, serverTimeManager: ServerTimeManagerProtocol? = nil) {
+    init(
+        api: MarketapAPIProtocol,
+        cache: MarketapCacheProtocol,
+        serverTimeManager: ServerTimeManagerProtocol? = nil,
+        defaults: UserDefaults = .standard
+    ) {
         self.api = api
         self.cache = cache
+        self.defaults = defaults
         self.serverTimeManager = serverTimeManager ?? ServerTimeManager(api: api, projectId: cache.projectId)
 
         self.failedEventsStorage = DataStorageManager<BulkEvent>(
@@ -118,7 +126,7 @@ final class EventService: EventServiceProtocol {
         let sdkIntegrationState = SdkIntegrationState.toJsonString()
 
         let currentTime = Date()
-        let lastEventTimestamp = UserDefaults.standard.double(forKey: "marketap_last_event_time")
+        let lastEventTimestamp = defaults.double(forKey: "marketap_last_event_time")
         let timeInterval = currentTime.timeIntervalSince1970 - lastEventTimestamp
 
         if timeInterval > 1800 || lastEventTimestamp == 0 {
@@ -152,7 +160,7 @@ final class EventService: EventServiceProtocol {
             timestamp: eventTimestamp
         )
 
-        UserDefaults.standard.set(eventTimestamp.timeIntervalSince1970, forKey: "marketap_last_event_time")
+        defaults.set(eventTimestamp.timeIntervalSince1970, forKey: "marketap_last_event_time")
 
         track(request: event)
         delegate?.onEvent(eventRequest: event, device: device, fromWebBridge: fromWebBridge)
@@ -168,7 +176,7 @@ final class EventService: EventServiceProtocol {
         }
 
         let storedRequest: UpdateDeviceRequest? = cache.loadCodableObject(forKey: Self.lastSentDeviceRequestKey)
-        let storedAt = UserDefaults.standard.double(forKey: Self.lastSentDeviceRequestAtKey)
+        let storedAt = defaults.double(forKey: Self.lastSentDeviceRequestAtKey)
         let isExpired = Date().timeIntervalSince1970 - storedAt > Self.deviceRequestTTL
 
         if !isExpired && updatedDevice == storedRequest {
@@ -249,7 +257,7 @@ final class EventService: EventServiceProtocol {
                     sent = true
                     self?.lastSentDeviceRequest = item
                     self?.cache.saveCodableObject(item, key: Self.lastSentDeviceRequestKey)
-                    UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: Self.lastSentDeviceRequestAtKey)
+                    self?.defaults.set(Date().timeIntervalSince1970, forKey: Self.lastSentDeviceRequestAtKey)
                 }
                 semaphore.signal()
             }

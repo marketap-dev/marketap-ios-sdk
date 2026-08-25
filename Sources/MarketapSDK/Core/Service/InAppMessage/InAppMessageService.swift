@@ -89,6 +89,9 @@ final class InAppMessageService: NSObject, InAppMessageServiceProtocol {
     let customHandlerStore: MarketapCustomHandlerStoreProtocol
     private let api: MarketapAPIProtocol
     private let cache: MarketapCacheProtocol
+    /// 숨김·노출 기록을 담는 저장소. 기본은 표준 저장소이고, 테스트만 격리된 suite 를 넣는다.
+    /// (예전엔 UserDefaults.standard 를 직접 써서 테스트가 시뮬레이터 상태를 영구 오염시켰다)
+    let defaults: UserDefaults
     weak var delegate: InAppMessageServiceDelegate?
 
     var isModalShown: Bool = false
@@ -106,11 +109,13 @@ final class InAppMessageService: NSObject, InAppMessageServiceProtocol {
     init(
         customHandlerStore: MarketapCustomHandlerStoreProtocol,
         api: MarketapAPIProtocol,
-        cache: MarketapCacheProtocol
+        cache: MarketapCacheProtocol,
+        defaults: UserDefaults = .standard
     ) {
         self.customHandlerStore = customHandlerStore
         self.cache = cache
         self.api = api
+        self.defaults = defaults
 
         super.init()
 
