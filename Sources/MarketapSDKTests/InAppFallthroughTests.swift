@@ -178,8 +178,11 @@ class InAppFallthroughTests: XCTestCase {
         // tearDown 이나 다음 테스트로 새어 나간다. 최종 상태(노출)를 기다린다.
         runFallthrough([campaign("slow"), campaign("b")])
 
+        // ivar 를 백그라운드에서 건드리지 않는다. tearDown 이 nil 로 만든 뒤 폴링이 한 번 더
+        // 돌면 암묵적 언랩이 터진다. 인스턴스를 먼저 붙잡아 둔다.
+        let service = self.service!
         waitUntil(self, "느린 후보를 넘어 다음 후보가 노출된다") {
-            self.service.pendingCampaign?.id == "b"
+            service.pendingCampaign?.id == "b"
         }
         XCTAssertEqual(api.fetchedCampaignIds, ["slow", "b"])
         XCTAssertEqual(service.pendingCampaign?.id, "b")
@@ -200,8 +203,9 @@ class InAppFallthroughTests: XCTestCase {
             fromWebBridge: false
         )
 
+        let service = self.service!
         waitUntil(self, "목록 타임아웃 후에도 캐시로 노출까지 간다") {
-            self.service.pendingCampaign?.id == "cached"
+            service.pendingCampaign?.id == "cached"
         }
     }
 

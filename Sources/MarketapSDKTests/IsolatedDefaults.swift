@@ -37,7 +37,15 @@ func waitUntil(
     let queue = DispatchQueue(label: "marketap.tests.poll")
     let interval: TimeInterval = 0.05
 
+    // 조건이 끝내 참이 안 되면 wait 는 실패하고 테스트가 끝나는데, 예약된 폴링은 그대로
+    // 남는다. 그 폴링이 tearDown 이 이미 nil 로 만든 프로퍼티를 건드리면 프로세스가 죽고
+    // **스위트 전체가 0개 실행으로 날아간다**(실제로 CI 에서 그렇게 됐다).
+    // 테스트가 끝나면 더 돌지 않도록 끊는다.
+    let stopped = PollStopFlag()
+    testCase.addTeardownBlock { stopped.stop() }
+
     func poll(_ remaining: Int) {
+        if stopped.isStopped { return }
         if condition() {
             expectation.fulfill()
             return
@@ -48,4 +56,21 @@ func waitUntil(
     queue.async { poll(Int(timeout / interval)) }
 
     testCase.wait(for: [expectation], timeout: timeout + 1)
+}
+
+/// 폴링 중단 플래그. 폴링 큐와 tearDown 스레드에서 같이 만지므로 락으로 보호한다.
+final class PollStopFlag {
+    private let lock = NSLock()
+    private var value = false
+
+    var isStopped: Bool {
+        lock.lock(); defer { lock.unlock() }
+        return value
+    }
+
+    func stop() {
+        lock.lock()
+        value = true
+        lock.unlock()
+    }
 }
