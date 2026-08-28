@@ -98,7 +98,7 @@ final class InAppMessageService: NSObject, InAppMessageServiceProtocol {
     let defaults: UserDefaults
     weak var delegate: InAppMessageServiceDelegate?
 
-    /// 표시 상태(isModalShown/didFinishLoad/pendingCampaign)를 지키는 락.
+    /// 적재·표시 선점 상태 일체를 지키는 락(아래 네 필드 전부).
     /// 파일 전역이 아니라 인스턴스 소유다 — 지키는 상태가 인스턴스별이라, 전역으로 두면
     /// 인스턴스가 둘일 때 서로 배제해주지도 못하면서 경합만 늘린다.
     let displayLock = NSLock()
@@ -126,10 +126,10 @@ final class InAppMessageService: NSObject, InAppMessageServiceProtocol {
     /// 적재 선점의 시한(초). 웹뷰가 이 안에 준비되지 않으면 적재를 버리고 표시 권리를 반납한다.
     /// 시한이 없으면 초기 로드가 영영 안 끝날 때 선점이 영구히 남아 인앱이 하나도 못 뜬다.
     ///
-    /// 넉넉하게 잡는다. 짧으면 앱 시작이 느릴 때 적재된 후보를 버리게 되는데, 그건 이 수정이
-    /// 없애려던 증상(먼저 도착한 후보가 조용히 사라짐)을 그대로 되살린다. 반대로 길어서 손해
-    /// 보는 구간은 "웹뷰가 고장 나 어차피 아무것도 못 뜨는" 동안뿐이라 실질 비용이 거의 없다.
-    /// 실측 참고: 갓 초기화한 시뮬레이터에서 1초짜리 디스패치 타이머가 20초까지 밀렸다.
+    /// 튜닝된 값이 아니라 보수적인 상한이다. 웹뷰가 준비되기까지 실제로 얼마나 걸리는지는
+    /// 재지 않았다. 근거는 비용의 비대칭이다: 짧으면 앱 시작이 느릴 때 적재된 후보를 버려
+    /// 이 수정이 없애려던 증상(먼저 도착한 후보가 조용히 사라짐)을 되살리는 반면, 길어서
+    /// 손해 보는 구간은 "웹뷰가 고장 나 어차피 아무것도 못 뜨는" 동안뿐이다.
     /// (테스트에서만 값을 바꾼다)
     var pendingClaimTimeoutSeconds: TimeInterval = 10
 

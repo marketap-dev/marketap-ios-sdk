@@ -82,6 +82,12 @@ class MockInAppMessageService: InAppMessageServiceProtocol {
     func recordHidden(campaignId: String, until: TimeInterval) {
         hiddenCampaigns.append((campaignId, until))
     }
+
+    private var _discardPendingCalled = false
+    var discardPendingCalled: Bool { sync { _discardPendingCalled } }
+    func discardPendingCampaign() {
+        sync { _discardPendingCalled = true }
+    }
 }
 
 // 예전엔 "0.5초 자고 한 번 단언" + wait(timeout: 1.0) 이었다. 여유가 0.5초뿐이라
@@ -183,6 +189,9 @@ class MarketapCoreTests: XCTestCase {
 
         let inApp = mockInAppService!
         waitUntil(self, "유저 변경이 캠페인 재조회를 부른다") { inApp.fetchCampaignsCalled }
+        // 목록만 다시 받으면 부족하다. 이전 신원으로 적재해 둔 후보가 표시 권리를 쥔 채
+        // 남아 있으면, 로그인 전 캠페인이 로그인 후에 뜨고 그동안 올바른 후보가 다 막힌다.
+        XCTAssertTrue(inApp.discardPendingCalled, "유저가 바뀌면 적재된 후보를 버려야 한다")
     }
 
     func testHideInAppMessageReachesTheService() {

@@ -18,6 +18,10 @@ private let inAppMaxFallthroughFetches = 5
 /// 이벤트가 난 지 한참 뒤에 팝업이 튀어나온다. fetch 당 1초 타임아웃이라 이 값이면 약 2회에서 찬다.
 private let inAppFallthroughBudgetSeconds: TimeInterval = 2
 
+/// present 가 실제로 올라갔는지 확인하기까지 기다리는 시간(초). UIKit 은 present 를 조용히
+/// 거절할 수 있어서, 이 시간 뒤에도 안 올라가 있으면 선점을 되돌린다.
+private let inAppPresentationRefusalCheckSeconds: TimeInterval = 0.5
+
 /// 경과 시간 측정용 단조 시계. 벽시계(Date)는 NTP 보정이나 사용자의 시간 변경으로
 /// 앞뒤로 튈 수 있어서, 뒤로 튀면 예산이 사실상 무한이 되고 앞으로 튀면 즉시 끊긴다.
 /// 기간을 재는 데는 절대 시각이 아니라 단조 증가 값을 쓴다. (web SDK 의 performance.now 와 같은 이유)
@@ -95,11 +99,18 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
         eventProperties: [String: Any]?,
         fromWebBridge: Bool
     ) {
-        // 앞 후보가 떴거나 다른 경로가 이미 띄웠으면 멈춘다.
+        // 네이티브 모달이 실제로 표시 단계에 들어갔을 때만 멈춘다.
+        //
+        // 적재 선점(웹뷰 대기)까지 여기서 막으면 안 된다. 웹브릿지 전달은 네이티브 웹뷰를
+        // 아예 쓰지 않는 독립 경로인데(show 의 브릿지 분기), 적재 때문에 같이 막히면
+        // 콜드스타트 직후 최대 pendingClaimTimeoutSeconds 동안 브릿지 인앱이 통째로 죽는다.
+        // 적재가 안 덮어써지는 건 claimDisplay 가 지킨다 — 여기서 또 막을 필요가 없다.
+        //
+        // 불변식(pendingCampaign != nil -> isModalShown) 덕에 "표시 중" 은 이 조합이다.
         displayLock.lock()
-        let alreadyShown = isModalShown
+        let alreadyPresenting = isModalShown && pendingCampaign == nil
         displayLock.unlock()
-        if alreadyShown { return }
+        if alreadyPresenting { return }
         guard index < candidates.count else { return }
 
         let campaign = candidates[index]
@@ -256,7 +267,7 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
             // UIKit 은 present 를 조용히 거절할 수 있다(이미 present 중, 전환 중, 뷰가 아직
             // 윈도우에 없음). 그때는 completion 도 viewDidDisappear 도 안 불려서, 선점이
             // 영구히 남고 이후 인앱이 하나도 안 뜬다. 실제로 올라갔는지 확인해 되돌린다.
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + inAppPresentationRefusalCheckSeconds) {
                 guard self.campaignViewController.presentingViewController == nil else { return }
                 MarketapLogger.warn("presentation was refused: \(campaign.id)")
                 self.releaseDisplay()
@@ -366,10 +377,15 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
         MarketapLogger.warn("in-app webView content process terminated")
 
         DispatchQueue.main.async {
-            if self.campaignViewController.presentingViewController != nil {
-                self.campaignViewController.dismiss(animated: false)
+            // presentedViewController == nil 조건이 핵심이다. UIKit 의 dismiss 는 수신자가
+            // 무언가를 present 중이면 **그 자식을** 내린다. 호스트 앱이 우리 모달 위에 자기
+            // 화면을 올려둔 상태에서 이걸 부르면 SDK 가 호스트 앱 화면을 임의로 닫아버린다.
+            // 그 경우엔 우리 모달도 안 닫히니 권리 반납도 실패한다 — 건드리지 않고 둔다.
+            let vc = self.campaignViewController
+            if vc.presentingViewController != nil, vc.presentedViewController == nil {
+                vc.dismiss(animated: false)
             }
-            self.campaignViewController.reloadShell()
+            vc.reloadShell()
         }
 
         markWebViewReady()
@@ -390,8 +406,32 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
         }
         displayLock.unlock()
 
-        if let drained = drained {
-            presentClaimed(campaign: drained)
+        guard let drained = drained else { return }
+
+        // 적재와 승격 사이는 최대 pendingClaimTimeoutSeconds 다. 그 사이에 같은 캠페인이
+        // 웹브릿지로 전달돼 빈도수를 채웠거나 사용자가 다른 경로에서 "하루 보지 않기" 로
+        // 닫았을 수 있다. 적재 시점의 판정을 그대로 믿으면 방금 끈 팝업이 다시 뜬다.
+        if isCampaignHiden(campaign: drained) {
+            MarketapLogger.verbose("pending campaign became hidden before promotion: \(drained.id)")
+            releaseDisplay()
+            return
         }
+
+        presentClaimed(campaign: drained)
+    }
+
+    /// 적재된 후보를 버리고 표시 권리를 반납한다.
+    ///
+    /// 신원(userId)이 바뀌면 이전 신원으로 고른 후보는 더 이상 맞지 않는다. 예전에는 적재가
+    /// 권리를 안 잡아서 뒤 이벤트가 알아서 덮어썼지만, 이제는 적재가 권리를 쥐므로 명시적으로
+    /// 버려주지 않으면 로그인 전 캠페인이 로그인 후에 뜨고 그동안 올바른 후보는 막힌다.
+    func discardPendingCampaign() {
+        displayLock.lock()
+        let discarded = pendingCampaign
+        displayLock.unlock()
+
+        guard let discarded = discarded else { return }
+        MarketapLogger.verbose("discarding pending campaign after identity change: \(discarded.id)")
+        releaseDisplay()
     }
 }

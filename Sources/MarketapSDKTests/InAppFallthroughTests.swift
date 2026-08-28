@@ -314,15 +314,59 @@ class InAppFallthroughTests: XCTestCase {
         )
     }
 
-    func testPendingClaimBlocksLaterCandidatesFromFetching() {
-        // 적재도 선점이므로, 뒤 이벤트는 상세 fetch 조차 시작하면 안 된다.
+    func testPendingClaimDoesNotFreezeCandidateEvaluation() {
+        // 적재 선점은 **네이티브 present 경로만** 막아야 한다. 후보 평가 자체를 얼리면
+        // 네이티브 웹뷰를 안 쓰는 웹브릿지 전달까지 같이 죽는다(콜드스타트 직후 최대
+        // pendingClaimTimeoutSeconds 동안). 적재가 안 덮어써지는 건 claimDisplay 가 지킨다.
         api.singleResponses = ["late": campaign("late", html: "<div>late</div>")]
 
         runFallthrough([campaign("first", html: "<div>1</div>")])
-        XCTAssertTrue(service.isModalShown, "적재도 표시 권리를 잡아야 한다")
+        XCTAssertTrue(service.isModalShown, "적재도 표시 권리를 잡는다")
 
         runFallthrough([campaign("late")])
-        XCTAssertEqual(api.fetchedCampaignIds, [], "권리가 잡혀 있으면 요청도 나가면 안 된다")
+        XCTAssertEqual(api.fetchedCampaignIds, ["late"], "적재 중에도 후보 평가는 계속돼야 한다")
+        XCTAssertEqual(service.pendingCampaign?.id, "first", "그래도 적재는 덮어써지면 안 된다")
+    }
+
+    func testPresentingModalDoesFreezeCandidateEvaluation() {
+        // 반대로 실제로 떠 있을 때는 멈춘다(요청도 안 나간다).
+        service.didFinishLoad = true
+        api.singleResponses = ["late": campaign("late", html: "<div>late</div>")]
+
+        runFallthrough([campaign("first", html: "<div>1</div>")])
+        XCTAssertTrue(service.isModalShown)
+        XCTAssertNil(service.pendingCampaign, "적재가 아니라 표시 단계다")
+
+        runFallthrough([campaign("late")])
+        XCTAssertEqual(api.fetchedCampaignIds, [], "표시 중이면 요청도 나가면 안 된다")
+    }
+
+    func testDiscardPendingCampaignReleasesTheClaim() {
+        // 신원이 바뀌면 이전 신원으로 고른 적재 후보를 버려야 한다.
+        runFallthrough([campaign("beforeLogin", html: "<div>1</div>")])
+        XCTAssertEqual(service.pendingCampaign?.id, "beforeLogin")
+
+        service.discardPendingCampaign()
+        XCTAssertNil(service.pendingCampaign)
+        XCTAssertFalse(service.isModalShown, "적재를 버렸으면 권리도 반납해야 한다")
+
+        // 승격 신호가 와도 버린 후보가 되살아나면 안 된다.
+        service.webView(WKWebView(), didFinish: nil)
+        XCTAssertNil(service.pendingCampaign)
+        XCTAssertFalse(service.isModalShown)
+    }
+
+    func testPendingCampaignHiddenBeforePromotionIsNotShown() {
+        // 적재와 승격 사이는 최대 시한만큼 벌어진다. 그 사이에 사용자가 다른 경로에서
+        // "하루 보지 않기" 로 닫았으면, 방금 끈 팝업이 다시 뜨면 안 된다.
+        runFallthrough([campaign("muted", html: "<div>m</div>")])
+        XCTAssertEqual(service.pendingCampaign?.id, "muted")
+
+        service.recordHidden(campaignId: "muted", until: 3600)
+        service.webView(WKWebView(), didFinish: nil)
+
+        XCTAssertNil(service.pendingCampaign)
+        XCTAssertFalse(service.isModalShown, "숨겨진 후보는 승격하지 말고 권리를 반납해야 한다")
     }
 
     func testPendingClaimIsPromotedWhenWebViewBecomesReady() {
@@ -353,11 +397,47 @@ class InAppFallthroughTests: XCTestCase {
         XCTAssertFalse(service.isModalShown, "적재를 버렸으면 표시 권리도 반납해야 한다")
 
         // 권리가 풀렸으니 다음 이벤트가 다시 시도할 수 있어야 한다.
+        // 여기서 시한을 되돌린다. 0.2초인 채로 두면 "second" 적재에도 시한이 걸려,
+        // 느린 머신에서 아래 단언 전에 만료될 수 있다(검증 대상이 아닌 플레이크).
+        service.pendingClaimTimeoutSeconds = 600
         runFallthrough([campaign("second", html: "<div>2</div>")])
         XCTAssertEqual(service.pendingCampaign?.id, "second")
     }
 
+    func testReleasedClaimDropsPendingCampaign() {
+        // 불변식(pendingCampaign != nil -> isModalShown == true)의 해제 쪽. 권리를 놓을 때
+        // 적재를 남겨두면, 나중에 웹뷰가 준비됐을 때 이미 놓은 권리로 캠페인이 뜬다.
+        // (testDismissalReleasesTheDisplayClaim 은 didFinishLoad=true 로 시작해 적재 경로를 안 탄다)
+        XCTAssertFalse(service.didFinishLoad, "전제: 웹뷰가 아직 준비되지 않았다")
+
+        runFallthrough([campaign("first", html: "<div>1</div>")])
+        XCTAssertEqual(service.pendingCampaign?.id, "first")
+
+        service.onDismissed()
+        XCTAssertFalse(service.isModalShown)
+        XCTAssertNil(service.pendingCampaign, "권리를 놓으면 적재도 같이 버려야 한다")
+
+        service.webView(WKWebView(), didFinish: nil)
+        XCTAssertNil(service.pendingCampaign, "놓은 권리로 나중에 뜨면 안 된다")
+    }
+
     // MARK: - 초기 로드 실패 복구
+
+    func testWebViewNavigationDelegateIsTheService() {
+        // 아래 실패 콜백 테스트들은 델리게이트 메서드를 서비스에 직접 호출한다. 그래서 배선이
+        // 끊겨도 전부 통과한다 — 이 PR 이 고치려는 증상(초기 로드 실패 시 영구 무노출)이
+        // 그대로 되살아나도 초록불이다. 배선 자체를 따로 붙잡아 둔다.
+        // (init 이 delegate 대입 -> loadViewIfNeeded 순서로 main 큐에 넣으므로 순서가 뒤집히면
+        //  viewDidLoad 안의 webView.navigationDelegate = delegate 가 nil 을 읽는다)
+        let ready = expectation(description: "init 이 main 큐에 넣은 웹뷰 준비 블록이 끝난다")
+        DispatchQueue.main.async { ready.fulfill() }
+        wait(for: [ready], timeout: 5)
+
+        XCTAssertTrue(
+            service.campaignViewController.webView?.navigationDelegate === service,
+            "웹뷰의 navigationDelegate 가 서비스로 배선돼 있어야 실패 콜백이 실제로 온다"
+        )
+    }
 
     func testProvisionalNavigationFailureUnblocksDisplay() {
         // 초기 blank 로드가 실패하면 예전엔 didFinishLoad 가 영영 false 라
