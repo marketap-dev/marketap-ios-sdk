@@ -165,32 +165,78 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
 
     /// 이 캠페인을 띄울 권리를 원자적으로 선점한다. true 를 받은 쪽만 present 로 간다.
     ///
-    /// 아직 웹뷰 로딩 전이면 pendingCampaign 에 적재하고 false 를 준다(로딩이 끝나면
-    /// webView(_:didFinish:) 가 다시 이 경로로 태운다).
+    /// 아직 웹뷰가 준비되기 전이면 pendingCampaign 에 적재하고 false 를 준다(준비되면
+    /// `markWebViewReady()` 가 노출로 승격시킨다). **적재도 선점이다** — isModalShown 을
+    /// 세워 뒤 이벤트가 앞 후보를 덮어쓰지 못하게 한다. 예전엔 적재 경로가 권리를 안 잡아서,
+    /// 앱 시작 직후처럼 웹뷰 초기화가 느릴 때 뒤 이벤트마다 같은 분기를 타며 먼저 도착한
+    /// (= 우선순위가 더 높은) 캠페인을 조용히 덮어썼다.
+    ///
+    /// 적재 선점은 `pendingClaimTimeoutSeconds` 시한을 함께 건다. 시한이 없으면 웹뷰가
+    /// 영영 준비되지 않을 때 권리가 잠긴 채로 남아 인앱이 하나도 못 뜬다.
     private func claimDisplay(campaign: InAppCampaign) -> Bool {
         displayLock.lock()
         defer { displayLock.unlock() }
 
         if isModalShown { return false }
+
+        // 아래 두 갈래 모두 "이 캠페인이 표시 권리를 가져갔다"는 뜻이다.
+        isModalShown = true
+
         guard didFinishLoad else {
-            MarketapLogger.verbose("loading campaign: \(campaign.id)")
+            MarketapLogger.verbose("webView not ready, claiming for pending campaign: \(campaign.id)")
             pendingCampaign = campaign
+            pendingGeneration &+= 1
+            schedulePendingExpiry(generation: pendingGeneration, campaignId: campaign.id)
             return false
         }
-        isModalShown = true
         return true
     }
 
+    /// 적재 선점에 시한을 건다. 시한이 지나도 여전히 같은 적재가 남아 있으면 권리를 반납해
+    /// 이후 이벤트가 다시 시도할 수 있게 한다(이벤트 하나는 잃지만 영구 무노출은 막는다).
+    private func schedulePendingExpiry(generation: Int, campaignId: String) {
+        let timeout = pendingClaimTimeoutSeconds
+        // .userInitiated: 이 타이머가 늦으면 그동안 인앱이 하나도 안 뜬다.
+        DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + timeout) { [weak self] in
+            guard let self = self else { return }
+
+            self.displayLock.lock()
+            // 세대가 다르면 이미 승격됐거나 반납된 뒤다 — 남의 선점을 풀면 안 된다.
+            guard self.pendingGeneration == generation, self.pendingCampaign != nil else {
+                self.displayLock.unlock()
+                return
+            }
+            self.pendingCampaign = nil
+            self.isModalShown = false
+            self.displayLock.unlock()
+
+            // verbose 가 아니라 warn 이다. 이 상태는 웹뷰가 준비되지 않았다는 진단 신호다.
+            MarketapLogger.warn(
+                "webView not ready within \(timeout)s, dropping pending campaign: \(campaignId)"
+            )
+        }
+    }
+
     /// 선점했다가 실제로 못 띄웠을 때 되돌린다.
+    ///
+    /// 적재도 같이 버린다. 불변식(`pendingCampaign != nil` → `isModalShown == true`)을 지키려면
+    /// 권리를 놓는 순간 적재도 없어야 한다. 남겨두면 나중에 웹뷰가 준비됐을 때 이미 놓은
+    /// 권리로 캠페인이 뜬다.
     private func releaseDisplay() {
         displayLock.lock()
         isModalShown = false
+        pendingCampaign = nil
+        pendingGeneration &+= 1
         displayLock.unlock()
     }
 
     private func presentCampaignModal(campaign: InAppCampaign) {
         guard claimDisplay(campaign: campaign) else { return }
+        presentClaimed(campaign: campaign)
+    }
 
+    /// 이미 표시 권리를 쥔 상태에서 실제 present 를 수행한다. 선점 없이 호출하면 안 된다.
+    private func presentClaimed(campaign: InAppCampaign) {
         DispatchQueue.main.async {
             self.campaignViewController.campaign = campaign
             guard let topViewController = self.getTopViewController() else {
@@ -292,14 +338,60 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        markWebViewReady()
+    }
+
+    /// 초기 blank 로드가 서버에 닿기도 전에 실패한 경우.
+    ///
+    /// 예전엔 이 콜백이 없어서 `didFinishLoad` 가 영영 false 로 남았고, 그 뒤로 **어떤
+    /// 인앱도 뜨지 못했다**. 초기 로드는 껍데기일 뿐이고 실제 노출은 새 loadHTMLString 을
+    /// 걸기 때문에, 실패도 "웹뷰 준비 완료"로 처리해 적재된 후보를 그대로 승격시킨다.
+    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+        MarketapLogger.warn("in-app webView provisional navigation failed: \(error.localizedDescription)")
+        markWebViewReady()
+    }
+
+    /// 네비게이션이 시작된 뒤 실패한 경우. 처리는 didFailProvisionalNavigation 과 같다.
+    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+        MarketapLogger.warn("in-app webView navigation failed: \(error.localizedDescription)")
+        markWebViewReady()
+    }
+
+    /// 웹 콘텐츠 프로세스가 죽었다. 화면은 빈 껍데기가 되고 JS 도 안 돈다.
+    ///
+    /// 떠 있는 모달이 있으면 닫기 버튼조차 JS 라 사용자가 닫을 수단이 없다 — 표시 권리가
+    /// 영구히 잠겨 이후 인앱이 하나도 안 뜬다. 내려서 권리를 반납하고(viewDidDisappear →
+    /// onDismissed), 껍데기를 다시 올려 다음 노출에 쓸 수 있게 한다.
+    func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+        MarketapLogger.warn("in-app webView content process terminated")
+
+        DispatchQueue.main.async {
+            if self.campaignViewController.presentingViewController != nil {
+                self.campaignViewController.dismiss(animated: false)
+            }
+            self.campaignViewController.reloadShell()
+        }
+
+        markWebViewReady()
+    }
+
+    /// 웹뷰가 노출에 쓸 수 있는 상태가 됐다고 표시하고, 적재된 후보가 있으면 노출로 승격한다.
+    ///
+    /// 승격은 표시 권리를 **놓지 않고** 이어간다. 적재 시점에 이미 선점했으므로 여기서 다시
+    /// claimDisplay 를 타면 자기 자신이 잡은 권리에 막혀 영영 못 뜬다.
+    private func markWebViewReady() {
         displayLock.lock()
         didFinishLoad = true
         let drained = pendingCampaign
         pendingCampaign = nil
+        if drained != nil {
+            // 시한 타이머가 뒤늦게 떠서 승격된 권리를 풀어버리지 않도록 세대를 넘긴다.
+            pendingGeneration &+= 1
+        }
         displayLock.unlock()
 
         if let drained = drained {
-            presentCampaignModal(campaign: drained)
+            presentClaimed(campaign: drained)
         }
     }
 }

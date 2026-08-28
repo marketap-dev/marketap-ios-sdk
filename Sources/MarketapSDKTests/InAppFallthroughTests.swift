@@ -8,6 +8,7 @@
 //
 
 import XCTest
+import WebKit
 @testable import MarketapSDK
 
 /// 상세 fetch 요청 경로를 기록하고, 캠페인 id 별로 단건 응답을 돌려주는 mock.
@@ -75,6 +76,10 @@ class InAppFallthroughTests: XCTestCase {
             customHandlerStore: CustomHandlerStor(), api: api,
             cache: MockMarketapCache(), defaults: defaults
         )
+        // 이 스위트는 적재 시한을 시험하지 않는다. 시한을 기본값으로 두면 느린 머신에서
+        // 폴링이 밀렸을 때 적재가 만료돼 사라지고, 폴스루가 아니라 시한을 시험하게 된다.
+        // 시한 자체는 testStalePendingClaimIsReleased 가 직접 짧게 잡아 따로 본다.
+        service.pendingClaimTimeoutSeconds = 600
     }
 
     override func tearDown() {
@@ -288,6 +293,108 @@ class InAppFallthroughTests: XCTestCase {
 
         // 반납됐으니 다음 캠페인이 다시 뜰 수 있어야 한다.
         runFallthrough([campaign("second", html: "<div>2</div>")])
+        XCTAssertTrue(service.isModalShown)
+    }
+
+    // MARK: - 웹뷰 로딩 중 적재(pending) 경로
+
+    func testPendingClaimIsNotOverwrittenByLaterEvent() {
+        // didFinishLoad == false (웹뷰가 아직 안 떴다). 예전에는 적재 경로가 표시 권리를
+        // 안 잡아서, 뒤이어 오는 이벤트마다 같은 분기를 타며 pendingCampaign 을 덮어썼다.
+        // 앱 시작 직후처럼 웹뷰 초기화가 느릴 때 먼저 도착한 후보가 조용히 사라졌다.
+        XCTAssertFalse(service.didFinishLoad, "전제: 웹뷰가 아직 준비되지 않았다")
+
+        runFallthrough([campaign("first", html: "<div>1</div>")])
+        XCTAssertEqual(service.pendingCampaign?.id, "first")
+
+        runFallthrough([campaign("second", html: "<div>2</div>")])
+        XCTAssertEqual(
+            service.pendingCampaign?.id, "first",
+            "먼저 적재된 후보를 뒤 이벤트가 덮어쓰면 안 된다"
+        )
+    }
+
+    func testPendingClaimBlocksLaterCandidatesFromFetching() {
+        // 적재도 선점이므로, 뒤 이벤트는 상세 fetch 조차 시작하면 안 된다.
+        api.singleResponses = ["late": campaign("late", html: "<div>late</div>")]
+
+        runFallthrough([campaign("first", html: "<div>1</div>")])
+        XCTAssertTrue(service.isModalShown, "적재도 표시 권리를 잡아야 한다")
+
+        runFallthrough([campaign("late")])
+        XCTAssertEqual(api.fetchedCampaignIds, [], "권리가 잡혀 있으면 요청도 나가면 안 된다")
+    }
+
+    func testPendingClaimIsPromotedWhenWebViewBecomesReady() {
+        runFallthrough([campaign("first", html: "<div>1</div>")])
+        XCTAssertEqual(service.pendingCampaign?.id, "first")
+
+        service.webView(WKWebView(), didFinish: nil)
+
+        XCTAssertTrue(service.didFinishLoad)
+        XCTAssertNil(service.pendingCampaign, "준비되면 적재는 비워져야 한다")
+        // 적재 선점을 그대로 이어받아야 한다. 승격 경로가 claimDisplay 를 다시 타면
+        // 자기가 잡아둔 권리에 막혀 영영 못 뜬다.
+        XCTAssertTrue(service.isModalShown, "적재 선점이 표시 선점으로 이어져야 한다")
+    }
+
+    func testStalePendingClaimIsReleased() {
+        // 웹뷰가 영영 준비되지 않으면 적재 선점이 남아 인앱이 하나도 안 뜬다. 시한을 둔다.
+        service.pendingClaimTimeoutSeconds = 0.2
+
+        runFallthrough([campaign("first", html: "<div>1</div>")])
+        XCTAssertTrue(service.isModalShown)
+        XCTAssertEqual(service.pendingCampaign?.id, "first")
+
+        let service = self.service!
+        waitUntil(self, "시한이 지나면 적재 선점이 풀린다") {
+            service.pendingCampaign == nil
+        }
+        XCTAssertFalse(service.isModalShown, "적재를 버렸으면 표시 권리도 반납해야 한다")
+
+        // 권리가 풀렸으니 다음 이벤트가 다시 시도할 수 있어야 한다.
+        runFallthrough([campaign("second", html: "<div>2</div>")])
+        XCTAssertEqual(service.pendingCampaign?.id, "second")
+    }
+
+    // MARK: - 초기 로드 실패 복구
+
+    func testProvisionalNavigationFailureUnblocksDisplay() {
+        // 초기 blank 로드가 실패하면 예전엔 didFinishLoad 가 영영 false 라
+        // 그 뒤로 **어떤 인앱도 뜨지 못했다**.
+        service.webView(
+            WKWebView(),
+            didFailProvisionalNavigation: nil,
+            withError: URLError(.networkConnectionLost)
+        )
+
+        XCTAssertTrue(service.didFinishLoad, "로드 실패도 웹뷰 준비 완료로 처리해야 한다")
+
+        runFallthrough([campaign("a", html: "<div>a</div>")])
+        XCTAssertNil(service.pendingCampaign, "준비됐으면 적재가 아니라 바로 표시로 가야 한다")
+        XCTAssertTrue(service.isModalShown)
+    }
+
+    func testNavigationFailureDrainsPendingCampaign() {
+        // 실패 전에 적재된 후보가 있으면 그대로 노출로 승격돼야 한다(이벤트 유실 방지).
+        runFallthrough([campaign("pending", html: "<div>p</div>")])
+        XCTAssertEqual(service.pendingCampaign?.id, "pending")
+
+        service.webView(WKWebView(), didFail: nil, withError: URLError(.timedOut))
+
+        XCTAssertTrue(service.didFinishLoad)
+        XCTAssertNil(service.pendingCampaign, "적재된 후보가 승격돼 비워져야 한다")
+        XCTAssertTrue(service.isModalShown)
+    }
+
+    func testContentProcessTerminationUnblocksDisplay() {
+        // 콘텐츠 프로세스가 죽어도 다음 노출은 가능해야 한다.
+        service.webViewWebContentProcessDidTerminate(WKWebView())
+
+        XCTAssertTrue(service.didFinishLoad)
+
+        runFallthrough([campaign("a", html: "<div>a</div>")])
+        XCTAssertNil(service.pendingCampaign)
         XCTAssertTrue(service.isModalShown)
     }
 

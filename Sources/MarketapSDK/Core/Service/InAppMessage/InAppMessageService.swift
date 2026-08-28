@@ -102,9 +102,36 @@ final class InAppMessageService: NSObject, InAppMessageServiceProtocol {
     /// 파일 전역이 아니라 인스턴스 소유다 — 지키는 상태가 인스턴스별이라, 전역으로 두면
     /// 인스턴스가 둘일 때 서로 배제해주지도 못하면서 경합만 늘린다.
     let displayLock = NSLock()
+
+    /// 표시 권리를 누가 잡고 있는지. 이름은 "모달이 떠 있다"지만 실제 의미는 **표시 권리를
+    /// 선점했다**이다. 웹뷰 로딩을 기다리며 pendingCampaign 에 적재한 상태도 여기 포함된다
+    /// (적재를 선점으로 안 치면 뒤 이벤트가 앞 후보를 조용히 덮어썼다).
+    ///
+    /// 불변식: `pendingCampaign != nil` 이면 반드시 `isModalShown == true`.
     var isModalShown: Bool = false
+
+    /// 웹뷰가 노출에 쓸 수 있는 상태인가. 초기 blank 로드가 **끝났든 실패했든** true 가 된다.
+    /// 실패도 종료로 치는 이유: 캠페인 노출은 어차피 새 loadHTMLString 을 걸기 때문에 초기
+    /// 로드 결과와 무관하다. 예전엔 didFinish 에서만 true 가 돼서, 초기 로드가 실패하면
+    /// 그 뒤로 어떤 인앱도 뜨지 못했다.
     var didFinishLoad = false
+
+    /// 웹뷰가 준비되기 전에 도착해 적재된 후보. 준비되는 즉시 노출로 승격된다.
     var pendingCampaign: InAppCampaign?
+
+    /// 적재 선점의 세대. 시한 타이머가 자기가 걸었던 적재만 취소하도록 구분한다.
+    /// (권리가 이미 다른 경로로 반납·승격됐는데 늦게 뜬 타이머가 남의 선점을 푸는 걸 막는다)
+    var pendingGeneration: Int = 0
+
+    /// 적재 선점의 시한(초). 웹뷰가 이 안에 준비되지 않으면 적재를 버리고 표시 권리를 반납한다.
+    /// 시한이 없으면 초기 로드가 영영 안 끝날 때 선점이 영구히 남아 인앱이 하나도 못 뜬다.
+    ///
+    /// 넉넉하게 잡는다. 짧으면 앱 시작이 느릴 때 적재된 후보를 버리게 되는데, 그건 이 수정이
+    /// 없애려던 증상(먼저 도착한 후보가 조용히 사라짐)을 그대로 되살린다. 반대로 길어서 손해
+    /// 보는 구간은 "웹뷰가 고장 나 어차피 아무것도 못 뜨는" 동안뿐이라 실질 비용이 거의 없다.
+    /// 실측 참고: 갓 초기화한 시뮬레이터에서 1초짜리 디스패치 타이머가 20초까지 밀렸다.
+    /// (테스트에서만 값을 바꾼다)
+    var pendingClaimTimeoutSeconds: TimeInterval = 10
 
     private var projectId: String {
         cache.projectId
