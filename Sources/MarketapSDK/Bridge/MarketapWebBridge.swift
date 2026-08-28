@@ -10,7 +10,32 @@ import UIKit
 
 /// 웹브릿지를 통해 인앱 메시지를 웹으로 전달하기 위한 프로토콜
 protocol WebBridgeInAppMessageDelegate: AnyObject {
-    func sendCampaignToWeb(campaign: InAppCampaign, messageId: String)
+    /// - Returns: 실제로 전달을 시작했는지. false 면 호출자가 다른 경로(네이티브 모달)로 폴백해야 한다.
+    func sendCampaignToWeb(campaign: InAppCampaign, messageId: String) -> Bool
+}
+
+/// 웹브릿지 전달 권리를 한 번만 가져간 결과. `claimActiveWebBridge()` 로만 만들어진다.
+///
+/// 예전 API 는 확인(hasActiveWebBridge)과 소비(sendCampaignToActiveWeb)가 나뉘어 있어서,
+/// 두 체인이 동시에 확인을 통과하면 뒤쪽은 impression 만 남기고 전달은 아무 데도 안 됐다.
+/// 선점에 성공한 쪽만 이 값을 받는다.
+enum WebBridgeClaim {
+    /// 외부 래퍼(Flutter/RN) 콜백
+    case external(ExternalInAppMessageCallback)
+    /// 네이티브 웹뷰 브릿지 인스턴스
+    case native(MarketapWebBridge)
+
+    /// - Returns: 실제로 전달을 시작했는지. false 면 호출자가 네이티브 모달로 폴백해야 한다.
+    func deliver(campaign: InAppCampaign, messageId: String) -> Bool {
+        switch self {
+        case .external(let callback):
+            let shouldHandleUrlRouting = !Marketap.customHandlerStore.customized && ServerTimeManager.useWebClickRouting
+            callback(campaign.toDictionary(), messageId, shouldHandleUrlRouting)
+            return true
+        case .native(let bridge):
+            return bridge.sendCampaignToWeb(campaign: campaign, messageId: messageId)
+        }
+    }
 }
 
 /// 외부에서 인앱 메시지를 받기 위한 콜백 타입 (Flutter, React Native 등)
@@ -18,7 +43,24 @@ public typealias ExternalInAppMessageCallback = (_ campaign: [String: Any], _ me
 
 @objc public class MarketapWebBridge: NSObject, WKScriptMessageHandler {
     public static let name = "marketap"
-    private weak var webView: WKWebView?
+
+    /// static 브릿지 상태(activeInstance / externalInAppMessageCallback /
+    /// isExternalWebBridgeActive)를 지키는 락.
+    ///
+    /// 이 상태는 세 군데 이상에서 만진다: WKWebView 메시지(메인 스레드), 래퍼 SDK 의
+    /// setExternalWebBridgeActive(호출자 스레드), 그리고 인앱 표시 체인(코어 시리얼큐 ·
+    /// URLSession 델리게이트 · 타임아웃 글로벌큐). 동기화 없이 두면 선점 자체가 성립하지 않는다.
+    private static let stateLock = NSLock()
+
+    /// 인스턴스 상태(webView / currentCampaign / currentMessageId)를 지키는 락.
+    /// webView 는 메인 스레드에서 쓰고 전달 체인(임의 큐)에서 읽는다.
+    private let instanceLock = NSLock()
+
+    private weak var _webView: WKWebView?
+    private var webView: WKWebView? {
+        get { instanceLock.lock(); defer { instanceLock.unlock() }; return _webView }
+        set { instanceLock.lock(); _webView = newValue; instanceLock.unlock() }
+    }
 
     /// 현재 활성화된 웹브릿지 인스턴스 (웹뷰가 살아있는 동안)
     private static weak var activeInstance: MarketapWebBridge?
@@ -32,8 +74,16 @@ public typealias ExternalInAppMessageCallback = (_ campaign: [String: Any], _ me
     private let handleInAppInWebView: Bool
 
     /// 현재 진행 중인 웹 인앱 메시지의 캠페인 정보
-    private var currentCampaign: InAppCampaign?
-    private var currentMessageId: String?
+    private var _currentCampaign: InAppCampaign?
+    private var _currentMessageId: String?
+    private var currentCampaign: InAppCampaign? {
+        get { instanceLock.lock(); defer { instanceLock.unlock() }; return _currentCampaign }
+        set { instanceLock.lock(); _currentCampaign = newValue; instanceLock.unlock() }
+    }
+    private var currentMessageId: String? {
+        get { instanceLock.lock(); defer { instanceLock.unlock() }; return _currentMessageId }
+        set { instanceLock.lock(); _currentMessageId = newValue; instanceLock.unlock() }
+    }
 
     /// MarketapWebBridge 초기화
     /// - Parameter handleInAppInWebView: 인앱 메시지를 웹뷰에서 처리할지 여부 (기본값: true)
@@ -92,7 +142,9 @@ public typealias ExternalInAppMessageCallback = (_ campaign: [String: Any], _ me
         }
         // 웹뷰에서 인앱 메시지를 처리하는 경우에만 활성 인스턴스로 등록
         if handleInAppInWebView {
+            Self.stateLock.lock()
             Self.activeInstance = self
+            Self.stateLock.unlock()
         }
         let eventProperties = params?["eventProperties"] as? [String: Any]
         // 웹브릿지 컨텍스트 표시하여 track 호출
@@ -216,21 +268,27 @@ public typealias ExternalInAppMessageCallback = (_ campaign: [String: Any], _ me
 
 extension MarketapWebBridge: WebBridgeInAppMessageDelegate {
     /// 캠페인을 웹으로 전달
-    func sendCampaignToWeb(campaign: InAppCampaign, messageId: String) {
+    ///
+    /// - Returns: 전달을 실제로 시작했는지. webView 가 사라졌거나 직렬화가 실패하면 false 다.
+    ///   예전엔 이 경우 조용히 return 했는데, 호출자가 그걸 알 길이 없어 캠페인이 어디에도
+    ///   안 뜬 채 빈도수만 소진됐다.
+    func sendCampaignToWeb(campaign: InAppCampaign, messageId: String) -> Bool {
         guard let webView = webView else {
             MarketapLogger.warn("sendCampaignToWeb: webView is nil")
-            return
+            return false
         }
-
-        self.currentCampaign = campaign
-        self.currentMessageId = messageId
 
         // 캠페인 정보를 JSON으로 직렬화
         guard let campaignData = try? JSONEncoder().encode(campaign),
               let campaignJson = String(data: campaignData, encoding: .utf8) else {
             MarketapLogger.error("sendCampaignToWeb: failed to encode campaign")
-            return
+            return false
         }
+
+        // 직렬화까지 성공한 뒤에 기록한다. 실패해서 폴백할 캠페인을 "진행 중"으로 남기면
+        // 웹이 보내오는 impression/click 이 엉뚱한 캠페인에 붙는다.
+        self.currentCampaign = campaign
+        self.currentMessageId = messageId
 
         // URL 라우팅 정책 계산
         let shouldHandleUrlRouting = !Marketap.customHandlerStore.customized && ServerTimeManager.useWebClickRouting
@@ -251,33 +309,40 @@ extension MarketapWebBridge: WebBridgeInAppMessageDelegate {
                 }
             }
         }
+
+        return true
     }
 
-    /// 현재 활성화된 웹브릿지가 있는지 확인
-    static func hasActiveWebBridge() -> Bool {
-        // 네이티브 웹브릿지 또는 외부 웹브릿지가 활성화되어 있는지 확인
-        return activeInstance?.webView != nil || isExternalWebBridgeActive
-    }
+    /// 웹브릿지 전달 권리를 **확인과 동시에 소비**한다. 성공한 쪽만 값을 받는다.
+    ///
+    /// 예전에는 `hasActiveWebBridge()` 로 확인한 뒤 따로 전달을 불렀는데, 전달이 브릿지를
+    /// 소비하므로 두 체인이 동시에 확인을 통과하면 뒤쪽은 impression 만 남기고 전달은 아무
+    /// 일도 안 일어났다(모달 폴백도 없어 복구 불가). 검사-후-사용을 하나로 합친다.
+    ///
+    /// 표시 권리 선점(`claimDisplay`)과 같은 모델이다: 선점에 성공한 쪽만 노출로 가고,
+    /// 실패한 쪽은 다른 경로로 폴백한다.
+    ///
+    /// - Returns: 선점한 전달 대상. nil 이면 쓸 수 있는 웹브릿지가 없으니 호출자가
+    ///   네이티브 모달로 폴백해야 한다.
+    static func claimActiveWebBridge() -> WebBridgeClaim? {
+        stateLock.lock()
 
-    /// 현재 활성화된 웹브릿지로 캠페인 전달
-    /// 전달 후 activeInstance를 클리어하여 다음 이벤트에서 올바른 웹브릿지를 사용하도록 함
-    static func sendCampaignToActiveWeb(campaign: InAppCampaign, messageId: String) {
-        // 외부 웹브릿지가 활성화된 경우 외부로 전달
-        if isExternalWebBridgeActive {
-            isExternalWebBridgeActive = false  // 전달 후 클리어
-            if let callback = externalInAppMessageCallback {
-                // InAppCampaign을 Dictionary로 변환
-                let campaignDict = campaign.toDictionary()
-                let shouldHandleUrlRouting = !Marketap.customHandlerStore.customized && ServerTimeManager.useWebClickRouting
-                callback(campaignDict, messageId, shouldHandleUrlRouting)
-            }
-            return
+        // 외부 웹브릿지(Flutter/RN). 받을 콜백이 있을 때만 선점한다 — 콜백 없이 플래그만
+        // 켜져 있으면 전달해도 아무 데도 안 가므로, 소비하지 말고 모달로 폴백시킨다.
+        if isExternalWebBridgeActive, let callback = externalInAppMessageCallback {
+            isExternalWebBridgeActive = false  // 전달 권리 소비
+            stateLock.unlock()
+            return .external(callback)
         }
 
-        // 네이티브 웹브릿지로 전달
+        // 네이티브 웹브릿지. 살아있는지 확인하기 전에 먼저 떼어낸다(웹뷰가 죽은 인스턴스는
+        // 어차피 치워야 한다). 락 안에서 인스턴스 락을 겹쳐 잡지 않도록 여기서 푼다.
         let bridge = activeInstance
-        activeInstance = nil  // 전달 전에 클리어 (sendCampaignToWeb이 실패해도 클리어)
-        bridge?.sendCampaignToWeb(campaign: campaign, messageId: messageId)
+        activeInstance = nil
+        stateLock.unlock()
+
+        guard let bridge = bridge, bridge.webView != nil else { return nil }
+        return .native(bridge)
     }
 
     // MARK: - External Bridge Support
@@ -285,12 +350,16 @@ extension MarketapWebBridge: WebBridgeInAppMessageDelegate {
     /// 외부 인앱 메시지 콜백 등록 (Flutter, React Native 등에서 사용)
     /// - Parameter callback: 인앱 메시지를 받을 콜백 함수
     @objc public static func setExternalInAppMessageCallback(_ callback: ExternalInAppMessageCallback?) {
+        stateLock.lock()
         externalInAppMessageCallback = callback
+        stateLock.unlock()
     }
 
     /// 외부 웹브릿지 활성화 상태 설정
     /// 외부에서 trackFromWebBridge 호출 시 true로 설정
     @objc public static func setExternalWebBridgeActive(_ active: Bool) {
+        stateLock.lock()
         isExternalWebBridgeActive = active
+        stateLock.unlock()
     }
 }
