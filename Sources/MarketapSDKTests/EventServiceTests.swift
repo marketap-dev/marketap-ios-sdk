@@ -280,4 +280,60 @@ class EventServiceTests: XCTestCase {
 
         XCTAssertTrue(currentTime - lastEventTimestamp < 1, "Last event timestamp should be updated to the current time.")
     }
+
+    /// 디바이스 전송 dedupe 는 스냅샷과 그 타임스탬프 두 값을 같이 보는데, 이 둘이 서로 다른
+    /// 저장소에 있으면(스냅샷은 cache, 타임스탬프는 defaults) 한쪽만 비어 있을 때 TTL 판단이
+    /// 깨진다. 두 저장소를 일부러 갈라놓고 그래도 판단이 유지되는지 본다.
+    func testDeviceDedupeStateSurvivesSeparateDefaultsStore() {
+        eventService.updateDevice(pushToken: "token-1")
+        eventService.userQueue.sync {}
+        XCTAssertEqual(
+            mockAPI.lastRequestPath, "/v1/client/profile/device?project_id=mock_project",
+            "첫 전송은 실제로 나가야 한다"
+        )
+
+        // cache 는 그대로 유지한 채 세션 타이밍 저장소만 다른 suite 로 바꿔 다시 시작한다.
+        // 타임스탬프가 cache 가 아니라 defaults 에 있으면 여기서 TTL 을 통째로 잃는다.
+        let otherDefaults = makeIsolatedDefaults(self)
+        otherDefaults.set(Date().timeIntervalSince1970, forKey: "marketap_last_event_time")
+        let restarted = EventService(
+            api: mockAPI, cache: mockCache,
+            serverTimeManager: mockServerTimeManager, defaults: otherDefaults
+        )
+        restarted.userQueue.sync {}
+        mockAPI.lastRequestPath = nil
+
+        restarted.updateDevice(pushToken: "token-1")
+        restarted.userQueue.sync {}
+
+        XCTAssertNil(
+            mockAPI.lastRequestPath,
+            "디바이스 정보가 같고 TTL 안이면 저장소 구성과 무관하게 재전송하지 않아야 한다"
+        )
+    }
+
+    /// 반대 방향: cache 에 있는 타임스탬프가 TTL 을 넘겼으면 다시 보내야 한다.
+    /// 타임스탬프가 defaults 에 있으면 이 조작이 무시돼 잘못 건너뛴다.
+    func testDeviceIsResentWhenStoredTimestampIsExpired() {
+        eventService.updateDevice(pushToken: "token-1")
+        eventService.userQueue.sync {}
+
+        let expiredAt = Date().timeIntervalSince1970 - EventService.deviceRequestTTL - 60
+        mockCache.saveCodableObject(expiredAt, key: EventService.lastSentDeviceRequestAtKey)
+
+        let restarted = EventService(
+            api: mockAPI, cache: mockCache,
+            serverTimeManager: mockServerTimeManager, defaults: defaults
+        )
+        restarted.userQueue.sync {}
+        mockAPI.lastRequestPath = nil
+
+        restarted.updateDevice(pushToken: "token-1")
+        restarted.userQueue.sync {}
+
+        XCTAssertEqual(
+            mockAPI.lastRequestPath, "/v1/client/profile/device?project_id=mock_project",
+            "TTL 이 지난 스냅샷은 다시 전송해야 한다"
+        )
+    }
 }
