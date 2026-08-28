@@ -161,8 +161,11 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
                 logImpression(campaignId: campaign.id)
                 return
             }
-            // 선점은 했는데 전달이 안 됐다(웹뷰가 사라짐 등). 빈도수를 소진하지 말고
-            // 네이티브 모달로 폴백한다 — 못 본 캠페인이 막히면 안 된다.
+            // 선점은 했는데 전달이 안 됐다(웹뷰가 사라짐, 직렬화 실패 등). 브릿지가 아직
+            // 멀쩡하면 선점을 돌려준다 — 안 그러면 살아있는 웹뷰가 등록 해제된 채로 남아
+            // 다음 인앱까지 네이티브 모달로 강등된다. (claimDisplay/releaseDisplay 와 같은 대칭)
+            claim.release()
+            // 빈도수는 소진하지 않고 네이티브 모달로 폴백한다 — 못 본 캠페인이 막히면 안 된다.
             MarketapLogger.warn("web bridge delivery failed, falling back to modal: \(campaign.id)")
         }
         presentCampaignModal(campaign: campaign)
