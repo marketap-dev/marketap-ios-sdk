@@ -19,7 +19,9 @@ final class EventService: EventServiceProtocol {
 
     let api: MarketapAPIProtocol
     private let cache: MarketapCacheProtocol
-    /// 세션 타이밍(마지막 이벤트 시각 등) 저장소. 기본은 표준 저장소, 테스트만 격리 suite.
+    /// 세션 타이밍(마지막 이벤트 시각) 전용 저장소. 기본은 표준 저장소, 테스트만 격리 suite.
+    /// 디바이스 전송 dedupe 상태는 여기 두지 않는다 — 스냅샷이 `cache` 에 있어서
+    /// 저장소가 갈리면 TTL 판단이 깨진다(#13).
     let defaults: UserDefaults
     weak var delegate: EventServiceDelegate?
     private var lastSentDeviceRequest: UpdateDeviceRequest?
@@ -176,7 +178,9 @@ final class EventService: EventServiceProtocol {
         }
 
         let storedRequest: UpdateDeviceRequest? = cache.loadCodableObject(forKey: Self.lastSentDeviceRequestKey)
-        let storedAt = defaults.double(forKey: Self.lastSentDeviceRequestAtKey)
+        // 스냅샷과 같은 저장소(`cache`)에서 읽는다. 둘이 갈리면 매 실행 재전송하거나
+        // 반대로 잘못 건너뛴다.
+        let storedAt: TimeInterval = cache.loadCodableObject(forKey: Self.lastSentDeviceRequestAtKey) ?? 0
         let isExpired = Date().timeIntervalSince1970 - storedAt > Self.deviceRequestTTL
 
         if !isExpired && updatedDevice == storedRequest {
@@ -257,7 +261,7 @@ final class EventService: EventServiceProtocol {
                     sent = true
                     self?.lastSentDeviceRequest = item
                     self?.cache.saveCodableObject(item, key: Self.lastSentDeviceRequestKey)
-                    self?.defaults.set(Date().timeIntervalSince1970, forKey: Self.lastSentDeviceRequestAtKey)
+                    self?.cache.saveCodableObject(Date().timeIntervalSince1970, key: Self.lastSentDeviceRequestAtKey)
                 }
                 semaphore.signal()
             }
