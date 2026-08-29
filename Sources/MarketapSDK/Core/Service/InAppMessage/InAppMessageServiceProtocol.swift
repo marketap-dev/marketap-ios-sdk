@@ -15,6 +15,8 @@ protocol InAppMessageServiceProtocol {
     )
     func onEvent(eventRequest: IngestEventRequest, fromWebBridge: Bool)
     func recordHidden(campaignId: String, until: TimeInterval)
+    /// 신원이 바뀌면 이전 신원으로 고른 적재 후보를 버린다.
+    func discardPendingCampaign()
 }
 
 extension InAppMessageServiceProtocol {
