@@ -96,6 +96,25 @@ final class InAppMessageWebViewController: UIViewController {
         }
     }
 
+    /// 캠페인 html 이 붙기 전에 올려두는 빈 껍데기.
+    private static let shellHTML = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    </head>
+    <body>
+    </body>
+    </html>
+    """
+
+    /// 껍데기를 다시 올린다. 콘텐츠 프로세스가 죽은 뒤 웹뷰를 되살리는 용도
+    /// (loadHTMLString 이 프로세스를 다시 띄운다).
+    func reloadShell() {
+        guard let webView = webView else { return }
+        webView.loadHTMLString(Self.shellHTML, baseURL: nil)
+    }
+
     private func createWebView() -> WKWebView {
         let webConfig = WKWebViewConfiguration()
         let contentController = WKUserContentController()
@@ -111,18 +130,8 @@ final class InAppMessageWebViewController: UIViewController {
         webView.scrollView.backgroundColor = .clear
         webView.isOpaque = false
         webView.navigationDelegate = delegate
-        let htmlContent = """
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
-        </head>
-        <body>
-        </body>
-        </html>
-        """
 
-        webView.loadHTMLString(htmlContent, baseURL: nil)
+        webView.loadHTMLString(Self.shellHTML, baseURL: nil)
         webView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
 
         return webView

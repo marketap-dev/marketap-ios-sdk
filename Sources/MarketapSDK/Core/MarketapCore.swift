@@ -51,6 +51,10 @@ final class MarketapCore: MarketapClientProtocol, MarketapNotificationHandlerPro
 extension MarketapCore: EventServiceDelegate {
     func handleUserIdChanged() {
         queue.async {
+            // 캠페인 목록만 다시 받으면 안 된다. 이전 신원으로 골라 적재해 둔 후보가
+            // 표시 권리를 쥔 채 남아 있으면, 로그인 전 캠페인이 로그인 후에 뜨고
+            // 그동안 올바른 후보는 하나도 못 뜬다.
+            self.inAppMessageService.discardPendingCampaign()
             self.inAppMessageService.fetchCampaigns(force: true)
         }
     }
