@@ -77,4 +77,18 @@ class MockMarketapCache: MarketapCacheProtocol {
     func clearObject(forKey key: String) {
         mockStorage.removeValue(forKey: key)
     }
+
+    // 프로토콜에 updateDevice 가 추가됐는데 이 mock 이 안 따라가서 테스트 타깃 전체가
+    // 빌드 실패했다(컴파일 에러라 InApp 테스트도 못 돌았다). 테스트에서 device 상태를
+    // 볼 일이 있으면 여기에 반영한다.
+    func updateDevice(pushToken: String?, optIn: Bool?, clearOptIn: Bool) {
+        if let pushToken = pushToken {
+            device.token = pushToken
+        }
+        if clearOptIn {
+            device.optIn = nil
+        } else if let optIn = optIn {
+            device.optIn = optIn
+        }
+    }
 }

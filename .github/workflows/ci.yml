@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# 같은 브랜치에 연달아 푸시하면 이전 실행은 취소한다.
+# macOS 러너는 분당 과금이 10배라 중복 실행을 그냥 두면 낭비가 크다.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Build & Test (iOS Simulator)
+    runs-on: macos-15
+    # 로컬 전체 스위트가 ~10초다. 20분을 넘겼다면 정상 종료가 아니라 매달린 것이므로
+    # 러너를 계속 태우지 말고 끊는다.
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Xcode 버전
+        run: xcodebuild -version
+
+      # 러너 이미지마다 설치된 시뮬레이터가 달라서 기기 이름을 박아두면 쉽게 깨진다.
+      # 사용 가능한 iPhone 중 하나를 골라 UDID 로 지정한다.
+      - name: 시뮬레이터 선택
+        id: sim
+        run: |
+          set -euo pipefail
+          udid=$(xcrun simctl list devices available --json \
+            | jq -r '[.devices | to_entries[]
+                      | select(.key | test("iOS"))
+                      | .value[]
+                      | select(.isAvailable and (.name | test("iPhone")))]
+                     | last | .udid')
+          if [ -z "$udid" ] || [ "$udid" = "null" ]; then
+            echo "사용 가능한 iPhone 시뮬레이터가 없다" >&2
+            xcrun simctl list devices available >&2
+            exit 1
+          fi
+          echo "udid=$udid" >> "$GITHUB_OUTPUT"
+          xcrun simctl list devices available | grep "$udid"
+
+      - name: 테스트
+        run: |
+          set -euo pipefail
+          run_tests() {
+            xcodebuild test \
+              -scheme MarketapSDK-Package \
+              -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.udid }}" \
+              -resultBundlePath TestResults.xcresult
+          }
+          # xcbeautify 는 러너 이미지에 따라 없을 수 있다. 있으면 쓰고, 없으면 그대로 흘린다.
+          # (파이프 상대가 없으면 스텝 자체가 깨지므로 무조건 파이프하지 않는다)
+          if command -v xcbeautify >/dev/null 2>&1; then
+            run_tests | xcbeautify
+          else
+            run_tests
+          fi
+
+      - name: 실패 시 결과 번들 업로드
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcresult
+          path: TestResults.xcresult
+          retention-days: 7

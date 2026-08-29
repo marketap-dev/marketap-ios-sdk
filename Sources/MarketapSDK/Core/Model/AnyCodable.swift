@@ -43,6 +43,11 @@ struct AnyCodable: Codable, Equatable {
         case let v as [String: Any]:
             let encodedDict = v.mapValues { AnyCodable($0) }
             try container.encode(encodedDict)
+        case is NSNull:
+            // decode 는 JSON null 을 NSNull 로 되살리는데 encode 가 이걸 못 다뤄서,
+            // 캐시에 저장했다 다시 꺼낸 값(예: 재전송 대기 중인 프로필)을 다시 인코딩할 때
+            // 통째로 실패했다. decode 와 대칭을 맞춘다.
+            try container.encodeNil()
         default:
             throw MarketapError.encodingError(
                 EncodingError.invalidValue(

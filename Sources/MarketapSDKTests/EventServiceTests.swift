@@ -107,6 +107,7 @@ class EventServiceTests: XCTestCase {
     var mockCache: MockMarketapCache!
     var mockDelegate: MockEventServiceDelegate!
     fileprivate var mockServerTimeManager: MockServerTimeManager!
+    var defaults: UserDefaults!
 
     override func setUp() {
         super.setUp()
@@ -114,7 +115,16 @@ class EventServiceTests: XCTestCase {
         mockCache = MockMarketapCache()
         mockServerTimeManager = MockServerTimeManager()
         mockDelegate = MockEventServiceDelegate()
-        eventService = EventService(api: mockAPI, cache: mockCache, serverTimeManager: mockServerTimeManager)
+        defaults = makeIsolatedDefaults(self)
+        // 세션이 이미 진행 중인 상태에서 시작한다. 이걸 안 정해두면 빈 저장소에서
+        // lastEventTimestamp == 0 이라 매 테스트가 mkt_session_start 를 한 번 더 발생시켜,
+        // 이벤트 개수를 세는 테스트가 조용히 어긋난다(예전엔 이전 실행이 남긴 값 덕에
+        // 우연히 맞았다). 세션 자체를 검증하는 테스트는 각자 이 값을 덮어쓴다.
+        defaults.set(Date().timeIntervalSince1970, forKey: "marketap_last_event_time")
+        eventService = EventService(
+            api: mockAPI, cache: mockCache,
+            serverTimeManager: mockServerTimeManager, defaults: defaults
+        )
         eventService.delegate = mockDelegate
         // 초기화 시 dispatched된 checkUserQueue/checkDeviceQueue 완료 대기
         eventService.userQueue.sync {}
@@ -233,7 +243,7 @@ class EventServiceTests: XCTestCase {
 
     func testNewSessionCreatedIfLastEventTimeIsMoreThan30Minutes() {
         let thirtyOneMinutesAgo = Date().addingTimeInterval(-1860).timeIntervalSince1970
-        UserDefaults.standard.set(thirtyOneMinutesAgo, forKey: "last_event_time")
+        defaults.set(thirtyOneMinutesAgo, forKey: "marketap_last_event_time")
         let previousSessionId = "existing-session-id"
         mockCache.sessionId = previousSessionId
 
@@ -249,7 +259,7 @@ class EventServiceTests: XCTestCase {
         let fiveMinutesAgo = Date().addingTimeInterval(-300).timeIntervalSince1970
         let previousSessionId = "existing-session-id"
         mockCache.sessionId = previousSessionId
-        UserDefaults.standard.set(fiveMinutesAgo, forKey: "last_event_time")
+        defaults.set(fiveMinutesAgo, forKey: "marketap_last_event_time")
 
         eventService.trackEvent(
             eventName: "test_event",
@@ -265,7 +275,7 @@ class EventServiceTests: XCTestCase {
             eventProperties: ["key": "value"]
         )
 
-        let lastEventTimestamp = UserDefaults.standard.double(forKey: "last_event_time")
+        let lastEventTimestamp = defaults.double(forKey: "marketap_last_event_time")
         let currentTime = Date().timeIntervalSince1970
 
         XCTAssertTrue(currentTime - lastEventTimestamp < 1, "Last event timestamp should be updated to the current time.")
