@@ -220,15 +220,15 @@ class WebBridgeClaimTests: XCTestCase {
         activateExternalBridge()
 
         let winners = DeliveryRecorder()
-        let group = DispatchGroup()
-        for i in 0..<32 {
-            DispatchQueue.global().async(group: group) {
-                if MarketapWebBridge.claimActiveWebBridge() != nil {
-                    winners.record("\(i)")
-                }
+        // DispatchQueue.global().async + group.wait 이 아니라 concurrentPerform 을 쓴다.
+        // 앞선 테스트들이 남긴 작업으로 글로벌 큐가 막혀 있으면 async 블록이 몇십 초씩 안
+        // 돌아서(실측: 32개 중 0개), 선점 로직이 아니라 큐 상태를 시험하게 된다.
+        // concurrentPerform 은 호출 스레드에서도 진행하므로 굶지 않는다.
+        DispatchQueue.concurrentPerform(iterations: 32) { i in
+            if MarketapWebBridge.claimActiveWebBridge() != nil {
+                winners.record("\(i)")
             }
         }
-        XCTAssertEqual(group.wait(timeout: .now() + 10), .success)
 
         XCTAssertEqual(winners.delivered.count, 1, "동시에 들어와도 선점은 정확히 하나여야 한다")
     }
@@ -247,13 +247,18 @@ class WebBridgeClaimTests: XCTestCase {
         // runFromWebBridge 헬퍼를 쓰지 않고 펼쳐 쓴다 — 헬퍼는 암묵적 언랩 ivar(service)를
         // 읽는데, 게이트가 안 풀린 채 테스트가 끝나면 tearDown 이 nil 로 만든 뒤 이 백그라운드
         // 블록이 그걸 건드려 프로세스가 죽는다. 인스턴스를 먼저 붙잡아 둔다.
-        DispatchQueue.global().async { [service] in
+        // 글로벌 큐가 아니라 전용 스레드에서 돌린다. 앞선 테스트들이 남긴 작업으로 큐가
+        // 막히면 이 블록이 10초 안에 시작조차 안 해서(실측: 전체 스위트에서 32초 소요),
+        // 경합이 아니라 스케줄링 지연을 시험하게 된다. Thread 는 GCD 풀을 안 쓴다.
+        let campaignA = campaign("first")
+        let thread = Thread { [service] in
             service?.tryShowCampaigns(
-                candidates: [self.campaign("first")], index: 0, fetches: 0,
+                candidates: [campaignA], index: 0, fetches: 0,
                 deadline: ProcessInfo.processInfo.systemUptime + 2,
                 eventName: "mkt_home_view", eventProperties: nil, fromWebBridge: true
             )
         }
+        thread.start()
         XCTAssertEqual(
             defaults.entered.wait(timeout: .now() + 10), .success,
             "A 체인이 impression 기록 지점까지 와야 한다"
