@@ -164,14 +164,22 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
     /// 웹브릿지 여부는 **여기서** 판단한다. 예전엔 fetch 를 걸기 전에 스냅샷을 떠서 콜백까지
     /// 들고 갔는데, 그 사이(최대 1초)에 브릿지가 떨어지면 사라진 웹뷰로 보내고 끝났다.
     private func show(campaign: InAppCampaign, fromWebBridge: Bool) {
-        if fromWebBridge && MarketapWebBridge.hasActiveWebBridge() {
-            // 웹으로 전달하는 순간 소진된 것으로 본다(이후 노출/클릭 이벤트는 웹이 보낸다).
-            logImpression(campaignId: campaign.id)
-            let messageId = UUID().uuidString
-            MarketapWebBridge.sendCampaignToActiveWeb(campaign: campaign, messageId: messageId)
-        } else {
-            presentCampaignModal(campaign: campaign)
+        if fromWebBridge, let claim = MarketapWebBridge.claimActiveWebBridge() {
+            // 확인과 소비가 나뉘어 있으면 두 체인이 같은 브릿지를 보고 통과해, 뒤쪽은
+            // impression 만 남기고 전달은 아무 데도 안 됐다. 선점에 성공한 쪽만 여기로 온다.
+            if claim.deliver(campaign: campaign, messageId: UUID().uuidString) {
+                // 웹으로 전달한 순간 소진된 것으로 본다(이후 노출/클릭 이벤트는 웹이 보낸다).
+                logImpression(campaignId: campaign.id)
+                return
+            }
+            // 선점은 했는데 전달이 안 됐다(웹뷰가 사라짐, 직렬화 실패 등). 브릿지가 아직
+            // 멀쩡하면 선점을 돌려준다 — 안 그러면 살아있는 웹뷰가 등록 해제된 채로 남아
+            // 다음 인앱까지 네이티브 모달로 강등된다. (claimDisplay/releaseDisplay 와 같은 대칭)
+            claim.release()
+            // 빈도수는 소진하지 않고 네이티브 모달로 폴백한다 — 못 본 캠페인이 막히면 안 된다.
+            MarketapLogger.warn("web bridge delivery failed, falling back to modal: \(campaign.id)")
         }
+        presentCampaignModal(campaign: campaign)
     }
 
     /// 이 캠페인을 띄울 권리를 원자적으로 선점한다. true 를 받은 쪽만 present 로 간다.
