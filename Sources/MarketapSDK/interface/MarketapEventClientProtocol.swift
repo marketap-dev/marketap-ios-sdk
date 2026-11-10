@@ -87,7 +87,7 @@ public protocol MarketapEventClientProtocol {
     // MARK: - Internal Methods (WebBridge)
 
     /// Tracks an event from the web bridge context.
-    /// In-app campaigns will be delegated to web for display.
+    /// In-app messages it triggers are drawn by the app.
     /// - Parameters:
     ///   - eventName: The name of the event to track.
     ///   - eventProperties: Additional properties related to the event (optional).

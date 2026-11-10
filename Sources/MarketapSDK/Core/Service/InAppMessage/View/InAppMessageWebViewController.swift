@@ -201,9 +201,14 @@ extension InAppMessageWebViewController: WKScriptMessageHandler {
             } else {
                 hideUntil = 0
             }
-            self.dismiss(animated: false) { [weak self] in
+            let finish = { [weak self] in
                 self?.webView.load(URLRequest(url: URL(string: "about:blank")!))
                 self?.delegate?.hideCampaign(campaignId: campaign.id, until: hideUntil)
+            }
+            if presentingViewController == nil {
+                finish()
+            } else {
+                dismiss(animated: false, completion: finish)
             }
         case .track:
             guard let body = message.body as? [Any],

@@ -117,7 +117,7 @@ class InAppFallthroughTests: XCTestCase {
             deadline: ProcessInfo.processInfo.systemUptime + budgetSeconds,
             eventName: "mkt_home_view",
             eventProperties: nil,
-            fromWebBridge: false
+            origin: nil
         )
     }
 
@@ -171,7 +171,7 @@ class InAppFallthroughTests: XCTestCase {
             deadline: ProcessInfo.processInfo.systemUptime - 1,
             eventName: "mkt_home_view",
             eventProperties: nil,
-            fromWebBridge: false
+            origin: nil
         )
 
         XCTAssertEqual(api.fetchedCampaignIds, [])
@@ -213,7 +213,7 @@ class InAppFallthroughTests: XCTestCase {
                 id: "e1", name: "mkt_home_view", userId: "u",
                 device: MockMarketapCache().device.makeRequest(), properties: nil, timestamp: Date()
             ),
-            fromWebBridge: false
+            origin: nil
         )
 
         let service = self.service!

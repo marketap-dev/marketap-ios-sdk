@@ -112,7 +112,7 @@ final class InAppDisplaySlotTests: XCTestCase {
         service.tryShowCampaigns(
             candidates: candidates, index: 0, fetches: 0,
             deadline: ProcessInfo.processInfo.systemUptime + 30,
-            eventName: "mkt_home_view", eventProperties: nil, fromWebBridge: false
+            eventName: "mkt_home_view", eventProperties: nil, origin: nil
         )
     }
 
@@ -282,36 +282,6 @@ final class InAppDisplaySlotTests: XCTestCase {
         }
     }
 
-    func testREG3_PendingPopupDoesNotBlockWebBridgeAndBridgeTakesOnePerEvent() {
-        MarketapWebBridge.setExternalWebBridgeActive(false)
-        _ = MarketapWebBridge.claimActiveWebBridge()
-        defer {
-            MarketapWebBridge.setExternalWebBridgeActive(false)
-            MarketapWebBridge.setExternalInAppMessageCallback(nil)
-        }
-        run([campaign("first", html: "<div>1</div>")])
-        XCTAssertEqual(service.pendingCampaign?.id, "first")
-
-        let lock = NSLock()
-        var delivered: [String] = []
-        MarketapWebBridge.setExternalInAppMessageCallback { campaign, _, _ in
-            lock.lock(); delivered.append(campaign["id"] as? String ?? "?"); lock.unlock()
-        }
-        MarketapWebBridge.setExternalWebBridgeActive(true)
-
-        service.tryShowCampaigns(
-            candidates: [campaign("bridged", html: "<div>b</div>"), floating("f")],
-            index: 0, fetches: 0,
-            deadline: ProcessInfo.processInfo.systemUptime + 30,
-            eventName: "mkt_home_view", eventProperties: nil, fromWebBridge: true
-        )
-        drainMain()
-
-        lock.lock(); XCTAssertEqual(delivered, ["bridged"]); lock.unlock()
-        XCTAssertEqual(service.pendingCampaign?.id, "first")
-        XCTAssertNil(service.activeFloating)
-    }
-
     func testREG5_PageViewKeepsFloatingEvenIfConsoleChosePageScope() {
         api.singleResponses = [:]
         let pageScoped = try! JSONDecoder().decode(
@@ -328,7 +298,7 @@ final class InAppDisplaySlotTests: XCTestCase {
                 id: "e1", name: "mkt_page_view", userId: "u",
                 device: MockMarketapCache().device.makeRequest(), properties: nil, timestamp: Date()
             ),
-            fromWebBridge: false
+            origin: nil
         )
         drainMain()
 

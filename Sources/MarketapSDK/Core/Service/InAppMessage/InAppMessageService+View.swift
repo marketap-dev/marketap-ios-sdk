@@ -95,7 +95,7 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
         deadline: TimeInterval,
         eventName: String,
         eventProperties: [String: Any]?,
-        fromWebBridge: Bool,
+        origin: InAppWebOrigin?,
         filledSlots: Set<InAppDisplaySlot> = []
     ) {
         let occupied = filledSlots.union(occupiedSlots())
@@ -106,7 +106,7 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
         let next = { (fetches: Int, filled: Set<InAppDisplaySlot>) in
             self.tryShowCampaigns(
                 candidates: candidates, index: index + 1, fetches: fetches, deadline: deadline,
-                eventName: eventName, eventProperties: eventProperties, fromWebBridge: fromWebBridge,
+                eventName: eventName, eventProperties: eventProperties, origin: origin,
                 filledSlots: filled
             )
         }
@@ -117,9 +117,8 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
         }
 
         if campaign.html != nil {
-            if show(campaign: campaign, fromWebBridge: fromWebBridge) {
-                next(fetches, filledSlots.union([campaign.slot]))
-            }
+            show(campaign: campaign, origin: origin)
+            next(fetches, filledSlots.union([campaign.slot]))
             return
         }
 
@@ -141,9 +140,8 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
         ) { [weak self] fetchedCampaign in
             guard let self = self else { return }
             if let fetchedCampaign = fetchedCampaign?.inheritingSlot(from: campaign), fetchedCampaign.html != nil {
-                if self.show(campaign: fetchedCampaign, fromWebBridge: fromWebBridge) {
-                    next(fetches + 1, filledSlots.union([fetchedCampaign.slot]))
-                }
+                self.show(campaign: fetchedCampaign, origin: origin)
+                next(fetches + 1, filledSlots.union([fetchedCampaign.slot]))
             } else {
                 MarketapLogger.warn("failed to fetch campaign html: \(campaign.id), trying next")
                 next(fetches + 1, filledSlots)
@@ -151,8 +149,7 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
         }
     }
 
-    /// 다른 체인이 이미 차지한 자리. 팝업은 실제로 표시 단계일 때만 찬 것으로 본다 —
-    /// 적재 선점(웹뷰 대기)까지 막으면 네이티브 웹뷰를 안 쓰는 웹브릿지 전달까지 같이 죽는다.
+    /// 다른 체인이 이미 차지한 자리. 팝업은 실제로 표시 단계일 때만 찬 것으로 본다.
     /// 적재가 덮어써지지 않는 건 claimDisplay 가 지킨다.
     private func occupiedSlots() -> Set<InAppDisplaySlot> {
         displayLock.lock()
@@ -163,33 +160,13 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
         return slots
     }
 
-    /// 확정된 캠페인을 노출한다(웹브릿지 위임, 플로팅, 또는 모달 present).
-    /// 웹브릿지 여부는 **여기서** 판단한다(fetch 사이에 브릿지가 떨어질 수 있다).
-    ///
-    /// - Returns: 다른 자리 후보를 계속 볼지. 웹브릿지로 넘겼으면 false — 브릿지는 이벤트당 한 번만 받는다.
-    private func show(campaign: InAppCampaign, fromWebBridge: Bool) -> Bool {
-        if fromWebBridge, let claim = MarketapWebBridge.claimActiveWebBridge() {
-            // 확인과 소비가 나뉘어 있으면 두 체인이 같은 브릿지를 보고 통과해, 뒤쪽은
-            // impression 만 남기고 전달은 아무 데도 안 됐다. 선점에 성공한 쪽만 여기로 온다.
-            if claim.deliver(campaign: campaign, messageId: UUID().uuidString) {
-                // 웹으로 전달한 순간 소진된 것으로 본다(이후 노출/클릭 이벤트는 웹이 보낸다).
-                logImpression(campaignId: campaign.id)
-                return false
-            }
-            // 선점은 했는데 전달이 안 됐다(웹뷰가 사라짐, 직렬화 실패 등). 브릿지가 아직
-            // 멀쩡하면 선점을 돌려준다 — 안 그러면 살아있는 웹뷰가 등록 해제된 채로 남아
-            // 다음 인앱까지 네이티브 모달로 강등된다. (claimDisplay/releaseDisplay 와 같은 대칭)
-            claim.release()
-            // 빈도수는 소진하지 않고 네이티브 모달로 폴백한다 — 못 본 캠페인이 막히면 안 된다.
-            MarketapLogger.warn("web bridge delivery failed, falling back to modal: \(campaign.id)")
-        }
+    private func show(campaign: InAppCampaign, origin: InAppWebOrigin?) {
         switch campaign.slot {
         case .floating:
-            _ = presentFloating(campaign: campaign)
+            _ = presentFloating(campaign: campaign, origin: origin)
         case .popup:
-            presentCampaignModal(campaign: campaign)
+            presentCampaignModal(campaign: campaign, origin: origin)
         }
-        return true
     }
 
     /// 이 캠페인을 띄울 권리를 원자적으로 선점한다. true 를 받은 쪽만 present 로 간다.
@@ -202,7 +179,7 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
     ///
     /// 적재 선점은 `pendingClaimTimeoutSeconds` 시한을 함께 건다. 시한이 없으면 웹뷰가
     /// 영영 준비되지 않을 때 권리가 잠긴 채로 남아 인앱이 하나도 못 뜬다.
-    private func claimDisplay(campaign: InAppCampaign) -> Bool {
+    private func claimDisplay(campaign: InAppCampaign, origin: InAppWebOrigin?) -> Bool {
         displayLock.lock()
         defer { displayLock.unlock() }
 
@@ -210,6 +187,7 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
 
         // 아래 두 갈래 모두 "이 캠페인이 표시 권리를 가져갔다"는 뜻이다.
         isModalShown = true
+        displayOrigin = origin
 
         guard didFinishLoad else {
             MarketapLogger.verbose("webView not ready, claiming for pending campaign: \(campaign.id)")
@@ -255,12 +233,13 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
         displayLock.lock()
         isModalShown = false
         pendingCampaign = nil
+        displayOrigin = nil
         pendingGeneration &+= 1
         displayLock.unlock()
     }
 
-    private func presentCampaignModal(campaign: InAppCampaign) {
-        guard claimDisplay(campaign: campaign) else { return }
+    private func presentCampaignModal(campaign: InAppCampaign, origin: InAppWebOrigin?) {
+        guard claimDisplay(campaign: campaign, origin: origin) else { return }
         presentClaimed(campaign: campaign)
     }
 
@@ -316,7 +295,14 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
         return topController
     }
 
-    func onEvent(eventRequest: IngestEventRequest, fromWebBridge: Bool) {
+    func onEvent(eventRequest: IngestEventRequest, origin: InAppWebOrigin?) {
+        if let origin = origin,
+           PageFloatingPolicy.eventLeavesPage(
+            eventName: eventRequest.name,
+            originReceivedAddressChange: origin.hasReceivedAddressChange
+           ) {
+            originDidLeavePage(ObjectIdentifier(origin))
+        }
         let eventProperties = eventRequest.properties?.compactMapValues { $0.value }
         fetchCampaigns(inTimeout: { [weak self] campaigns in
                 guard let self = self else { return }
@@ -331,7 +317,7 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
                     deadline: inAppMonotonicNow() + inAppFallthroughBudgetSeconds,
                     eventName: eventRequest.name,
                     eventProperties: eventProperties,
-                    fromWebBridge: fromWebBridge
+                    origin: origin
                 )
             })
     }
@@ -346,10 +332,22 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
     }
 
     func onClick(campaign: InAppCampaign, locationId: String, messageId: String, url: String?) {
+        displayLock.lock()
+        let origin = displayOrigin
+        displayLock.unlock()
+        onClick(campaign: campaign, locationId: locationId, messageId: messageId, url: url, origin: origin, closingPopup: true)
+    }
+
+    func onClick(
+        campaign: InAppCampaign,
+        locationId: String,
+        messageId: String,
+        url: String?,
+        origin: InAppWebOrigin?,
+        closingPopup: Bool
+    ) {
         MarketapLogger.debug("onClick: \(url ?? "null")")
-        customHandlerStore.handleClick(
-            MarketapClickEvent(campaignType: .inAppMessage, campaignId: campaign.id, url: url)
-        )
+        routeClick(MarketapClickEvent(campaignType: .inAppMessage, campaignId: campaign.id, url: url), origin: origin, closingPopup: closingPopup)
 
         let props = InAppEventBuilder.clickEventProperties(
             campaignId: campaign.id,
@@ -359,6 +357,36 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
             layoutSubType: campaign.layout.layoutSubType
         )
         delegate?.trackEvent(eventName: "mkt_click_message", eventProperties: props)
+    }
+
+    /// 출처 웹뷰가 화면에 있고 웹 클릭 처리 설정이 켜져 있으면 링크를 그 웹뷰에서 연다. 팝업은 닫은 뒤 연다.
+    func routeClick(_ event: MarketapClickEvent, origin: InAppWebOrigin?, closingPopup: Bool) {
+        let route = {
+            let settings = self.clickRoutingSettings()
+            let decision = InAppClickRoute.of(
+                url: event.url,
+                customized: settings.customized,
+                useWebClickRouting: settings.useWebClickRouting,
+                originVisible: origin?.isWebViewVisible ?? false
+            )
+            guard decision == .webView, let origin = origin, let url = event.url else {
+                self.customHandlerStore.handleClick(event)
+                return
+            }
+            MarketapLogger.debug("opening in-app click in origin web view: \(url)")
+            let open = { origin.openInWebView(url: url) }
+            let popup = self.campaignViewController
+            if closingPopup, popup.presentingViewController != nil {
+                popup.dismiss(animated: false, completion: open)
+            } else {
+                open()
+            }
+        }
+        if Thread.isMainThread {
+            route()
+        } else {
+            DispatchQueue.main.async(execute: route)
+        }
     }
 
     func onTrack(campaign: InAppCampaign, eventName: String, properties: [String: Any]?) {

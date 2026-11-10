@@ -62,9 +62,13 @@ extension MarketapCore {
     }
 
     func trackFromWebBridge(eventName: String, eventProperties: [String : Any]?) {
+        trackFromWebBridge(eventName: eventName, eventProperties: eventProperties, origin: MarketapWebBridge.consumeExternalOrigin())
+    }
+
+    func trackFromWebBridge(eventName: String, eventProperties: [String : Any]?, origin: InAppWebOrigin?) {
         queue.async {
             MarketapLogger.debug("trackFromWebBridge: \(eventName)\n\(eventProperties.prettyPrintedJSONString)")
-            self.eventService.trackEvent(eventName: eventName, eventProperties: eventProperties, fromWebBridge: true)
+            self.eventService.trackEvent(eventName: eventName, eventProperties: eventProperties, origin: origin)
         }
     }
 

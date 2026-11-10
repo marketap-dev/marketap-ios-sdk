@@ -13,10 +13,12 @@ protocol InAppMessageServiceProtocol {
         inTimeout: (([InAppCampaign]) -> Void)?,
         completion: (([InAppCampaign]) -> Void)?,
     )
-    func onEvent(eventRequest: IngestEventRequest, fromWebBridge: Bool)
+    func onEvent(eventRequest: IngestEventRequest, origin: InAppWebOrigin?)
     func recordHidden(campaignId: String, until: TimeInterval)
     /// 신원이 바뀌면 이전 신원으로 고른 적재 후보를 버린다.
     func discardPendingCampaign()
+    /// 출처 웹뷰가 페이지를 벗어났다(주소 변경·창에서 떨어짐·브리지 해제). 그 출처에 묶인 플로팅만 닫는다.
+    func originDidLeavePage(_ originId: ObjectIdentifier)
 }
 
 extension InAppMessageServiceProtocol {
@@ -29,6 +31,6 @@ extension InAppMessageServiceProtocol {
     }
 
     func onEvent(eventRequest: IngestEventRequest) {
-        onEvent(eventRequest: eventRequest, fromWebBridge: false)
+        onEvent(eventRequest: eventRequest, origin: nil)
     }
 }

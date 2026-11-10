@@ -18,6 +18,7 @@ enum MarketapBridgeEventType: String {
     case inAppMessageHide
     case inAppMessageTrack
     case inAppMessageSetUserProperties
+    case addressChanged
     case setDeviceOptIn
 }
 

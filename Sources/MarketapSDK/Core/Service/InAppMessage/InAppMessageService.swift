@@ -137,7 +137,14 @@ final class InAppMessageService: NSObject, InAppMessageServiceProtocol {
     /// 플로팅 자리의 표시 권리. 팝업 자리(`isModalShown`)와 서로 막지 않는다. `displayLock` 으로 지킨다.
     var activeFloating: FloatingCampaignSession?
 
+    /// 팝업 표시 권리를 쥔 캠페인의 출처 웹뷰. `displayLock` 으로 지킨다.
+    weak var displayOrigin: InAppWebOrigin?
+
     var floatingPresenter: FloatingPresenter = .shared
+
+    var clickRoutingSettings: () -> (customized: Bool, useWebClickRouting: Bool) = {
+        (Marketap.customHandlerStore.customized, ServerTimeManager.useWebClickRouting)
+    }
 
     private var projectId: String {
         cache.projectId

@@ -132,7 +132,7 @@ public class MarketapPlugin: NSObject {
 
     // MARK: - 이벤트 처리 (플러그인용)
 
-    /// 이벤트를 추적합니다. 인앱 캠페인이 플러그인으로 전달됩니다.
+    /// 래퍼 웹뷰에서 온 이벤트를 추적합니다. 직전에 `setExternalWebBridgeActive(true)` 였으면 그 웹뷰를 인앱 메시지의 출처로 기록합니다.
     public static func trackEvent(eventName: String, eventProperties: [String: Any]? = nil) {
         Marketap.client?.trackFromWebBridge(eventName: eventName, eventProperties: eventProperties)
     }
