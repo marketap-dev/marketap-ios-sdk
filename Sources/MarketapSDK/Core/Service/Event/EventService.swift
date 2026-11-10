@@ -36,17 +36,21 @@ final class EventService: EventServiceProtocol {
 
     let failedEventsStorage: DataStorageManager<BulkEvent>
     let serverTimeManager: ServerTimeManagerProtocol
+    let policyStore: RemotePolicyStore
 
     init(
         api: MarketapAPIProtocol,
         cache: MarketapCacheProtocol,
         serverTimeManager: ServerTimeManagerProtocol? = nil,
-        defaults: UserDefaults = .standard
+        defaults: UserDefaults = .standard,
+        policyStore: RemotePolicyStore? = nil
     ) {
         self.api = api
         self.cache = cache
         self.defaults = defaults
-        self.serverTimeManager = serverTimeManager ?? ServerTimeManager(api: api, projectId: cache.projectId)
+        let policyStore = policyStore ?? RemotePolicyStore(projectId: cache.projectId, defaults: defaults)
+        self.policyStore = policyStore
+        self.serverTimeManager = serverTimeManager ?? ServerTimeManager(api: api, projectId: cache.projectId, policyStore: policyStore)
 
         self.failedEventsStorage = DataStorageManager<BulkEvent>(
             cache: cache,
@@ -55,6 +59,8 @@ final class EventService: EventServiceProtocol {
             maxStorageSize: Self.failedDataSize
         )
 
+        policyStore.onCollectionStopped = { [weak self] in self?.discardCollectedData() }
+        if !policyStore.isAllowed(.collection) { discardCollectedData() }
         sendFailedEventsIfNeeded()
         userQueue.async { [weak self] in
             self?.checkUserQueue()
@@ -196,7 +202,9 @@ final class EventService: EventServiceProtocol {
     }
 
     private func updateProfile(request: UpdateProfileRequest) {
-        cache.saveCodableObject(request, key: Self.pendingUserProfileKey)
+        guard policyStore.performIfAllowed(.collection, {
+            cache.saveCodableObject(request, key: Self.pendingUserProfileKey)
+        }) else { return }
         userQueue.async { [weak self] in
             self?.checkUserQueue()
         }
@@ -210,23 +218,29 @@ final class EventService: EventServiceProtocol {
 
             let semaphore = DispatchSemaphore(value: 0)
             var sent = false
+            let generation = policyStore.collectionGeneration
 
             serverTimeManager.withServerTime { [weak self] serverTime in
                 guard let self = self else {
                     semaphore.signal()
                     return
                 }
-                var request = item
-                request.timestamp = serverTime
+                let allowed = self.policyStore.performIfAllowed(.collection, generation: generation) {
+                    var request = item
+                    request.timestamp = serverTime
 
-                self.api.requestWithoutResponse(
-                    baseURL: .event,
-                    path: "/v1/client/profile/user?project_id=\(self.projectId)",
-                    body: request
-                ) { result in
-                    if case .success = result {
-                        sent = true
+                    self.api.requestWithoutResponse(
+                        baseURL: .event,
+                        path: "/v1/client/profile/user?project_id=\(self.projectId)",
+                        body: request
+                    ) { result in
+                        if case .success = result {
+                            sent = true
+                        }
+                        semaphore.signal()
                     }
+                }
+                if !allowed {
                     semaphore.signal()
                 }
             }
@@ -236,7 +250,9 @@ final class EventService: EventServiceProtocol {
             if !sent {
                 // 더 새로운 요청이 없을 때만 복구 (있으면 새 요청이 최신 상태)
                 if (cache.loadCodableObject(forKey: Self.pendingUserProfileKey) as UpdateProfileRequest?) == nil {
-                    cache.saveCodableObject(item, key: Self.pendingUserProfileKey)
+                    policyStore.performIfAllowed(.collection, generation: generation) {
+                        cache.saveCodableObject(item, key: Self.pendingUserProfileKey)
+                    }
                 }
                 break
             }
@@ -278,23 +294,31 @@ final class EventService: EventServiceProtocol {
     }
 
     private func track(request: IngestEventRequest) {
+        let generation = policyStore.collectionGeneration
         serverTimeManager.withServerTime { [weak self] serverTime in
             guard let self = self else { return }
-            var request = request
-            request.timestamp = serverTime
-            self.api.requestWithoutResponse(
-                baseURL: .event,
-                path: "/v1/client/events?project_id=\(self.projectId)",
-                body: request
-            ) { [weak self] result in
-                switch result {
-                case .success:
-                    self?.requestDidSuccess()
-                case .failure(let error):
-                    if case MarketapError.serverError = error {
-                        self?.saveFailedEvent(request)
+            let send = {
+                var request = request
+                request.timestamp = serverTime
+                self.api.requestWithoutResponse(
+                    baseURL: .event,
+                    path: "/v1/client/events?project_id=\(self.projectId)",
+                    body: request
+                ) { [weak self] result in
+                    switch result {
+                    case .success:
+                        self?.requestDidSuccess()
+                    case .failure(let error):
+                        if case MarketapError.serverError = error {
+                            self?.policyStore.performIfAllowed(.collection, generation: generation) { self?.saveFailedEvent(request) }
+                        }
                     }
                 }
+            }
+            if self.isPushEvent(name: request.name, properties: request.properties) {
+                self.policyStore.performIfAllowed(.pushTracking, send)
+            } else {
+                self.policyStore.performIfAllowed(.collection, generation: generation, send)
             }
         }
     }
@@ -309,6 +333,19 @@ final class EventService: EventServiceProtocol {
 }
 
 extension EventService {
+    private func isPushEvent(name: String, properties: [String: AnyCodable]?) -> Bool {
+        name == "mkt_push_impression" || properties?["mkt_channel_type"]?.value as? String == "PUSH"
+    }
+
+    private func permitsEvent(name: String, properties: [String: AnyCodable]?) -> Bool {
+        !isPushEvent(name: name, properties: properties) || policyStore.isAllowed(.pushTracking)
+    }
+
+    private func discardCollectedData() {
+        _ = failedEventsStorage.getAndClearData()
+        cache.clearObject(forKey: Self.pendingUserProfileKey)
+    }
+
     private func saveFailedEvent(_ event: IngestEventRequest) {
         let failedEvent = BulkEvent(
             id: event.id,
@@ -321,21 +358,28 @@ extension EventService {
     }
 
     func sendFailedEventsIfNeeded() {
-        let failedEventsSnapshot = failedEventsStorage.getAndClearData()
-        guard !failedEventsSnapshot.isEmpty else { return }
+        policyStore.performIfAllowed(.collection) {
+            let generation = policyStore.collectionGeneration
+            let failedEventsSnapshot = failedEventsStorage.getAndClearData().filter {
+                permitsEvent(name: $0.name, properties: $0.properties)
+            }
+            guard !failedEventsSnapshot.isEmpty else { return }
 
-        let bulkRequest = CreateBulkClientEventRequest(
-            device: cache.device.makeRequest(),
-            events: failedEventsSnapshot
-        )
+            let bulkRequest = CreateBulkClientEventRequest(
+                device: cache.device.makeRequest(),
+                events: failedEventsSnapshot
+            )
 
-        api.requestWithoutResponse(
-            baseURL: .event,
-            path: "/v1/client/events/bulk?project_id=\(projectId)",
-            body: bulkRequest
-        ) { [weak self] result in
-            if case .failure(let error) = result, case MarketapError.serverError = error {
-                self?.failedEventsStorage.restoreFailedData(failedEventsSnapshot)
+            api.requestWithoutResponse(
+                baseURL: .event,
+                path: "/v1/client/events/bulk?project_id=\(projectId)",
+                body: bulkRequest
+            ) { [weak self] result in
+                if case .failure(let error) = result, case MarketapError.serverError = error {
+                    self?.policyStore.performIfAllowed(.collection, generation: generation) {
+                        self?.failedEventsStorage.restoreFailedData(failedEventsSnapshot)
+                    }
+                }
             }
         }
     }

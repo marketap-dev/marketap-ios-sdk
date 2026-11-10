@@ -56,18 +56,25 @@ public class Marketap: NSObject {
     ///
     /// - Important: `initialize`를 호출하기 전에는 `client`를 사용할 수 없습니다.
     @objc public static func initialize(projectId: String) {
-        initialize(config: SdkMetadataProvider.createNativeConfig(projectId: projectId))
+        initialize(projectId: projectId, clientKey: nil)
+    }
+
+    @objc public static func initialize(projectId: String, clientKey: String?) {
+        initialize(config: SdkMetadataProvider.createNativeConfig(projectId: projectId, clientKey: clientKey))
     }
 
     static func initialize(config: MarketapConfig) {
-        if _client != nil && _currentConfig?.projectId == config.projectId {
+        ClientKeyStore.save(config.clientKey, projectId: config.projectId)
+        if _client != nil && _currentConfig?.projectId == config.projectId && _currentConfig?.clientKey == config.clientKey {
             MarketapLogger.info("Marketap SDK is already initialized with projectId: \(config.projectId). Skipping re-initialization.")
             return
         }
-        let api = MarketapAPI()
+        let api = MarketapAPI(clientKey: config.clientKey, config: config)
         let cache = MarketapCache(config: config)
-        let eventService = EventService(api: api, cache: cache)
-        let inAppMessageService = InAppMessageService(customHandlerStore: self.customHandlerStore, api: api, cache: cache)
+        let policyStore = RemotePolicyStore(projectId: config.projectId, sdkType: config.sdkType)
+        let serverTimeManager = ServerTimeManager(api: api, projectId: config.projectId, policyStore: policyStore)
+        let eventService = EventService(api: api, cache: cache, serverTimeManager: serverTimeManager, policyStore: policyStore)
+        let inAppMessageService = InAppMessageService(customHandlerStore: self.customHandlerStore, api: api, cache: cache, policyStore: policyStore)
         let core = MarketapCore(customHandlerStore: self.customHandlerStore, eventService: eventService, inAppMessageService: inAppMessageService)
         eventService.delegate = core
         inAppMessageService.delegate = core

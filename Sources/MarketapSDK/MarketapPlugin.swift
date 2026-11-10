@@ -62,11 +62,15 @@ public class MarketapPlugin: NSObject {
     private override init() {}
 
     public static func initialize(projectId: String, integrationInfo: MarketapIntegrationInfo) {
+        initialize(projectId: projectId, integrationInfo: integrationInfo, clientKey: nil)
+    }
+
+    public static func initialize(projectId: String, integrationInfo: MarketapIntegrationInfo, clientKey: String?) {
         MarketapLogger.verbose(
             "Marketap Plugin initialize with projectId=\(projectId), " +
             "sdkType=\(integrationInfo.sdkType), sdkVersion=\(integrationInfo.sdkVersion)"
         )
-        Marketap.initialize(config: SdkMetadataProvider.createConfig(projectId: projectId, integrationInfo: integrationInfo))
+        Marketap.initialize(config: SdkMetadataProvider.createConfig(projectId: projectId, integrationInfo: integrationInfo, clientKey: clientKey))
     }
 
     // MARK: - 인앱 이벤트 처리 (플러그인용)

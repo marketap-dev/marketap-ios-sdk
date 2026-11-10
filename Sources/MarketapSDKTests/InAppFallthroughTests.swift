@@ -76,6 +76,7 @@ class InAppFallthroughTests: XCTestCase {
             customHandlerStore: CustomHandlerStor(), api: api,
             cache: MockMarketapCache(), defaults: defaults
         )
+        service.campaignViewController = sharedTestWebViewController
         // 이 스위트는 적재 시한을 시험하지 않는다. 시한을 기본값으로 두면 느린 머신에서
         // 폴링이 밀렸을 때 적재가 만료돼 사라지고, 폴스루가 아니라 시한을 시험하게 된다.
         // 시한 자체는 testStalePendingClaimIsReleased 가 직접 짧게 잡아 따로 본다.
@@ -351,7 +352,7 @@ class InAppFallthroughTests: XCTestCase {
         XCTAssertFalse(service.isModalShown, "적재를 버렸으면 권리도 반납해야 한다")
 
         // 승격 신호가 와도 버린 후보가 되살아나면 안 된다.
-        service.webView(WKWebView(), didFinish: nil)
+        service.webView(sharedTestWebViewController.webView, didFinish: nil)
         XCTAssertNil(service.pendingCampaign)
         XCTAssertFalse(service.isModalShown)
     }
@@ -363,7 +364,7 @@ class InAppFallthroughTests: XCTestCase {
         XCTAssertEqual(service.pendingCampaign?.id, "muted")
 
         service.recordHidden(campaignId: "muted", until: 3600)
-        service.webView(WKWebView(), didFinish: nil)
+        service.webView(sharedTestWebViewController.webView, didFinish: nil)
 
         XCTAssertNil(service.pendingCampaign)
         XCTAssertFalse(service.isModalShown, "숨겨진 후보는 승격하지 말고 권리를 반납해야 한다")
@@ -373,7 +374,7 @@ class InAppFallthroughTests: XCTestCase {
         runFallthrough([campaign("first", html: "<div>1</div>")])
         XCTAssertEqual(service.pendingCampaign?.id, "first")
 
-        service.webView(WKWebView(), didFinish: nil)
+        service.webView(sharedTestWebViewController.webView, didFinish: nil)
 
         XCTAssertTrue(service.didFinishLoad)
         XCTAssertNil(service.pendingCampaign, "준비되면 적재는 비워져야 한다")
@@ -417,7 +418,7 @@ class InAppFallthroughTests: XCTestCase {
         XCTAssertFalse(service.isModalShown)
         XCTAssertNil(service.pendingCampaign, "권리를 놓으면 적재도 같이 버려야 한다")
 
-        service.webView(WKWebView(), didFinish: nil)
+        service.webView(sharedTestWebViewController.webView, didFinish: nil)
         XCTAssertNil(service.pendingCampaign, "놓은 권리로 나중에 뜨면 안 된다")
     }
 
@@ -429,6 +430,7 @@ class InAppFallthroughTests: XCTestCase {
         // 그대로 되살아나도 초록불이다. 배선 자체를 따로 붙잡아 둔다.
         // (init 이 delegate 대입 -> loadViewIfNeeded 순서로 main 큐에 넣으므로 순서가 뒤집히면
         //  viewDidLoad 안의 webView.navigationDelegate = delegate 가 nil 을 읽는다)
+        let service = InAppMessageService(customHandlerStore: CustomHandlerStor(), api: api, cache: MockMarketapCache(), defaults: defaults)
         let ready = expectation(description: "init 이 main 큐에 넣은 웹뷰 준비 블록이 끝난다")
         DispatchQueue.main.async { ready.fulfill() }
         wait(for: [ready], timeout: 5)
@@ -443,7 +445,7 @@ class InAppFallthroughTests: XCTestCase {
         // 초기 blank 로드가 실패하면 예전엔 didFinishLoad 가 영영 false 라
         // 그 뒤로 **어떤 인앱도 뜨지 못했다**.
         service.webView(
-            WKWebView(),
+            sharedTestWebViewController.webView,
             didFailProvisionalNavigation: nil,
             withError: URLError(.networkConnectionLost)
         )
@@ -460,7 +462,7 @@ class InAppFallthroughTests: XCTestCase {
         runFallthrough([campaign("pending", html: "<div>p</div>")])
         XCTAssertEqual(service.pendingCampaign?.id, "pending")
 
-        service.webView(WKWebView(), didFail: nil, withError: URLError(.timedOut))
+        service.webView(sharedTestWebViewController.webView, didFail: nil, withError: URLError(.timedOut))
 
         XCTAssertTrue(service.didFinishLoad)
         XCTAssertNil(service.pendingCampaign, "적재된 후보가 승격돼 비워져야 한다")
@@ -469,7 +471,7 @@ class InAppFallthroughTests: XCTestCase {
 
     func testContentProcessTerminationUnblocksDisplay() {
         // 콘텐츠 프로세스가 죽어도 다음 노출은 가능해야 한다.
-        service.webViewWebContentProcessDidTerminate(WKWebView())
+        service.webViewWebContentProcessDidTerminate(sharedTestWebViewController.webView)
 
         XCTAssertTrue(service.didFinishLoad)
 

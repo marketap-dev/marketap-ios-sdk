@@ -13,6 +13,35 @@ final class MarketapAPI: MarketapAPIProtocol {
         case crm = "https://crm.marketap.io"
     }
 
+    static let clientKeyHeader = "X-Marketap-Client-Key"
+
+    private let headers: [String: String]
+
+    init(clientKey: String? = nil, config: MarketapConfig? = nil) {
+        var headers = [
+            "X-Marketap-SDK-Platform": "ios",
+            "X-Marketap-SDK-Version": MarketapConfig.nativeSdkVersion,
+            "X-Marketap-SDK-Source": "app"
+        ]
+        if let clientKey = clientKey, !clientKey.isEmpty {
+            headers[Self.clientKeyHeader] = clientKey
+        }
+        let wrapper = ["flutter": "flutter", "react_native": "react-native"][config?.sdkType ?? ""]
+        if let wrapper = wrapper {
+            headers["X-Marketap-SDK-Wrapper"] = wrapper
+            let version = config?.sdkVersion ?? ""
+            if version != "unknown", version.utf8.count <= 64,
+               version.range(of: "^[0-9A-Za-z.+-]+$", options: .regularExpression) != nil {
+                headers["X-Marketap-SDK-Wrapper-Version"] = version
+            }
+        }
+        self.headers = headers
+    }
+
+    func applySDKHeaders(to request: inout URLRequest) {
+        headers.forEach { request.setValue($0.value, forHTTPHeaderField: $0.key) }
+    }
+
     func request<T: Decodable, U: Encodable>(
         baseURL: BaseURL = .event,
         path: String,
@@ -29,6 +58,7 @@ final class MarketapAPI: MarketapAPIProtocol {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        applySDKHeaders(to: &request)
 
         do {
             request.httpBody = try JSONEncoder().encode(body)
@@ -81,6 +111,7 @@ final class MarketapAPI: MarketapAPIProtocol {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        applySDKHeaders(to: &request)
 
         do {
             request.httpBody = try JSONEncoder().encode(body)
@@ -137,6 +168,7 @@ extension MarketapAPI {
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         request.setValue("application/json", forHTTPHeaderField: "Accept")
+        applySDKHeaders(to: &request)
 
         logRequest(request, body: nil as String?)
 

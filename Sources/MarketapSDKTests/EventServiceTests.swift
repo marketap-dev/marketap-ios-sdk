@@ -16,6 +16,7 @@ private class MockServerTimeManager: ServerTimeManagerProtocol {
 
 private class MockMarketapAPI: MarketapAPIProtocol {
     var shouldFail = false
+    var failureStatusCode = 500
     var lastRequestPath: String?
     var lastRequestBody: Data?
     var lastBulkEvents: [BulkEvent]?
@@ -75,7 +76,7 @@ private class MockMarketapAPI: MarketapAPIProtocol {
         }
 
         if shouldFail {
-            completion?(.failure(.serverError(statusCode: 500)))
+            completion?(.failure(.serverError(statusCode: failureStatusCode)))
         } else {
             completion?(.success(()))
         }
@@ -204,6 +205,40 @@ class EventServiceTests: XCTestCase {
 
         let pendingAfterSuccess: UpdateProfileRequest? = mockCache.loadCodableObject(forKey: EventService.pendingUserProfileKey)
         XCTAssertNil(pendingAfterSuccess, "identify 성공 후 pendingUserProfile이 제거되어야 함")
+    }
+
+    func testIdentifyKeepsPendingOnHTTPError() {
+        for code in [400, 401] {
+            mockAPI.shouldFail = true
+            mockAPI.failureStatusCode = code
+            eventService.identify(userId: "u\(code)", userProperties: nil)
+            eventService.userQueue.sync {}
+
+            let pending: UpdateProfileRequest? = mockCache.loadCodableObject(forKey: EventService.pendingUserProfileKey)
+            XCTAssertNotNil(pending, "\(code)는 pendingUserProfile에 복구되어야 함")
+        }
+    }
+
+    func testUpdateDeviceKeepsPendingOnHTTPError() {
+        for code in [400, 401] {
+            mockAPI.shouldFail = true
+            mockAPI.failureStatusCode = code
+            eventService.updateDevice(pushToken: "token\(code)")
+            eventService.userQueue.sync {}
+
+            let pending: UpdateDeviceRequest? = mockCache.loadCodableObject(forKey: EventService.pendingDeviceProfileKey)
+            XCTAssertNotNil(pending, "\(code)는 pendingDeviceProfile에 복구되어야 함")
+        }
+    }
+
+    func testUpdateDeviceKeepsPendingOnServerError() {
+        mockAPI.shouldFail = true
+        mockAPI.failureStatusCode = 503
+        eventService.updateDevice(pushToken: "token503")
+        eventService.userQueue.sync {}
+
+        let pending: UpdateDeviceRequest? = mockCache.loadCodableObject(forKey: EventService.pendingDeviceProfileKey)
+        XCTAssertNotNil(pending)
     }
 
     func testPendingUserProfileIsSentOnNextRequest() {

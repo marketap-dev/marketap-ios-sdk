@@ -13,4 +13,5 @@ struct MarketapConfig: Codable, Equatable {
     let projectId: String
     let sdkType: String
     let sdkVersion: String
+    let clientKey: String?
 }
