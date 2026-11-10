@@ -165,7 +165,7 @@ struct InAppCampaign: Codable, Equatable {
     let updatedAt: String
     /// 서버는 플로팅일 때만 싣는다.
     var displaySlot: InAppDisplaySlot? = nil
-    /// 플로팅의 화면 이동 값. `PAGE` 면 웹뷰 이벤트일 때 웹 SDK 로 넘기고, 그 밖의 값은 앱이 그린다.
+    /// 플로팅의 화면 이동 값. `PAGE` 면 "이 페이지에서만", 그 밖의 값과 값 없음은 "닫을 때까지 유지".
     var floatingScope: String? = nil
 
     var slot: InAppDisplaySlot { displaySlot ?? .popup }
