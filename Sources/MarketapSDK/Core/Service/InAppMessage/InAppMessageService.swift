@@ -134,6 +134,11 @@ final class InAppMessageService: NSObject, InAppMessageServiceProtocol {
     /// (테스트에서만 값을 바꾼다)
     var pendingClaimTimeoutSeconds: TimeInterval = 10
 
+    /// 플로팅 자리의 표시 권리. 팝업 자리(`isModalShown`)와 서로 막지 않는다. `displayLock` 으로 지킨다.
+    var activeFloating: FloatingCampaignSession?
+
+    var floatingPresenter: FloatingPresenter = .shared
+
     private var projectId: String {
         cache.projectId
     }

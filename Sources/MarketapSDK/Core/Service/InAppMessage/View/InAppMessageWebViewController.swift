@@ -23,6 +23,7 @@ protocol InAppMessageWebViewControllerDelegate: AnyObject, WKNavigationDelegate 
 final class InAppMessageWebViewController: UIViewController {
     var campaign: InAppCampaign? {
         didSet {
+            impressionReported = false
             if let campaign = campaign, let html = campaign.html {
                 self.updateCampaignContent(campaignHTML: html)
             }
@@ -32,6 +33,8 @@ final class InAppMessageWebViewController: UIViewController {
 
     weak var delegate: InAppMessageWebViewControllerDelegate?
     private let messageId = UUID().uuidString
+    private var impressionReported = false
+    private var coverWatchToken = 0
 
     init() {
         super.init(nibName: nil, bundle: nil)
@@ -86,12 +89,33 @@ final class InAppMessageWebViewController: UIViewController {
 
     override func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
+        coverWatchToken += 1
+        // 앱이 팝업 위에 다른 화면을 올리면 가려질 뿐 팝업은 남아 있다. 내려간 경우에만 닫힘으로 본다.
+        guard presentedViewController == nil else {
+            watchWhileCovered(token: coverWatchToken)
+            return
+        }
         delegate?.onDismissed()
+    }
+
+    /// 가려진 채로 앱이 팝업까지 함께 내리면 닫힘 신호가 안 올 수 있어, 내려갔는지 확인한다.
+    private func watchWhileCovered(token: Int) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+            guard let self, self.coverWatchToken == token else { return }
+            guard self.presentingViewController == nil else {
+                self.watchWhileCovered(token: token)
+                return
+            }
+            self.coverWatchToken += 1
+            self.delegate?.onDismissed()
+        }
     }
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
-        if let campaign = campaign {
+        coverWatchToken += 1
+        if let campaign = campaign, !impressionReported {
+            impressionReported = true
             delegate?.onImpression(campaign: campaign, messageId: messageId)
         }
     }

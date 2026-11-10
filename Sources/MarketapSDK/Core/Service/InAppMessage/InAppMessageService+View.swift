@@ -71,9 +71,9 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
         return validTimestamps.count < frequencyCap.limit
     }
 
-    func logImpression(campaignId: String) {
+    func logImpression(campaignId: String, at date: Date = Date()) {
         let key = "impression_\(campaignId)"
-        let now = Date().timeIntervalSince1970
+        let now = date.timeIntervalSince1970
 
         var timestamps = defaults.object(forKey: key) as? [TimeInterval] ?? []
         timestamps.append(now)
@@ -81,15 +81,13 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
         defaults.set(Array(timestamps.suffix(100)), forKey: key)
     }
 
-    /// 후보를 우선순위 순으로 **하나가 뜰 때까지** 시도한다.
+    /// 후보를 우선순위 순으로 **자리(팝업·플로팅)마다 하나가 뜰 때까지** 시도한다.
+    /// 자리가 찬 후보만 건너뛰고 계속 간다(web SDK `handleCampaigns` 와 같은 규칙).
     ///
-    /// 예전에는 첫 후보 하나만 시도하고, 그 상세 fetch 가 빈 응답이면(쿠폰 발급 실패·타겟팅
-    /// 탈락 등 서버가 노출을 확정 못 한 경우) 뒤에 뜰 수 있는 캠페인이 있어도 화면에
-    /// 아무것도 안 떴다. web SDK 와 같은 증상·수정이다.
+    /// 상세 fetch 가 빈 응답이면(서버가 노출을 확정 못 한 경우) 다음 후보로 넘어간다.
+    /// 상세 fetch 횟수(`inAppMaxFallthroughFetches`)와 전체 시간(`inAppFallthroughBudgetSeconds`)으로 묶는다.
     ///
-    /// fetch 는 비동기라(스레드를 블록하지 않는다) 실패 콜백에서 다음 후보로 이어간다.
-    /// 무한정 이어가면 이벤트가 난 지 한참 뒤에 팝업이 튀어나오므로, 상세 fetch 횟수
-    /// (`inAppMaxFallthroughFetches`)와 전체 시간(`inAppFallthroughBudgetSeconds`)으로 묶는다.
+    /// - Parameter filledSlots: 이 체인에서 이미 처리가 끝난 자리.
     func tryShowCampaigns(
         candidates: [InAppCampaign],
         index: Int,
@@ -97,36 +95,31 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
         deadline: TimeInterval,
         eventName: String,
         eventProperties: [String: Any]?,
-        fromWebBridge: Bool
+        fromWebBridge: Bool,
+        filledSlots: Set<InAppDisplaySlot> = []
     ) {
-        // 네이티브 모달이 실제로 표시 단계에 들어갔을 때만 멈춘다.
-        //
-        // 적재 선점(웹뷰 대기)까지 여기서 막으면 안 된다. 웹브릿지 전달은 네이티브 웹뷰를
-        // 아예 쓰지 않는 독립 경로인데(show 의 브릿지 분기), 적재 때문에 같이 막히면
-        // 콜드스타트 직후 최대 pendingClaimTimeoutSeconds 동안 브릿지 인앱이 통째로 죽는다.
-        // 적재가 안 덮어써지는 건 claimDisplay 가 지킨다 — 여기서 또 막을 필요가 없다.
-        //
-        // 불변식(pendingCampaign != nil -> isModalShown) 덕에 "표시 중" 은 이 조합이다.
-        displayLock.lock()
-        let alreadyPresenting = isModalShown && pendingCampaign == nil
-        displayLock.unlock()
-        if alreadyPresenting { return }
+        let occupied = filledSlots.union(occupiedSlots())
+        if occupied.isSuperset(of: [.popup, .floating]) { return }
         guard index < candidates.count else { return }
 
         let campaign = candidates[index]
-
-        // 숨김·빈도수 미달 캠페인은 요청 없이 다음 후보로. (fetch 예산 안 깎음)
-        if isCampaignHiden(campaign: campaign) {
-            tryShowCampaigns(
+        let next = { (fetches: Int, filled: Set<InAppDisplaySlot>) in
+            self.tryShowCampaigns(
                 candidates: candidates, index: index + 1, fetches: fetches, deadline: deadline,
-                eventName: eventName, eventProperties: eventProperties, fromWebBridge: fromWebBridge
+                eventName: eventName, eventProperties: eventProperties, fromWebBridge: fromWebBridge,
+                filledSlots: filled
             )
+        }
+
+        if occupied.contains(campaign.slot) || isCampaignHiden(campaign: campaign) {
+            next(fetches, filledSlots)
             return
         }
 
-        // html 이 이미 있으면(정적 렌더) 서버를 안 타고 바로 노출. fetch 예산 안 깎음.
         if campaign.html != nil {
-            show(campaign: campaign, fromWebBridge: fromWebBridge)
+            if show(campaign: campaign, fromWebBridge: fromWebBridge) {
+                next(fetches, filledSlots.union([campaign.slot]))
+            }
             return
         }
 
@@ -147,30 +140,41 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
             eventProperties: eventProperties
         ) { [weak self] fetchedCampaign in
             guard let self = self else { return }
-            if let fetchedCampaign = fetchedCampaign, fetchedCampaign.html != nil {
-                self.show(campaign: fetchedCampaign, fromWebBridge: fromWebBridge)
+            if let fetchedCampaign = fetchedCampaign?.inheritingSlot(from: campaign), fetchedCampaign.html != nil {
+                if self.show(campaign: fetchedCampaign, fromWebBridge: fromWebBridge) {
+                    next(fetches + 1, filledSlots.union([fetchedCampaign.slot]))
+                }
             } else {
                 MarketapLogger.warn("failed to fetch campaign html: \(campaign.id), trying next")
-                self.tryShowCampaigns(
-                    candidates: candidates, index: index + 1, fetches: fetches + 1, deadline: deadline,
-                    eventName: eventName, eventProperties: eventProperties, fromWebBridge: fromWebBridge
-                )
+                next(fetches + 1, filledSlots)
             }
         }
     }
 
-    /// 확정된 캠페인을 노출한다(웹브릿지 위임 또는 모달 present).
+    /// 다른 체인이 이미 차지한 자리. 팝업은 실제로 표시 단계일 때만 찬 것으로 본다 —
+    /// 적재 선점(웹뷰 대기)까지 막으면 네이티브 웹뷰를 안 쓰는 웹브릿지 전달까지 같이 죽는다.
+    /// 적재가 덮어써지지 않는 건 claimDisplay 가 지킨다.
+    private func occupiedSlots() -> Set<InAppDisplaySlot> {
+        displayLock.lock()
+        defer { displayLock.unlock() }
+        var slots: Set<InAppDisplaySlot> = []
+        if isModalShown && pendingCampaign == nil { slots.insert(.popup) }
+        if activeFloating != nil { slots.insert(.floating) }
+        return slots
+    }
+
+    /// 확정된 캠페인을 노출한다(웹브릿지 위임, 플로팅, 또는 모달 present).
+    /// 웹브릿지 여부는 **여기서** 판단한다(fetch 사이에 브릿지가 떨어질 수 있다).
     ///
-    /// 웹브릿지 여부는 **여기서** 판단한다. 예전엔 fetch 를 걸기 전에 스냅샷을 떠서 콜백까지
-    /// 들고 갔는데, 그 사이(최대 1초)에 브릿지가 떨어지면 사라진 웹뷰로 보내고 끝났다.
-    private func show(campaign: InAppCampaign, fromWebBridge: Bool) {
+    /// - Returns: 다른 자리 후보를 계속 볼지. 웹브릿지로 넘겼으면 false — 브릿지는 이벤트당 한 번만 받는다.
+    private func show(campaign: InAppCampaign, fromWebBridge: Bool) -> Bool {
         if fromWebBridge, let claim = MarketapWebBridge.claimActiveWebBridge() {
             // 확인과 소비가 나뉘어 있으면 두 체인이 같은 브릿지를 보고 통과해, 뒤쪽은
             // impression 만 남기고 전달은 아무 데도 안 됐다. 선점에 성공한 쪽만 여기로 온다.
             if claim.deliver(campaign: campaign, messageId: UUID().uuidString) {
                 // 웹으로 전달한 순간 소진된 것으로 본다(이후 노출/클릭 이벤트는 웹이 보낸다).
                 logImpression(campaignId: campaign.id)
-                return
+                return false
             }
             // 선점은 했는데 전달이 안 됐다(웹뷰가 사라짐, 직렬화 실패 등). 브릿지가 아직
             // 멀쩡하면 선점을 돌려준다 — 안 그러면 살아있는 웹뷰가 등록 해제된 채로 남아
@@ -179,7 +183,13 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
             // 빈도수는 소진하지 않고 네이티브 모달로 폴백한다 — 못 본 캠페인이 막히면 안 된다.
             MarketapLogger.warn("web bridge delivery failed, falling back to modal: \(campaign.id)")
         }
-        presentCampaignModal(campaign: campaign)
+        switch campaign.slot {
+        case .floating:
+            _ = presentFloating(campaign: campaign)
+        case .popup:
+            presentCampaignModal(campaign: campaign)
+        }
+        return true
     }
 
     /// 이 캠페인을 띄울 권리를 원자적으로 선점한다. true 를 받은 쪽만 present 로 간다.
@@ -265,6 +275,7 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
             }
 
             MarketapLogger.verbose("presenting campaign: \(campaign.id)")
+            self.floatingPresenter.setSuspended(true)
             topViewController.present(self.campaignViewController, animated: false) {
                 MarketapLogger.verbose("presented campaign: \(campaign.id)")
                 // 화면에 실제로 올라간 뒤에 기록한다. present 가 거절되면 이 블록은 안 불리고,
@@ -278,6 +289,7 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
             DispatchQueue.main.asyncAfter(deadline: .now() + inAppPresentationRefusalCheckSeconds) {
                 guard self.campaignViewController.presentingViewController == nil else { return }
                 MarketapLogger.warn("presentation was refused: \(campaign.id)")
+                self.floatingPresenter.setSuspended(false)
                 self.releaseDisplay()
             }
         }
@@ -287,12 +299,13 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
     /// 경로가 있어서 여기서도 표시 권리를 되돌린다. 중복 해제는 무해하다.
     func onDismissed() {
         releaseDisplay()
+        DispatchQueue.main.async {
+            self.floatingPresenter.setSuspended(false)
+        }
     }
 
     private func getTopViewController() -> UIViewController? {
-        guard let windowScene = UIApplication.shared.connectedScenes
-                .first(where: { [.foregroundActive, .foregroundInactive].contains($0.activationState) }) as? UIWindowScene,
-              let keyWindow = windowScene.windows.first(where: { $0.isKeyWindow }) else {
+        guard let keyWindow = FloatingScreenFinder.keyWindow() else {
             return nil
         }
 
