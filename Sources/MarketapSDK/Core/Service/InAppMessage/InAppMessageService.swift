@@ -146,6 +146,23 @@ final class InAppMessageService: NSObject, InAppMessageServiceProtocol {
         (Marketap.customHandlerStore.customized, ServerTimeManager.useWebClickRouting)
     }
 
+    /// 화면 전환 신호 직전 이 시간(초) 안에 화면에 나타난 메시지는 그 신호로 닫지 않는다.
+    var screenChangeGraceSeconds: TimeInterval = 0.1
+
+    /// 팝업이 화면에 나타난 시각(단조 시계). 아직 나타나지 않았으면 nil. `displayLock` 으로 지킨다.
+    var popupShownAt: TimeInterval?
+
+    /// 팝업 표시 권리의 번호. 선점할 때마다 바뀌고, 반납은 같은 번호를 쥔 쪽만 한다. `displayLock` 으로 지킨다.
+    var displayClaim: Int = 0
+
+    /// 화면에 올린 팝업의 표시 권리 번호. 올린 적이 없거나 내려갔으면 nil. `displayLock` 으로 지킨다.
+    var presentedClaim: Int?
+
+    /// 화면에 올린 팝업의 캠페인 ID. `displayLock` 으로 지킨다.
+    var presentedCampaignId: String?
+
+    var monotonicNow: () -> TimeInterval = { ProcessInfo.processInfo.systemUptime }
+
     private var projectId: String {
         cache.projectId
     }

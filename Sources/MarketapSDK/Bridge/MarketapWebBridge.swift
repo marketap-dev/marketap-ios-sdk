@@ -25,14 +25,13 @@ public typealias ExternalInAppMessageCallback = (_ campaign: [String: Any], _ me
     }
 
     /// 외부 인앱 메시지 콜백 (Flutter, React Native 등에서 등록)
-    private static var externalInAppMessageCallback: ExternalInAppMessageCallback?
     /// 외부 웹브릿지가 활성화되었는지 여부
     private static var isExternalWebBridgeActive: Bool = false
+    private static var activeExternalWebViewId: String = ExternalWebViewHost.defaultId
 
     /// true 면 이 웹뷰에서 시작된 인앱 메시지의 링크를 이 웹뷰에서 열고, "이 페이지에서만" 플로팅을 페이지 이탈 때 닫는다.
     private let handleInAppInWebView: Bool
 
-    private var _hasReceivedAddressChange = false
     private var pageWatcher: WebViewWindowWatcher?
     private weak var pageWatchOwner: AnyObject?
 
@@ -55,7 +54,7 @@ public typealias ExternalInAppMessageCallback = (_ campaign: [String: Any], _ me
         let watcher = pageWatcher
         DispatchQueue.main.async { watcher?.detach() }
         if handleInAppInWebView {
-            Self.inAppService?.originDidLeavePage(ObjectIdentifier(self))
+            Self.inAppService?.originDidDisappear(ObjectIdentifier(self))
         }
     }
 
@@ -219,9 +218,6 @@ public typealias ExternalInAppMessageCallback = (_ campaign: [String: Any], _ me
     }
 
     private func handleAddressChanged() {
-        instanceLock.lock()
-        _hasReceivedAddressChange = true
-        instanceLock.unlock()
         guard handleInAppInWebView else { return }
         Self.inAppService?.originDidLeavePage(ObjectIdentifier(self))
     }
@@ -255,50 +251,67 @@ public typealias ExternalInAppMessageCallback = (_ campaign: [String: Any], _ me
 // MARK: - Static bridge state
 
 extension MarketapWebBridge {
-    /// 래퍼가 `setExternalWebBridgeActive(true)` 로 표시한 이벤트면 래퍼 웹뷰를 출처로 돌려주고 표시를 지운다.
+    /// 래퍼가 `setExternalWebBridgeActive(true)` 로 표시한 이벤트면 그 래퍼 웹뷰를 출처로 돌려주고 표시를 지운다.
     static func consumeExternalOrigin() -> InAppWebOrigin? {
         stateLock.lock()
-        defer { stateLock.unlock() }
-        guard isExternalWebBridgeActive else { return nil }
+        let active = isExternalWebBridgeActive
+        let webViewId = activeExternalWebViewId
         isExternalWebBridgeActive = false
-        return ExternalWebViewHost.shared
+        stateLock.unlock()
+        guard active else { return nil }
+        return ExternalWebViewHost.host(for: webViewId)
     }
 
     // MARK: - External Bridge Support
 
-    /// 외부 인앱 메시지 콜백 등록 (Flutter, React Native 등에서 사용)
-    /// - Parameter callback: 인앱 메시지를 받을 콜백 함수
+    /// 래퍼용. 앱이 캠페인을 웹으로 넘기지 않으므로 등록한 콜백은 호출되지 않는다.
     @objc public static func setExternalInAppMessageCallback(_ callback: ExternalInAppMessageCallback?) {
-        stateLock.lock()
-        externalInAppMessageCallback = callback
-        stateLock.unlock()
+        MarketapLogger.debug("setExternalInAppMessageCallback: campaigns are not delivered to web (registered=\(callback != nil))")
     }
 
     /// 다음 `MarketapPlugin.trackEvent` 가 handleInAppInWebView 가 켜진 래퍼 웹뷰에서 왔는지 표시한다.
     @objc public static func setExternalWebBridgeActive(_ active: Bool) {
+        setExternalWebBridgeActive(active, webViewId: ExternalWebViewHost.defaultId)
+    }
+
+    /// 다음 `MarketapPlugin.trackEvent` 가 handleInAppInWebView 가 켜진 래퍼 웹뷰 `webViewId` 에서 왔는지 표시한다.
+    @objc public static func setExternalWebBridgeActive(_ active: Bool, webViewId: String) {
         stateLock.lock()
         isExternalWebBridgeActive = active
+        activeExternalWebViewId = webViewId
         stateLock.unlock()
     }
 
-    /// 앱이 래퍼 웹뷰에 보내는 명령을 받을 콜백. type 은 "openUrl"(payload `url`)이고 메인 스레드에서 불린다.
+    /// 앱이 래퍼 웹뷰에 보내는 명령을 받을 콜백. type 은 "openUrl"(payload `url`, 웹뷰를 구분하는 래퍼면 `webViewId`)이고 메인 스레드에서 불린다.
     @objc public static func setExternalWebViewCommandCallback(_ callback: ((String, [String: Any]) -> Void)?) {
-        ExternalWebViewHost.shared.command = callback
+        ExternalWebViewHost.command = callback
     }
 
     /// 래퍼 웹뷰 브리지가 생기면 true, 해제(dispose)되면 false 로 알린다.
     @objc public static func setExternalWebViewAttached(_ attached: Bool) {
-        let host = ExternalWebViewHost.shared
-        host.attached = attached
-        if !attached {
-            inAppService?.originDidLeavePage(ObjectIdentifier(host))
+        setExternalWebViewAttached(attached, webViewId: ExternalWebViewHost.defaultId)
+    }
+
+    /// 래퍼 웹뷰 `webViewId` 의 브리지가 생기면 true, 해제(dispose)되면 false 로 알린다.
+    @objc public static func setExternalWebViewAttached(_ attached: Bool, webViewId: String) {
+        if attached {
+            ExternalWebViewHost.host(for: webViewId).attached = true
+            return
         }
+        guard let host = ExternalWebViewHost.existingHost(for: webViewId) else { return }
+        host.attached = false
+        ExternalWebViewHost.remove(id: webViewId)
+        inAppService?.originDidDisappear(ObjectIdentifier(host))
     }
 
     /// 래퍼가 웹 SDK 에서 받은 주소 변경(addressChanged)을 전달한다.
     @objc public static func handleExternalAddressChanged() {
-        let host = ExternalWebViewHost.shared
-        host.hasReceivedAddressChange = true
+        handleExternalAddressChanged(webViewId: ExternalWebViewHost.defaultId)
+    }
+
+    /// 래퍼 웹뷰 `webViewId` 가 웹 SDK 에서 받은 주소 변경(addressChanged)을 전달한다.
+    @objc public static func handleExternalAddressChanged(webViewId: String) {
+        guard let host = ExternalWebViewHost.existingHost(for: webViewId) else { return }
         inAppService?.originDidLeavePage(ObjectIdentifier(host))
     }
 }
@@ -307,11 +320,6 @@ extension MarketapWebBridge {
 
 extension MarketapWebBridge: InAppWebOrigin {
     var isWebViewVisible: Bool { webView?.window != nil }
-
-    var hasReceivedAddressChange: Bool {
-        instanceLock.lock(); defer { instanceLock.unlock() }
-        return _hasReceivedAddressChange
-    }
 
     func openInWebView(url: String) {
         guard let literal = JavaScriptLiteral.string(url) else { return }

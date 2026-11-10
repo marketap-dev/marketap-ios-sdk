@@ -97,6 +97,14 @@ extension MarketapCore {
         }
     }
 
+    func screenChanged() {
+        let signalTime = ProcessInfo.processInfo.systemUptime
+        queue.async {
+            MarketapLogger.debug("screenChanged")
+            self.inAppMessageService.screenChanged(at: signalTime)
+        }
+    }
+
     func identify(userId: String, userProperties: [String : Any]?) {
         queue.async {
             MarketapLogger.debug("identify: \(userId)\n\(userProperties.prettyPrintedJSONString)")

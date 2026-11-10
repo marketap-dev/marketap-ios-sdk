@@ -282,27 +282,126 @@ final class InAppDisplaySlotTests: XCTestCase {
         }
     }
 
-    func testREG5_PageViewKeepsFloatingEvenIfConsoleChosePageScope() {
-        api.singleResponses = [:]
-        let pageScoped = try! JSONDecoder().decode(
-            InAppCampaign.self,
-            from: Data("{\(baseJSON),\"html\":\"<div></div>\",\"displaySlot\":\"FLOATING\",\"floatingScope\":\"PAGE\"}".utf8)
+    private func appEvent(_ name: String) -> IngestEventRequest {
+        IngestEventRequest(
+            id: "e1", name: name, userId: "u",
+            device: MockMarketapCache().device.makeRequest(), properties: nil, timestamp: Date()
         )
-        run([pageScoped])
+    }
+
+    private func scopedFloating(_ scope: String) -> InAppCampaign {
+        try! JSONDecoder().decode(
+            InAppCampaign.self,
+            from: Data("{\(baseJSON),\"html\":\"<div></div>\",\"displaySlot\":\"FLOATING\",\"floatingScope\":\"\(scope)\"}".utf8)
+        )
+    }
+
+    private func passScreenChangeGrace() {
+        service.monotonicNow = { ProcessInfo.processInfo.systemUptime + 1 }
+    }
+
+    private func showFloating(scope: String) {
+        run([scopedFloating(scope)])
         waitForFloating("c")
         service.lastFetch = Date()
         service.campaigns = []
+    }
 
-        service.onEvent(
-            eventRequest: IngestEventRequest(
-                id: "e1", name: "mkt_page_view", userId: "u",
-                device: MockMarketapCache().device.makeRequest(), properties: nil, timestamp: Date()
-            ),
-            origin: nil
-        )
+    func testREG5_ScreenChangedClosesPageScopedFloating() {
+        showFloating(scope: "PAGE")
+
+        passScreenChangeGrace()
+        service.screenChanged()
+        drainMain()
+
+        XCTAssertNil(service.activeFloating)
+        XCTAssertFalse(service.floatingPresenter.isShowing)
+    }
+
+    func testREG5_ScreenChangedKeepsUntilClosedFloating() {
+        showFloating(scope: "UNTIL_CLOSED")
+
+        passScreenChangeGrace()
+        service.screenChanged()
         drainMain()
 
         XCTAssertEqual(service.activeFloating?.campaign.id, "c")
         XCTAssertTrue(service.floatingPresenter.isShowing)
+    }
+
+    func testREG6_PageViewAndOtherEventsDoNotClosePageFloating() {
+        showFloating(scope: "PAGE")
+
+        for name in ["mkt_page_view", "screen_view", "mkt_purchase"] {
+            service.onEvent(eventRequest: appEvent(name), origin: nil)
+        }
+        drainMain()
+
+        XCTAssertEqual(service.activeFloating?.campaign.id, "c")
+        XCTAssertTrue(service.floatingPresenter.isShowing)
+    }
+
+    func testREG7_PageFloatingNotShownYetSurvivesScreenChange() {
+        XCTAssertTrue(service.presentFloating(campaign: scopedFloating("PAGE")))
+        passScreenChangeGrace()
+
+        service.screenChanged()
+
+        waitForFloating("c")
+    }
+
+    func testREG7_PageFloatingShownWithinGraceSurvivesScreenChange() {
+        XCTAssertTrue(service.presentFloating(campaign: scopedFloating("PAGE")))
+        waitForFloating("c")
+        let shownAt = service.activeFloating?.shownAt ?? 0
+        service.monotonicNow = { shownAt + 0.05 }
+
+        service.screenChanged()
+        drainMain()
+
+        XCTAssertEqual(service.activeFloating?.campaign.id, "c")
+    }
+
+    func testREG7_FloatingShownAfterSignalSurvivesLateEvaluation() {
+        XCTAssertTrue(service.presentFloating(campaign: scopedFloating("PAGE")))
+        waitForFloating("c")
+        let shownAt = service.activeFloating?.shownAt ?? 0
+        service.monotonicNow = { shownAt + 5 }
+
+        service.screenChanged(at: shownAt - 1)
+        drainMain()
+
+        XCTAssertEqual(service.activeFloating?.campaign.id, "c")
+    }
+
+    func testREG7_PopupNotShownYetSurvivesScreenChange() {
+        service.tryShowCampaigns(
+            candidates: [campaign("p", html: "<div>p</div>")], index: 0, fetches: 0,
+            deadline: ProcessInfo.processInfo.systemUptime + 30,
+            eventName: "mkt_home_view", eventProperties: nil, origin: nil
+        )
+        passScreenChangeGrace()
+
+        service.screenChanged()
+
+        XCTAssertEqual(service.pendingCampaign?.id, "p")
+        XCTAssertTrue(service.isModalShown)
+    }
+
+    func testREG9_PageFloatingIsReplacedByFloatingOfNextScreen() {
+        showFloating(scope: "PAGE")
+        let next = try! JSONDecoder().decode(
+            InAppCampaign.self,
+            from: Data(("{\"id\":\"b\",\"layout\":{\"layoutType\":\"MODAL\",\"layoutSubType\":\"CENTER\",\"orientations\":[]},"
+                + "\"triggerEventCondition\":{\"condition\":{\"eventFilter\":{\"eventName\":\"mkt_page_view\"}}},\"updatedAt\":\"t\","
+                + "\"html\":\"<div></div>\",\"displaySlot\":\"FLOATING\",\"floatingScope\":\"PAGE\"}").utf8)
+        )
+        service.campaigns = [next]
+
+        passScreenChangeGrace()
+        service.screenChanged()
+        service.onEvent(eventRequest: appEvent("mkt_page_view"), origin: nil)
+
+        waitForFloating("b")
     }
 }

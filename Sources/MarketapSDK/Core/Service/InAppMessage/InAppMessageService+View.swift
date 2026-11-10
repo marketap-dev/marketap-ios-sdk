@@ -22,6 +22,9 @@ private let inAppFallthroughBudgetSeconds: TimeInterval = 2
 /// 거절할 수 있어서, 이 시간 뒤에도 안 올라가 있으면 선점을 되돌린다.
 private let inAppPresentationRefusalCheckSeconds: TimeInterval = 0.5
 
+/// 다른 화면에 덮인 팝업을 닫으려고 위 화면이 내려갔는지 다시 확인하는 간격(초).
+private let inAppPopupUncoverCheckSeconds: TimeInterval = 0.3
+
 /// 경과 시간 측정용 단조 시계. 벽시계(Date)는 NTP 보정이나 사용자의 시간 변경으로
 /// 앞뒤로 튈 수 있어서, 뒤로 튀면 예산이 사실상 무한이 되고 앞으로 튀면 즉시 끊긴다.
 /// 기간을 재는 데는 절대 시각이 아니라 단조 증가 값을 쓴다. (web SDK 의 performance.now 와 같은 이유)
@@ -47,7 +50,7 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
     /// 네이티브 모달을 닫았을 때. 숨김 기록 + 표시 권리 반납.
     func hideCampaign(campaignId: String, until: TimeInterval) {
         MarketapLogger.debug("hide \(campaignId) until: \(until)")
-        releaseDisplay()
+        releasePresentedDisplay(ifCampaign: campaignId)
         recordHidden(campaignId: campaignId, until: until)
     }
 
@@ -169,9 +172,9 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
         }
     }
 
-    /// 이 캠페인을 띄울 권리를 원자적으로 선점한다. true 를 받은 쪽만 present 로 간다.
+    /// 이 캠페인을 띄울 권리를 원자적으로 선점한다. 권리 번호를 받은 쪽만 present 로 간다.
     ///
-    /// 아직 웹뷰가 준비되기 전이면 pendingCampaign 에 적재하고 false 를 준다(준비되면
+    /// 아직 웹뷰가 준비되기 전이면 pendingCampaign 에 적재하고 nil 을 준다(준비되면
     /// `markWebViewReady()` 가 노출로 승격시킨다). **적재도 선점이다** — isModalShown 을
     /// 세워 뒤 이벤트가 앞 후보를 덮어쓰지 못하게 한다. 예전엔 적재 경로가 권리를 안 잡아서,
     /// 앱 시작 직후처럼 웹뷰 초기화가 느릴 때 뒤 이벤트마다 같은 분기를 타며 먼저 도착한
@@ -179,24 +182,26 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
     ///
     /// 적재 선점은 `pendingClaimTimeoutSeconds` 시한을 함께 건다. 시한이 없으면 웹뷰가
     /// 영영 준비되지 않을 때 권리가 잠긴 채로 남아 인앱이 하나도 못 뜬다.
-    private func claimDisplay(campaign: InAppCampaign, origin: InAppWebOrigin?) -> Bool {
+    private func claimDisplay(campaign: InAppCampaign, origin: InAppWebOrigin?) -> Int? {
         displayLock.lock()
         defer { displayLock.unlock() }
 
-        if isModalShown { return false }
+        if isModalShown { return nil }
 
         // 아래 두 갈래 모두 "이 캠페인이 표시 권리를 가져갔다"는 뜻이다.
         isModalShown = true
         displayOrigin = origin
+        popupShownAt = nil
+        displayClaim &+= 1
 
         guard didFinishLoad else {
             MarketapLogger.verbose("webView not ready, claiming for pending campaign: \(campaign.id)")
             pendingCampaign = campaign
             pendingGeneration &+= 1
             schedulePendingExpiry(generation: pendingGeneration, campaignId: campaign.id)
-            return false
+            return nil
         }
-        return true
+        return displayClaim
     }
 
     /// 적재 선점에 시한을 건다. 시한이 지나도 여전히 같은 적재가 남아 있으면 권리를 반납해
@@ -213,8 +218,7 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
                 self.displayLock.unlock()
                 return
             }
-            self.pendingCampaign = nil
-            self.isModalShown = false
+            self.releaseDisplayLocked(claim: self.displayClaim)
             self.displayLock.unlock()
 
             // verbose 가 아니라 warn 이다. 이 상태는 웹뷰가 준비되지 않았다는 진단 신호다.
@@ -229,27 +233,109 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
     /// 적재도 같이 버린다. 불변식(`pendingCampaign != nil` → `isModalShown == true`)을 지키려면
     /// 권리를 놓는 순간 적재도 없어야 한다. 남겨두면 나중에 웹뷰가 준비됐을 때 이미 놓은
     /// 권리로 캠페인이 뜬다.
-    private func releaseDisplay() {
+    ///
+    /// 같은 권리 번호를 쥔 쪽만 반납한다. 늦게 도착한 이전 팝업의 닫힘 신호가 그 뒤에 선점된 권리를 풀지 않게 한다.
+    @discardableResult
+    private func releaseDisplay(claim: Int) -> Bool {
         displayLock.lock()
+        defer { displayLock.unlock() }
+        return releaseDisplayLocked(claim: claim)
+    }
+
+    /// `displayLock` 을 쥔 상태에서만 부른다.
+    @discardableResult
+    private func releaseDisplayLocked(claim: Int) -> Bool {
+        guard isModalShown, displayClaim == claim else { return false }
         isModalShown = false
         pendingCampaign = nil
         displayOrigin = nil
+        popupShownAt = nil
         pendingGeneration &+= 1
-        displayLock.unlock()
+        return true
+    }
+
+    /// 화면에 올린 팝업의 표시 권리를 반납한다. 올린 팝업이 없으면 아무것도 하지 않는다.
+    @discardableResult
+    private func releasePresentedDisplay(ifClaim expectedClaim: Int? = nil, ifCampaign expectedCampaignId: String? = nil) -> Bool {
+        displayLock.lock()
+        defer { displayLock.unlock() }
+        guard let claim = presentedClaim,
+              expectedClaim == nil || expectedClaim == claim,
+              expectedCampaignId == nil || expectedCampaignId == presentedCampaignId else { return false }
+        presentedClaim = nil
+        presentedCampaignId = nil
+        return releaseDisplayLocked(claim: claim)
     }
 
     private func presentCampaignModal(campaign: InAppCampaign, origin: InAppWebOrigin?) {
-        guard claimDisplay(campaign: campaign, origin: origin) else { return }
-        presentClaimed(campaign: campaign)
+        guard let claim = claimDisplay(campaign: campaign, origin: origin) else { return }
+        presentClaimed(campaign: campaign, claim: claim)
+    }
+
+    /// 표시 권리를 쥔 팝업이 조건에 맞으면 닫는다. 아직 화면에 나타나기 전이면 권리를 반납하고, 떠 있으면 내린다.
+    ///
+    /// - Parameter shouldClose: 출처 웹뷰와 팝업이 화면에 나타난 시각(나타나기 전이면 nil)을 받는다.
+    func closePopup(because cause: String, if shouldClose: (InAppWebOrigin?, TimeInterval?) -> Bool) {
+        displayLock.lock()
+        guard isModalShown, shouldClose(displayOrigin, popupShownAt) else {
+            displayLock.unlock()
+            return
+        }
+        let claim = displayClaim
+        if presentedClaim != claim {
+            MarketapLogger.verbose("\(cause), dropping popup before it was presented")
+            releaseDisplayLocked(claim: claim)
+        }
+        displayLock.unlock()
+        DispatchQueue.main.async {
+            guard self.isPresented(claim: claim) else { return }
+            let controller = self.campaignViewController
+            guard controller.presentingViewController != nil, !controller.isBeingDismissed else { return }
+            MarketapLogger.verbose("\(cause), closing popup: \(controller.campaign?.id ?? "")")
+            guard controller.presentedViewController == nil else {
+                if !controller.view.isHidden {
+                    controller.view.isHidden = true
+                    self.dismissPopupWhenUncovered()
+                }
+                return
+            }
+            controller.dismiss(animated: false)
+        }
+    }
+
+    /// 팝업 위에 앱 화면이 올라와 있으면 `dismiss` 가 그 화면을 내린다. 팝업은 숨겨 두고 위 화면이 내려간 뒤에 닫는다.
+    private func dismissPopupWhenUncovered() {
+        DispatchQueue.main.asyncAfter(deadline: .now() + inAppPopupUncoverCheckSeconds) {
+            let controller = self.campaignViewController
+            guard controller.presentingViewController != nil,
+                  controller.view.isHidden,
+                  !controller.isBeingDismissed else { return }
+            guard controller.presentedViewController == nil else {
+                self.dismissPopupWhenUncovered()
+                return
+            }
+            controller.dismiss(animated: false)
+        }
     }
 
     /// 이미 표시 권리를 쥔 상태에서 실제 present 를 수행한다. 선점 없이 호출하면 안 된다.
-    private func presentClaimed(campaign: InAppCampaign) {
+    private func presentClaimed(campaign: InAppCampaign, claim: Int) {
         DispatchQueue.main.async {
+            guard self.beginPresenting(claim: claim, campaignId: campaign.id) else {
+                MarketapLogger.verbose("display claim was released before popup was presented: \(campaign.id)")
+                return
+            }
+            self.displayLock.lock()
+            if let origin = self.displayOrigin, !origin.isWebViewVisible {
+                MarketapLogger.verbose("origin web view left before popup was presented: \(campaign.id)")
+                self.displayOrigin = nil
+            }
+            self.displayLock.unlock()
             self.campaignViewController.campaign = campaign
+            self.campaignViewController.view.isHidden = false
             guard let topViewController = self.getTopViewController() else {
                 MarketapLogger.warn("failed to find topViewController: \(campaign.id)")
-                self.releaseDisplay()
+                self.releasePresentedDisplay(ifClaim: claim)
                 return
             }
 
@@ -257,6 +343,7 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
             self.floatingPresenter.setSuspended(true)
             topViewController.present(self.campaignViewController, animated: false) {
                 MarketapLogger.verbose("presented campaign: \(campaign.id)")
+                self.markPopupShown(claim: claim)
                 // 화면에 실제로 올라간 뒤에 기록한다. present 가 거절되면 이 블록은 안 불리고,
                 // 그러면 빈도수도 소진되지 않아야 한다(안 본 캠페인이 막히면 안 된다).
                 self.logImpression(campaignId: campaign.id)
@@ -266,18 +353,42 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
             // 윈도우에 없음). 그때는 completion 도 viewDidDisappear 도 안 불려서, 선점이
             // 영구히 남고 이후 인앱이 하나도 안 뜬다. 실제로 올라갔는지 확인해 되돌린다.
             DispatchQueue.main.asyncAfter(deadline: .now() + inAppPresentationRefusalCheckSeconds) {
-                guard self.campaignViewController.presentingViewController == nil else { return }
+                guard self.campaignViewController.presentingViewController == nil,
+                      self.releasePresentedDisplay(ifClaim: claim) else { return }
                 MarketapLogger.warn("presentation was refused: \(campaign.id)")
                 self.floatingPresenter.setSuspended(false)
-                self.releaseDisplay()
             }
         }
     }
 
+    /// 표시 권리가 아직 이 번호의 것이면 화면에 올리는 중으로 표시한다.
+    private func beginPresenting(claim: Int, campaignId: String) -> Bool {
+        displayLock.lock()
+        defer { displayLock.unlock() }
+        guard isModalShown, displayClaim == claim else { return false }
+        presentedClaim = claim
+        presentedCampaignId = campaignId
+        return true
+    }
+
+    private func isPresented(claim: Int) -> Bool {
+        displayLock.lock()
+        defer { displayLock.unlock() }
+        return presentedClaim == claim
+    }
+
+    private func markPopupShown(claim: Int) {
+        displayLock.lock()
+        if isModalShown, displayClaim == claim {
+            popupShownAt = monotonicNow()
+        }
+        displayLock.unlock()
+    }
+
     /// 모달이 내려갔다. hideCampaign(JS 의 "오늘 하루 보지 않기" 등)을 거치지 않고 닫히는
-    /// 경로가 있어서 여기서도 표시 권리를 되돌린다. 중복 해제는 무해하다.
+    /// 경로가 있어서 여기서도 표시 권리를 되돌린다. 화면에 올린 팝업의 권리만 반납한다.
     func onDismissed() {
-        releaseDisplay()
+        releasePresentedDisplay()
         DispatchQueue.main.async {
             self.floatingPresenter.setSuspended(false)
         }
@@ -296,11 +407,7 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
     }
 
     func onEvent(eventRequest: IngestEventRequest, origin: InAppWebOrigin?) {
-        if let origin = origin,
-           PageFloatingPolicy.eventLeavesPage(
-            eventName: eventRequest.name,
-            originReceivedAddressChange: origin.hasReceivedAddressChange
-           ) {
+        if let origin = origin, PageFloatingPolicy.eventLeavesPage(eventName: eventRequest.name) {
             originDidLeavePage(ObjectIdentifier(origin))
         }
         let eventProperties = eventRequest.properties?.compactMapValues { $0.value }
@@ -448,6 +555,7 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
         displayLock.lock()
         didFinishLoad = true
         let drained = pendingCampaign
+        let claim = displayClaim
         pendingCampaign = nil
         if drained != nil {
             // 시한 타이머가 뒤늦게 떠서 승격된 권리를 풀어버리지 않도록 세대를 넘긴다.
@@ -462,11 +570,11 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
         // 닫았을 수 있다. 적재 시점의 판정을 그대로 믿으면 방금 끈 팝업이 다시 뜬다.
         if isCampaignHiden(campaign: drained) {
             MarketapLogger.verbose("pending campaign became hidden before promotion: \(drained.id)")
-            releaseDisplay()
+            releaseDisplay(claim: claim)
             return
         }
 
-        presentClaimed(campaign: drained)
+        presentClaimed(campaign: drained, claim: claim)
     }
 
     /// 적재된 후보를 버리고 표시 권리를 반납한다.
@@ -477,10 +585,12 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
     func discardPendingCampaign() {
         displayLock.lock()
         let discarded = pendingCampaign
+        if discarded != nil {
+            releaseDisplayLocked(claim: displayClaim)
+        }
         displayLock.unlock()
 
         guard let discarded = discarded else { return }
         MarketapLogger.verbose("discarding pending campaign after identity change: \(discarded.id)")
-        releaseDisplay()
     }
 }

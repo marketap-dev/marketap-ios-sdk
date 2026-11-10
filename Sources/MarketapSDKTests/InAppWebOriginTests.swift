@@ -40,7 +40,6 @@ private final class TrackedEvents: InAppMessageServiceDelegate {
 private final class FakeOrigin: InAppWebOrigin {
     private let lock = NSLock()
     private var _opened: [String] = []
-    private var _received = false
     private var _watching: [ObjectIdentifier] = []
 
     var visible = true
@@ -51,13 +50,8 @@ private final class FakeOrigin: InAppWebOrigin {
 
     var opened: [String] { sync { _opened } }
     var watching: [ObjectIdentifier] { sync { _watching } }
-    var received: Bool {
-        get { sync { _received } }
-        set { sync { _received = newValue } }
-    }
 
     var isWebViewVisible: Bool { visible }
-    var hasReceivedAddressChange: Bool { received }
     func openInWebView(url: String) { sync { _opened.append(url) } }
 
     func beginWatchingWindow(owner: AnyObject, onLeave: @escaping () -> Void) -> Bool {
@@ -107,6 +101,12 @@ final class InAppWebOriginPolicyTests: XCTestCase {
         XCTAssertFalse(PageFloatingPolicy.isBoundToOrigin(floatingScope: nil, hasOrigin: true))
     }
 
+    func testOnlyPageBarClosesOnAppScreenChange() {
+        XCTAssertTrue(PageFloatingPolicy.closesOnAppScreenChange(floatingScope: "PAGE"))
+        XCTAssertFalse(PageFloatingPolicy.closesOnAppScreenChange(floatingScope: "UNTIL_CLOSED"))
+        XCTAssertFalse(PageFloatingPolicy.closesOnAppScreenChange(floatingScope: nil))
+    }
+
     func testREG28_ClosesOnlyBarOfLeavingOrigin() {
         let a = ObjectIdentifier(FakeOrigin.self)
         let b = ObjectIdentifier(NSObject.self)
@@ -118,9 +118,8 @@ final class InAppWebOriginPolicyTests: XCTestCase {
     }
 
     func testREG30_PageViewLeavesPageOnlyBeforeFirstAddressChange() {
-        XCTAssertTrue(PageFloatingPolicy.eventLeavesPage(eventName: "mkt_page_view", originReceivedAddressChange: false))
-        XCTAssertFalse(PageFloatingPolicy.eventLeavesPage(eventName: "mkt_page_view", originReceivedAddressChange: true))
-        XCTAssertFalse(PageFloatingPolicy.eventLeavesPage(eventName: "mkt_home_view", originReceivedAddressChange: false))
+        XCTAssertTrue(PageFloatingPolicy.eventLeavesPage(eventName: "mkt_page_view"))
+        XCTAssertFalse(PageFloatingPolicy.eventLeavesPage(eventName: "mkt_home_view"))
     }
 
     func testExternalOriginIsConsumedOnce() {
@@ -130,6 +129,36 @@ final class InAppWebOriginPolicyTests: XCTestCase {
         MarketapWebBridge.setExternalWebBridgeActive(true)
         XCTAssertTrue(MarketapWebBridge.consumeExternalOrigin() === ExternalWebViewHost.shared)
         XCTAssertNil(MarketapWebBridge.consumeExternalOrigin(), "다음 이벤트까지 출처가 남으면 안 된다")
+    }
+
+    func testExternalOriginIsSeparatePerWebView() {
+        MarketapWebBridge.setExternalWebViewAttached(true, webViewId: "a")
+        MarketapWebBridge.setExternalWebViewAttached(true, webViewId: "b")
+        defer {
+            MarketapWebBridge.setExternalWebViewAttached(false, webViewId: "a")
+            MarketapWebBridge.setExternalWebViewAttached(false, webViewId: "b")
+        }
+
+        MarketapWebBridge.setExternalWebBridgeActive(true, webViewId: "a")
+        let a = MarketapWebBridge.consumeExternalOrigin()
+        MarketapWebBridge.setExternalWebBridgeActive(true, webViewId: "b")
+        let b = MarketapWebBridge.consumeExternalOrigin()
+
+        XCTAssertTrue(a === ExternalWebViewHost.existingHost(for: "a"))
+        XCTAssertTrue(b === ExternalWebViewHost.existingHost(for: "b"))
+        XCTAssertFalse(a === b)
+        XCTAssertFalse(a === ExternalWebViewHost.shared)
+    }
+
+    func testExternalHostIsRemovedOnDetach() {
+        MarketapWebBridge.setExternalWebViewAttached(true, webViewId: "a")
+        XCTAssertEqual(ExternalWebViewHost.existingHost(for: "a")?.attached, true)
+
+        MarketapWebBridge.setExternalWebViewAttached(false, webViewId: "a")
+        XCTAssertNil(ExternalWebViewHost.existingHost(for: "a"))
+
+        MarketapWebBridge.setExternalWebViewAttached(false)
+        XCTAssertNotNil(ExternalWebViewHost.existingHost(for: ExternalWebViewHost.defaultId), "기본 호스트는 남는다")
     }
 
     func testJavaScriptStringLiteral() {
@@ -234,14 +263,159 @@ final class InAppWebOriginServiceTests: XCTestCase {
         XCTAssertEqual(origin.watching.count, 1, "출처 웹뷰의 창 감시를 건다")
     }
 
-    func testPageFloatingIsNotShownWhenOriginAlreadyLeftWindow() {
+    func testPageFloatingIsShownWithoutOriginWhenOriginAlreadyLeftWindow() {
         origin.inWindow = false
         run([makeCampaign("f", slot: .floating, scope: "PAGE")], origin: origin)
+        waitForFloating("f")
+
+        XCTAssertNil(service.activeFloating?.origin, "출처를 잊고 앱 화면 메시지처럼 다룬다")
+        XCTAssertNil(service.activeFloating?.originId)
+        XCTAssertEqual(impressionCount("f"), 1)
+
+        service.originDidDisappear(ObjectIdentifier(origin))
+        XCTAssertEqual(service.activeFloating?.campaign.id, "f", "사라진 웹뷰의 신호에 닫히지 않는다")
+
+        passScreenChangeGrace()
+        service.screenChanged()
+        drainMain()
+        XCTAssertNil(service.activeFloating, "다음 화면 전환에 닫힌다")
+    }
+
+    private func passScreenChangeGrace() {
+        service.monotonicNow = { ProcessInfo.processInfo.systemUptime + 1 }
+    }
+
+    private func showPopup() {
+        service.tryShowCampaigns(
+            candidates: [makeCampaign("p", slot: .popup)], index: 0, fetches: 0,
+            deadline: ProcessInfo.processInfo.systemUptime + 30,
+            eventName: "mkt_home_view", eventProperties: nil, origin: origin
+        )
+    }
+
+    private func markPopupShown(at shownAt: TimeInterval) {
+        service.presentedClaim = service.displayClaim
+        service.popupShownAt = shownAt
+    }
+
+    func testREG8_ScreenChangedClosesWebViewPageFloating() {
+        run([makeCampaign("f", slot: .floating, scope: "PAGE")], origin: origin)
+        waitForFloating("f")
+
+        passScreenChangeGrace()
+        service.screenChanged()
         drainMain()
 
         XCTAssertNil(service.activeFloating)
         XCTAssertFalse(service.floatingPresenter.isShowing)
-        XCTAssertEqual(impressionCount("f"), 0)
+        XCTAssertEqual(origin.watching.count, 0)
+    }
+
+    func testREG8_ScreenChangedKeepsUntilClosedFloating() {
+        run([makeCampaign("f", slot: .floating, scope: "UNTIL_CLOSED")], origin: origin)
+        waitForFloating("f")
+
+        passScreenChangeGrace()
+        service.screenChanged()
+        drainMain()
+
+        XCTAssertEqual(service.activeFloating?.campaign.id, "f")
+    }
+
+    func testREG8_AppPageViewDoesNotCloseAnything() {
+        run([makeCampaign("f", slot: .floating, scope: "PAGE")], origin: origin)
+        waitForFloating("f")
+        showPopup()
+
+        pageView(origin: nil)
+
+        XCTAssertEqual(service.activeFloating?.campaign.id, "f")
+        XCTAssertEqual(service.pendingCampaign?.id, "p")
+    }
+
+    func testREG8_ScreenChangedKeepsPopupNotShownYet() {
+        showPopup()
+        XCTAssertEqual(service.pendingCampaign?.id, "p")
+
+        passScreenChangeGrace()
+        service.screenChanged()
+
+        XCTAssertEqual(service.pendingCampaign?.id, "p")
+        XCTAssertTrue(service.isModalShown)
+    }
+
+    func testREG8_PopupShownWithinGraceIsKept() {
+        service.monotonicNow = { 100 }
+        showPopup()
+        markPopupShown(at: 99.95)
+
+        service.screenChanged()
+
+        XCTAssertTrue(service.isModalShown)
+    }
+
+    func testREG8_PopupShownBeforeGraceIsClosed() {
+        service.monotonicNow = { 100 }
+        service.didFinishLoad = true
+        showPopup()
+        service.popupShownAt = 98
+
+        service.screenChanged()
+
+        XCTAssertFalse(service.isModalShown)
+    }
+
+    func testREG8_WebPageMoveKeepsPopupNotShownYet() {
+        showPopup()
+
+        service.originDidLeavePage(ObjectIdentifier(origin))
+
+        XCTAssertEqual(service.pendingCampaign?.id, "p")
+        XCTAssertTrue(service.isModalShown)
+    }
+
+    func testREG8_WebPageMoveClosesThatWebViewsShownPopupOnly() {
+        service.didFinishLoad = true
+        showPopup()
+        service.popupShownAt = 1
+
+        service.originDidLeavePage(ObjectIdentifier(FakeOrigin()))
+        XCTAssertTrue(service.isModalShown)
+
+        service.originDidLeavePage(ObjectIdentifier(origin))
+        XCTAssertFalse(service.isModalShown)
+    }
+
+    func testREG8_OriginDisappearingKeepsPopupNotShownYet() {
+        showPopup()
+
+        service.originDidDisappear(ObjectIdentifier(origin))
+
+        XCTAssertEqual(service.pendingCampaign?.id, "p")
+        XCTAssertTrue(service.isModalShown)
+    }
+
+    func testREG8_OriginDisappearingClosesThatWebViewsShownPopupOnly() {
+        service.didFinishLoad = true
+        showPopup()
+        service.popupShownAt = 1
+
+        service.originDidDisappear(ObjectIdentifier(FakeOrigin()))
+        XCTAssertTrue(service.isModalShown)
+
+        service.originDidDisappear(ObjectIdentifier(origin))
+        XCTAssertFalse(service.isModalShown)
+    }
+
+    func testPageMoveKeepsPageBarNotShownYet() {
+        run([makeCampaign("f", slot: .floating, scope: "PAGE")], origin: origin)
+        XCTAssertNil(service.activeFloating?.shownAt)
+
+        service.originDidLeavePage(ObjectIdentifier(origin))
+        service.screenChanged()
+
+        waitForFloating("f")
+        XCTAssertEqual(service.activeFloating?.campaign.id, "f")
     }
 
     func testREG32_ImpressionIsRecordedOnceForWebViewFloating() {
@@ -308,10 +482,10 @@ final class InAppWebOriginServiceTests: XCTestCase {
     func testExternalOriginOpensThroughCommand() {
         let external = ExternalWebViewHost.shared
         var commands: [(String, [String: Any])] = []
-        external.command = { commands.append(($0, $1)) }
+        ExternalWebViewHost.command = { commands.append(($0, $1)) }
         external.attached = true
         defer {
-            external.command = nil
+            ExternalWebViewHost.command = nil
             external.attached = false
         }
 
@@ -319,7 +493,44 @@ final class InAppWebOriginServiceTests: XCTestCase {
 
         XCTAssertEqual(commands.map(\.0), ["openUrl"])
         XCTAssertEqual(commands.first?.1["url"] as? String, "https://shop.example.com/a")
+        XCTAssertNil(commands.first?.1["webViewId"])
         XCTAssertEqual(clicks.clicked, [])
+    }
+
+    func testExternalOriginCommandCarriesWebViewId() {
+        let external = ExternalWebViewHost.host(for: "wv-1")
+        var commands: [(String, [String: Any])] = []
+        ExternalWebViewHost.command = { commands.append(($0, $1)) }
+        external.attached = true
+        defer {
+            ExternalWebViewHost.command = nil
+            ExternalWebViewHost.remove(id: "wv-1")
+        }
+
+        floatingClick(origin: external)
+
+        XCTAssertEqual(commands.first?.1["webViewId"] as? String, "wv-1")
+    }
+
+    func testAddressChangeOfOtherExternalWebViewKeepsBar() {
+        let a = ExternalWebViewHost.host(for: "wv-a")
+        let b = ExternalWebViewHost.host(for: "wv-b")
+        ExternalWebViewHost.command = { _, _ in }
+        a.attached = true
+        b.attached = true
+        defer {
+            ExternalWebViewHost.command = nil
+            ExternalWebViewHost.remove(id: "wv-a")
+            ExternalWebViewHost.remove(id: "wv-b")
+        }
+        run([makeCampaign("f", slot: .floating, scope: "PAGE")], origin: a)
+        waitForFloating("f")
+
+        service.originDidLeavePage(ObjectIdentifier(b))
+        XCTAssertEqual(service.activeFloating?.campaign.id, "f", "다른 웹뷰의 주소 변경에는 닫지 않는다")
+
+        service.originDidLeavePage(ObjectIdentifier(a))
+        XCTAssertNil(service.activeFloating)
     }
 
     // MARK: - "이 페이지에서만" 닫기
@@ -350,11 +561,12 @@ final class InAppWebOriginServiceTests: XCTestCase {
         XCTAssertEqual(origin.watching, [], "유지 바는 창 감시를 걸지 않는다")
     }
 
-    func testPageBarWithoutOriginStays() {
+    func testPageBarFromAppScreenIgnoresWebViewSignals() {
         run([makeCampaign("f", slot: .floating, scope: "PAGE")], origin: nil)
         waitForFloating("f")
 
-        pageView(origin: nil)
+        pageView(origin: origin)
+        service.originDidLeavePage(ObjectIdentifier(origin))
 
         XCTAssertEqual(service.activeFloating?.campaign.id, "f")
     }
@@ -370,7 +582,7 @@ final class InAppWebOriginServiceTests: XCTestCase {
         XCTAssertFalse(service.floatingPresenter.isShowing)
     }
 
-    func testREG30_PageViewClosesBarBeforeFirstAddressChange() {
+    func testREG30_WebPageViewClosesBar() {
         run([makeCampaign("f", slot: .floating, scope: "PAGE")], origin: origin)
         waitForFloating("f")
 
@@ -380,14 +592,22 @@ final class InAppWebOriginServiceTests: XCTestCase {
         XCTAssertFalse(service.floatingPresenter.isShowing)
     }
 
-    func testREG30_PageViewKeepsBarAfterAddressChangeWasReceived() {
-        origin.received = true
-        run([makeCampaign("f", slot: .floating, scope: "PAGE")], origin: origin)
-        waitForFloating("f")
+    func testREG30_WebPageViewClosesThatWebViewsPopup() {
+        service.tryShowCampaigns(
+            candidates: [makeCampaign("p", slot: .popup)], index: 0, fetches: 0,
+            deadline: ProcessInfo.processInfo.systemUptime + 30,
+            eventName: "mkt_home_view", eventProperties: nil, origin: origin
+        )
+        XCTAssertEqual(service.pendingCampaign?.id, "p")
 
         pageView(origin: origin)
+        XCTAssertEqual(service.pendingCampaign?.id, "p", "아직 나타나지 않은 팝업은 페이지 이동으로 버리지 않는다")
 
-        XCTAssertEqual(service.activeFloating?.campaign.id, "f")
+        service.popupShownAt = 1
+        pageView(origin: origin)
+
+        XCTAssertNil(service.pendingCampaign)
+        XCTAssertFalse(service.isModalShown)
     }
 
     func testREG30_PageViewFromOtherOriginKeepsBar() {
