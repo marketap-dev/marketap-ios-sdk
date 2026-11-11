@@ -62,5 +62,5 @@ jobs:
           fi
           for spec in MarketapSDK MarketapSDKNotificationServiceExtension; do
             curl -fsS -o /dev/null "https://trunk.cocoapods.org/api/v1/pods/$spec/versions/$VERSION" ||
-              pod trunk push "$spec.podspec" --allow-warnings --synchronous
+              pod trunk push "$spec.podspec" --allow-warnings
           done
