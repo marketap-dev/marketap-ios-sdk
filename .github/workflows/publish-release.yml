@@ -1,0 +1,66 @@
+name: Publish release
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 다시 돌릴 버전 (머지된 release PR 의 버전)
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-release-${{ github.event.pull_request.head.ref || format('release/{0}', inputs.version) }}
+
+jobs:
+  gate:
+    if: github.event_name == 'workflow_dispatch' || (startsWith(github.event.pull_request.head.ref, 'release/') && github.event.pull_request.head.repo.full_name == github.repository)
+    uses: marketap-dev/sdk-shared/.github/workflows/release-gate.yml@main
+    with:
+      version: ${{ inputs.version }}
+    secrets:
+      SDK_RELEASE_APP_ID: ${{ secrets.SDK_RELEASE_APP_ID }}
+      SDK_RELEASE_APP_PRIVATE_KEY: ${{ secrets.SDK_RELEASE_APP_PRIVATE_KEY }}
+
+  finalize:
+    needs: gate
+    if: needs.gate.outputs.proceed == 'true'
+    uses: marketap-dev/sdk-shared/.github/workflows/release-finalize.yml@main
+    with:
+      tag: ${{ needs.gate.outputs.tag }}
+      sha: ${{ needs.gate.outputs.sha }}
+      pr: ${{ needs.gate.outputs.pr }}
+      prerelease: ${{ needs.gate.outputs.prerelease }}
+      latest: ${{ needs.gate.outputs.latest }}
+    secrets:
+      SDK_RELEASE_APP_ID: ${{ secrets.SDK_RELEASE_APP_ID }}
+      SDK_RELEASE_APP_PRIVATE_KEY: ${{ secrets.SDK_RELEASE_APP_PRIVATE_KEY }}
+
+  cocoapods:
+    needs: [gate, finalize]
+    if: needs.gate.outputs.proceed == 'true'
+    runs-on: macos-15
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ needs.gate.outputs.sha }}
+          persist-credentials: false
+
+      - env:
+          COCOAPODS_TRUNK_TOKEN: ${{ secrets.COCOAPODS_TRUNK_TOKEN }}
+          VERSION: ${{ needs.gate.outputs.version }}
+        run: |
+          set -euo pipefail
+          if [ "$(date -u +%Y%m%d)" -ge 20261202 ]; then
+            echo "::warning::CocoaPods trunk 가 2026-12-02 부터 읽기 전용이라 SPM tag 로만 배포합니다"
+            exit 0
+          fi
+          for spec in MarketapSDK MarketapSDKNotificationServiceExtension; do
+            curl -fsS -o /dev/null "https://trunk.cocoapods.org/api/v1/pods/$spec/versions/$VERSION" ||
+              pod trunk push "$spec.podspec" --allow-warnings --synchronous
+          done
