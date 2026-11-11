@@ -20,6 +20,7 @@ class InAppMessageServiceOperatorTests: XCTestCase {
             api: api,
             cache: cache
         )
+        inAppMessageService.campaignViewController = sharedTestWebViewController
     }
 
     override func tearDown() {

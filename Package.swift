@@ -30,7 +30,7 @@ let package = Package(
         ),
         .testTarget(
             name: "MarketapSDKTests",
-            dependencies: ["MarketapSDK"],
+            dependencies: ["MarketapSDK", "MarketapSDKNotificationServiceExtension"],
             path: "Sources/MarketapSDKTests"
         )
     ]

@@ -92,6 +92,7 @@ final class InAppMessageService: NSObject, InAppMessageServiceProtocol {
 
     let customHandlerStore: MarketapCustomHandlerStoreProtocol
     private let api: MarketapAPIProtocol
+    private let policyStore: RemotePolicyStore?
     private let cache: MarketapCacheProtocol
     /// 숨김·노출 기록을 담는 저장소. 기본은 표준 저장소이고, 테스트만 격리된 suite 를 넣는다.
     /// (예전엔 UserDefaults.standard 를 직접 써서 테스트가 시뮬레이터 상태를 영구 오염시켰다)
@@ -161,12 +162,14 @@ final class InAppMessageService: NSObject, InAppMessageServiceProtocol {
         customHandlerStore: MarketapCustomHandlerStoreProtocol,
         api: MarketapAPIProtocol,
         cache: MarketapCacheProtocol,
-        defaults: UserDefaults = .standard
+        defaults: UserDefaults = .standard,
+        policyStore: RemotePolicyStore? = nil
     ) {
         self.customHandlerStore = customHandlerStore
         self.cache = cache
         self.api = api
         self.defaults = defaults
+        self.policyStore = policyStore
 
         super.init()
 
@@ -184,6 +187,19 @@ final class InAppMessageService: NSObject, InAppMessageServiceProtocol {
         inTimeout: (([InAppCampaign]) -> Void)? = nil,
         completion: (([InAppCampaign]) -> Void)? = nil,
     ) {
+        if policyStore?.isAllowed(.inApp) == false {
+            if campaigns?.isEmpty == false || lastFetch != nil {
+                campaigns = []
+                lastFetch = nil
+                cache.clearObject(forKey: Self.campaignCacheKey)
+                cache.clearObject(forKey: Self.checksumKey)
+                cache.clearObject(forKey: Self.lastFetchKey)
+            }
+            discardPendingCampaign()
+            inTimeout?([])
+            completion?([])
+            return
+        }
         let timeoutSeconds: TimeInterval = 1
         let timeoutController = inTimeout.map { handler in
             InAppMessageTimeoutController(
@@ -196,6 +212,10 @@ final class InAppMessageService: NSObject, InAppMessageServiceProtocol {
                 // 캐시로 강등해서라도 체인을 깨운다.
                 onTimeout: { [weak self] in
                     guard let self = self else { return }
+                    guard self.policyStore?.isAllowed(.inApp) != false else {
+                        handler([])
+                        return
+                    }
                     let cached = self.campaigns
                         ?? self.cache.loadCodableObject(forKey: Self.campaignCacheKey)
                         ?? []
@@ -231,6 +251,11 @@ final class InAppMessageService: NSObject, InAppMessageServiceProtocol {
             guard let self = self else { return }
 
             let didCompleteWithinTimeout = timeoutController?.markCompleted() ?? false
+            guard self.policyStore?.isAllowed(.inApp) != false else {
+                if didCompleteWithinTimeout { inTimeout?([]) }
+                completion?([])
+                return
+            }
 
             switch result {
             case .success(let response):
@@ -265,6 +290,10 @@ final class InAppMessageService: NSObject, InAppMessageServiceProtocol {
         eventProperties: [String: Any]? = nil,
         completion: ((InAppCampaign?) -> Void)? = nil
     ) {
+        if policyStore?.isAllowed(.inApp) == false {
+            completion?(nil)
+            return
+        }
         let timeoutSeconds: TimeInterval = 1
         let timeoutController = InAppMessageTimeoutController(
             timeoutSeconds: timeoutSeconds,
@@ -293,9 +322,13 @@ final class InAppMessageService: NSObject, InAppMessageServiceProtocol {
             body: request,
             responseType: InAppCampaignSingleFetchResponse.self
         ) { [weak self] result in
-            guard self != nil else { return }
+            guard let self = self else { return }
 
             guard timeoutController.markCompleted() else { return }
+            guard self.policyStore?.isAllowed(.inApp) != false else {
+                completion?(nil)
+                return
+            }
 
             switch result {
             case .success(let response):

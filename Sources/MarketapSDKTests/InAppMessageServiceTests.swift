@@ -55,6 +55,12 @@ class CustomHandlerStor: MarketapCustomHandlerStoreProtocol {
     }
 }
 
+let sharedTestWebViewController: InAppMessageWebViewController = {
+    let controller = InAppMessageWebViewController()
+    controller.loadViewIfNeeded()
+    return controller
+}()
+
 class InAppMessageServiceTests: XCTestCase {
     var service: InAppMessageService!
     var mockAPI: MockMarketapAPIForIAM!
@@ -66,6 +72,7 @@ class InAppMessageServiceTests: XCTestCase {
         mockCache = MockMarketapCache()
 
         service = InAppMessageService(customHandlerStore: CustomHandlerStor(), api: mockAPI, cache: mockCache)
+        service.campaignViewController = sharedTestWebViewController
     }
 
     override func tearDown() {

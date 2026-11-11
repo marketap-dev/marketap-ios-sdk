@@ -9,6 +9,8 @@ import UserNotifications
 import Foundation
 
 class MarketapNotificationServiceClient: MarketapNotificationServiceClientProtocol {
+    static let nativeSdkVersion = "1.5.1-beta.1"
+
     struct MarketapNotification {
         let userId: String?
         let deviceId: String?
@@ -109,6 +111,8 @@ extension MarketapNotificationServiceClient {
             return
         }
 
+        guard Self.isPushTrackingAllowed(projectId: projectId) else { return }
+
         let urlString = "https://event.marketap.io/v1/client/events?project_id=\(projectId)"
         guard let url = URL(string: urlString) else {
             return
@@ -129,9 +133,55 @@ extension MarketapNotificationServiceClient {
         var urlRequest = URLRequest(url: url)
         urlRequest.httpMethod = "POST"
         urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        urlRequest.setValue("ios", forHTTPHeaderField: "X-Marketap-SDK-Platform")
+        urlRequest.setValue(Self.nativeSdkVersion, forHTTPHeaderField: "X-Marketap-SDK-Version")
+        urlRequest.setValue("nse", forHTTPHeaderField: "X-Marketap-SDK-Source")
+        if let clientKey = Self.loadClientKey(projectId: projectId), !clientKey.isEmpty {
+            urlRequest.setValue(clientKey, forHTTPHeaderField: "X-Marketap-Client-Key")
+        }
         urlRequest.httpBody = try? JSONEncoder().encode(request)
 
         let task = URLSession.shared.dataTask(with: urlRequest)
         task.resume()
+    }
+}
+
+extension MarketapNotificationServiceClient {
+    static let appGroupInfoPlistKey = "MarketapAppGroupIdentifier"
+    private static let fractionalFormatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
+    private static let formatter = ISO8601DateFormatter()
+    static let clientKeyDefaultsKeyPrefix = "marketap_client_key."
+
+    static func isPushTrackingAllowed(
+        projectId: String,
+        bundle: Bundle = .main,
+        defaults: UserDefaults = .standard,
+        defaultsProvider: (String) -> UserDefaults? = { UserDefaults(suiteName: $0) },
+        now: Date = Date()
+    ) -> Bool {
+        let storage: UserDefaults
+        if let group = bundle.object(forInfoDictionaryKey: appGroupInfoPlistKey) as? String, !group.isEmpty,
+           let shared = defaultsProvider(group) {
+            storage = shared
+        } else {
+            storage = defaults
+        }
+        guard let data = storage.data(forKey: "marketap_sdk_policy." + projectId),
+              let policy = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+              let block = policy["pushTracking"] as? [String: Any], block["mode"] as? String == "stop" else { return true }
+        guard let expiresAt = block["expiresAt"] as? String else { return false }
+        let expiry = fractionalFormatter.date(from: expiresAt) ?? formatter.date(from: expiresAt)
+        return expiry.map { $0 <= now } ?? false
+    }
+
+    static func loadClientKey(projectId: String) -> String? {
+        guard let groupId = Bundle.main.object(forInfoDictionaryKey: appGroupInfoPlistKey) as? String, !groupId.isEmpty else {
+            return nil
+        }
+        return UserDefaults(suiteName: groupId)?.string(forKey: clientKeyDefaultsKeyPrefix + projectId)
     }
 }

@@ -125,6 +125,7 @@ class WebBridgeClaimTests: XCTestCase {
             customHandlerStore: CustomHandlerStor(), api: NoopAPIForWebBridge(),
             cache: MockMarketapCache(), defaults: defaults
         )
+        service.campaignViewController = sharedTestWebViewController
         // 브릿지 상태는 static 이라 테스트 사이에 샌다. 매번 깨끗한 상태에서 시작한다.
         resetWebBridgeState()
     }

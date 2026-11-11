@@ -15,6 +15,7 @@
 		B4D6A0E22D64618100557EAC /* MarketapSDKNotificationServiceExtension.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = B4D69E472D5DBE4000557EAC /* MarketapSDKNotificationServiceExtension.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		C4F100092DFE000000557EAC /* MarketapSDK.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B47948B02D5B3F4E00A76A65 /* MarketapSDK.framework */; };
 		C4F1000A2DFE000000557EAC /* MarketapSDK.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = B47948B02D5B3F4E00A76A65 /* MarketapSDK.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		C10460010000000000000001 = {isa = PBXBuildFile; fileRef = B4D69E472D5DBE4000557EAC; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -53,6 +54,7 @@
 			remoteGlobalIDString = B47948AF2D5B3F4E00A76A65;
 			remoteInfo = MarketapSDK;
 		};
+		C10460010000000000000002 = {isa = PBXContainerItemProxy; containerPortal = B47948A72D5B3F4E00A76A65; proxyType = 1; remoteGlobalIDString = B4D69E462D5DBE4000557EAC; remoteInfo = MarketapSDKNotificationServiceExtension; };
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -142,13 +144,6 @@
 		};
 		B4D69E782D5DBF3400557EAC /* Exceptions for "MarketapSDKNotificationServiceExtension" folder in "MarketapSDKNotificationServiceExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				ImpressionRequest.swift,
-				MarketapNotificationService.swift,
-				MarketapNotificationServiceClient.swift,
-				MarketapNotificationServiceClientProtocol.swift,
-				MarketapSDKNotificationServiceExtension.h,
-			);
 			publicHeaders = (
 				MarketapSDKNotificationServiceExtension.h,
 			);
@@ -262,6 +257,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				B4D6A0A62D631EDD00557EAC /* MarketapSDK.framework in Frameworks */,
+				C10460010000000000000001,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -368,6 +364,7 @@
 			);
 			dependencies = (
 			);
+			fileSystemSynchronizedGroups = (B4D69E732D5DBF3400557EAC,);
 			name = MarketapSDKNotificationServiceExtension;
 			packageProductDependencies = (
 			);
@@ -437,6 +434,7 @@
 			);
 			dependencies = (
 				B4D6A0A82D631EDD00557EAC /* PBXTargetDependency */,
+				C10460010000000000000003,
 			);
 			fileSystemSynchronizedGroups = (
 				B4D6A0A32D631EDD00557EAC /* MarketapSDKTests */,
@@ -643,6 +641,7 @@
 			target = B47948AF2D5B3F4E00A76A65 /* MarketapSDK */;
 			targetProxy = C4F1000B2DFE000000557EAC /* PBXContainerItemProxy */;
 		};
+		C10460010000000000000003 = {isa = PBXTargetDependency; target = B4D69E462D5DBE4000557EAC; targetProxy = C10460010000000000000002; };
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
