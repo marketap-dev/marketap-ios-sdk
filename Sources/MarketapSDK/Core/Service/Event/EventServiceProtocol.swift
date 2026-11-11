@@ -15,20 +15,20 @@ protocol EventServiceProtocol {
     func identify(userId: String, userProperties: [String: Any]?)
     func setUserProperties(userProperties: [String: Any], userId: String?)
     func flushUser()
-    func trackEvent(eventName: String, eventProperties: [String: Any]?, userId: String?, id: String?, timestamp: Date?, fromWebBridge: Bool)
+    func trackEvent(eventName: String, eventProperties: [String: Any]?, userId: String?, id: String?, timestamp: Date?, origin: InAppWebOrigin?)
     func updateDevice(pushToken: String?, optIn: Bool?, removeUserId: Bool, clearOptIn: Bool)
 }
 
 extension EventServiceProtocol {
     func trackEvent(eventName: String, eventProperties: [String: Any]?, userId: String? = nil) {
-        trackEvent(eventName: eventName, eventProperties: eventProperties, userId: userId, id: nil, timestamp: nil, fromWebBridge: false)
+        trackEvent(eventName: eventName, eventProperties: eventProperties, userId: userId, id: nil, timestamp: nil, origin: nil)
     }
 
     func trackEvent(eventName: String, eventProperties: [String: Any]?, id: String?, timestamp: Date?) {
-        trackEvent(eventName: eventName, eventProperties: eventProperties, userId: nil, id: id, timestamp: timestamp, fromWebBridge: false)
+        trackEvent(eventName: eventName, eventProperties: eventProperties, userId: nil, id: id, timestamp: timestamp, origin: nil)
     }
 
-    func trackEvent(eventName: String, eventProperties: [String: Any]?, fromWebBridge: Bool) {
-        trackEvent(eventName: eventName, eventProperties: eventProperties, userId: nil, id: nil, timestamp: nil, fromWebBridge: fromWebBridge)
+    func trackEvent(eventName: String, eventProperties: [String: Any]?, origin: InAppWebOrigin?) {
+        trackEvent(eventName: eventName, eventProperties: eventProperties, userId: nil, id: nil, timestamp: nil, origin: origin)
     }
 }

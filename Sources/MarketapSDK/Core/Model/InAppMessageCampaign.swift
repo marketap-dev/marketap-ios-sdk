@@ -146,12 +146,38 @@ struct Layout: Codable, Equatable {
     let orientations: [String]
 }
 
+/// 인앱이 차지하는 자리. 자리마다 하나씩 뜨고 서로 막지 않는다. 값이 없거나 모르는 값이면 `popup`.
+enum InAppDisplaySlot: String, Codable, Equatable {
+    case popup = "POPUP"
+    case floating = "FLOATING"
+
+    init(from decoder: Decoder) throws {
+        let raw = try decoder.singleValueContainer().decode(String.self)
+        self = InAppDisplaySlot(rawValue: raw) ?? .popup
+    }
+}
+
 struct InAppCampaign: Codable, Equatable {
     let id: String
     let layout: Layout
     let triggerEventCondition: EventTriggerCondition
     let html: String?
     let updatedAt: String
+    /// 서버는 플로팅일 때만 싣는다.
+    var displaySlot: InAppDisplaySlot? = nil
+    /// 플로팅의 화면 이동 값. `PAGE` 면 "이 페이지에서만", 그 밖의 값과 값 없음은 "닫을 때까지 유지".
+    var floatingScope: String? = nil
+
+    var slot: InAppDisplaySlot { displaySlot ?? .popup }
+
+    /// 상세 응답에 자리 정보가 없으면 목록 응답의 값을 쓴다.
+    func inheritingSlot(from listed: InAppCampaign) -> InAppCampaign {
+        guard displaySlot == nil else { return self }
+        var resolved = self
+        resolved.displaySlot = listed.displaySlot
+        resolved.floatingScope = floatingScope ?? listed.floatingScope
+        return resolved
+    }
 
     func toDictionary() -> [String: Any] {
         guard let data = try? JSONEncoder().encode(self),

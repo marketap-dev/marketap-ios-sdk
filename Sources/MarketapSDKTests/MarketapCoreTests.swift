@@ -39,7 +39,7 @@ class MockEventService: EventServiceProtocol {
         sync { _optIn = optIn }
     }
 
-    func trackEvent(eventName: String, eventProperties: [String : Any]?, userId: String?, id: String?, timestamp: Date?, fromWebBridge: Bool) {
+    func trackEvent(eventName: String, eventProperties: [String : Any]?, userId: String?, id: String?, timestamp: Date?, origin: InAppWebOrigin?) {
         sync { _trackedEvents.append(eventName) }
     }
 
@@ -74,7 +74,7 @@ class MockInAppMessageService: InAppMessageServiceProtocol {
         sync { _fetchCampaignsCalled = true }
     }
 
-    func onEvent(eventRequest: IngestEventRequest, fromWebBridge: Bool) {
+    func onEvent(eventRequest: IngestEventRequest, origin: InAppWebOrigin?) {
         sync { _receivedEvent = eventRequest }
     }
 
@@ -88,6 +88,10 @@ class MockInAppMessageService: InAppMessageServiceProtocol {
     func discardPendingCampaign() {
         sync { _discardPendingCalled = true }
     }
+
+    func originDidLeavePage(_ originId: ObjectIdentifier) {}
+    func originDidDisappear(_ originId: ObjectIdentifier) {}
+    func screenChanged(at signalTime: TimeInterval) {}
 }
 
 // 예전엔 "0.5초 자고 한 번 단언" + wait(timeout: 1.0) 이었다. 여유가 0.5초뿐이라
@@ -208,7 +212,7 @@ class MarketapCoreTests: XCTestCase {
         let eventRequest = IngestEventRequest(id: "1", name: "custom_event", userId: "user_789", device: MockDevice().toDevice().makeRequest(), properties: nil, timestamp: Date())
         let mockDevice = MockDevice().toDevice()
 
-        core.onEvent(eventRequest: eventRequest, device: mockDevice, fromWebBridge: false)
+        core.onEvent(eventRequest: eventRequest, device: mockDevice, origin: nil)
 
         let inApp = mockInAppService!
         waitUntil(self, "이벤트가 인앱 서비스까지 전달된다") {

@@ -127,7 +127,7 @@ final class EventService: EventServiceProtocol {
         userId: String? = nil,
         id: String? = nil,
         timestamp: Date? = nil,
-        fromWebBridge: Bool = false
+        origin: InAppWebOrigin? = nil
     ) {
         let device = cache.device
         var properties = eventProperties ?? [:]
@@ -171,7 +171,7 @@ final class EventService: EventServiceProtocol {
         defaults.set(eventTimestamp.timeIntervalSince1970, forKey: "marketap_last_event_time")
 
         track(request: event)
-        delegate?.onEvent(eventRequest: event, device: device, fromWebBridge: fromWebBridge)
+        delegate?.onEvent(eventRequest: event, device: device, origin: origin)
     }
 
 

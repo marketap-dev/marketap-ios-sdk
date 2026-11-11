@@ -94,7 +94,7 @@ class MockEventServiceDelegate: EventServiceDelegate {
         handleUserIdChangedCalled = true
     }
 
-    func onEvent(eventRequest: IngestEventRequest, device: Device, fromWebBridge: Bool) {
+    func onEvent(eventRequest: IngestEventRequest, device: Device, origin: InAppWebOrigin?) {
         queue.sync {
             self.lastEventRequest = eventRequest
             self.lastDevice = device

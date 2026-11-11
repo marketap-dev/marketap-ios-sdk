@@ -117,7 +117,7 @@ class InAppFallthroughTests: XCTestCase {
             deadline: ProcessInfo.processInfo.systemUptime + budgetSeconds,
             eventName: "mkt_home_view",
             eventProperties: nil,
-            fromWebBridge: false
+            origin: nil
         )
     }
 
@@ -171,7 +171,7 @@ class InAppFallthroughTests: XCTestCase {
             deadline: ProcessInfo.processInfo.systemUptime - 1,
             eventName: "mkt_home_view",
             eventProperties: nil,
-            fromWebBridge: false
+            origin: nil
         )
 
         XCTAssertEqual(api.fetchedCampaignIds, [])
@@ -213,7 +213,7 @@ class InAppFallthroughTests: XCTestCase {
                 id: "e1", name: "mkt_home_view", userId: "u",
                 device: MockMarketapCache().device.makeRequest(), properties: nil, timestamp: Date()
             ),
-            fromWebBridge: false
+            origin: nil
         )
 
         let service = self.service!
@@ -288,6 +288,7 @@ class InAppFallthroughTests: XCTestCase {
         service.didFinishLoad = true
         runFallthrough([campaign("first", html: "<div>1</div>")])
         XCTAssertTrue(service.isModalShown, "첫 캠페인이 표시 권리를 가져가야 한다")
+        service.presentedClaim = service.displayClaim
 
         service.onDismissed()
         XCTAssertFalse(service.isModalShown, "내려갔으면 권리를 반납해야 한다")
@@ -295,6 +296,21 @@ class InAppFallthroughTests: XCTestCase {
         // 반납됐으니 다음 캠페인이 다시 뜰 수 있어야 한다.
         runFallthrough([campaign("second", html: "<div>2</div>")])
         XCTAssertTrue(service.isModalShown)
+    }
+
+    func testLateDismissalOfPreviousPopupKeepsNewerClaim() {
+        runFallthrough([campaign("first", html: "<div>1</div>")])
+        service.presentedClaim = service.displayClaim
+        service.onDismissed()
+
+        runFallthrough([campaign("second", html: "<div>2</div>")])
+        XCTAssertEqual(service.pendingCampaign?.id, "second")
+
+        service.onDismissed()
+        service.hideCampaign(campaignId: "first", until: 0)
+
+        XCTAssertTrue(service.isModalShown, "이전 팝업의 늦은 닫힘 신호가 새 표시 권리를 풀면 안 된다")
+        XCTAssertEqual(service.pendingCampaign?.id, "second")
     }
 
     // MARK: - 웹뷰 로딩 중 적재(pending) 경로
@@ -413,6 +429,7 @@ class InAppFallthroughTests: XCTestCase {
 
         runFallthrough([campaign("first", html: "<div>1</div>")])
         XCTAssertEqual(service.pendingCampaign?.id, "first")
+        service.presentedClaim = service.displayClaim
 
         service.onDismissed()
         XCTAssertFalse(service.isModalShown)

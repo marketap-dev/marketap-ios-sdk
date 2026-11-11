@@ -70,6 +70,9 @@ public protocol MarketapEventClientProtocol {
     /// - Parameter eventProperties: Additional properties related to the page view event (optional).
     func trackPageView(eventProperties: [String: Any]?)
 
+    /// Signals that the visible app screen changed. Not sent to the server.
+    func screenChanged()
+
     // MARK: - User Profile Management
 
     /// Identifies or updates a user's profile information.
@@ -87,7 +90,7 @@ public protocol MarketapEventClientProtocol {
     // MARK: - Internal Methods (WebBridge)
 
     /// Tracks an event from the web bridge context.
-    /// In-app campaigns will be delegated to web for display.
+    /// In-app messages it triggers are drawn by the app.
     /// - Parameters:
     ///   - eventName: The name of the event to track.
     ///   - eventProperties: Additional properties related to the event (optional).
@@ -96,4 +99,8 @@ public protocol MarketapEventClientProtocol {
     /// Updates user properties without requiring a user ID.
     /// - Parameter userProperties: A dictionary containing properties to update.
     func setUserProperties(userProperties: [String: Any])
+}
+
+public extension MarketapEventClientProtocol {
+    func screenChanged() {}
 }

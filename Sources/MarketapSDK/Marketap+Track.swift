@@ -71,6 +71,12 @@ extension Marketap {
         client?.trackPageView(eventProperties: eventProperties)
     }
 
+    /// 앱 화면이 바뀔 때마다 호출합니다. 탭 전환, 전체 화면·모달을 닫고 돌아올 때도 포함합니다.
+    /// 서버로 이벤트를 보내지 않으며, "이 페이지에서만" 플로팅과 팝업을 닫는 데 씁니다.
+    @objc public static func screenChanged() {
+        client?.screenChanged()
+    }
+
     /// 유저의 프로필을 업데이트합니다.
     /// - Parameters:
     ///   - userId: 유저의 고유 식별자 (ID)

@@ -67,10 +67,10 @@ extension MarketapCore: EventServiceDelegate {
         inAppMessageService.recordHidden(campaignId: campaignId, until: until)
     }
 
-    func onEvent(eventRequest: IngestEventRequest, device: Device, fromWebBridge: Bool) {
+    func onEvent(eventRequest: IngestEventRequest, device: Device, origin: InAppWebOrigin?) {
         queue.async {
             if !["mkt_delivery_message", "mkt_click_message"].contains(eventRequest.name) {
-                self.inAppMessageService.onEvent(eventRequest: eventRequest, fromWebBridge: fromWebBridge)
+                self.inAppMessageService.onEvent(eventRequest: eventRequest, origin: origin)
             }
         }
     }
