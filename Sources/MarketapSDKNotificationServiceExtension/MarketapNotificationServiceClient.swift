@@ -9,7 +9,7 @@ import UserNotifications
 import Foundation
 
 class MarketapNotificationServiceClient: MarketapNotificationServiceClientProtocol {
-    static let nativeSdkVersion = "1.5.1-beta.1"
+    static let nativeSdkVersion = "1.6.0"
 
     struct MarketapNotification {
         let userId: String?
