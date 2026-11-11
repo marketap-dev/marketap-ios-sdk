@@ -61,6 +61,7 @@ jobs:
             exit 0
           fi
           for spec in MarketapSDK MarketapSDKNotificationServiceExtension; do
-            curl -fsS -o /dev/null "https://trunk.cocoapods.org/api/v1/pods/$spec/versions/$VERSION" ||
-              pod trunk push "$spec.podspec" --allow-warnings
+            URL="https://trunk.cocoapods.org/api/v1/pods/$spec/versions/$VERSION"
+            curl -fsS -o /dev/null "$URL" && continue
+            pod trunk push "$spec.podspec" --allow-warnings || curl -fsS -o /dev/null "$(curl -fsS "$URL" | jq -r .data_url)"
           done
