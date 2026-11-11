@@ -19,8 +19,11 @@ private let inAppMaxFallthroughFetches = 5
 private let inAppFallthroughBudgetSeconds: TimeInterval = 2
 
 /// present 가 실제로 올라갔는지 확인하기까지 기다리는 시간(초). UIKit 은 present 를 조용히
-/// 거절할 수 있어서, 이 시간 뒤에도 안 올라가 있으면 선점을 되돌린다.
+/// 거절할 수 있어서, 이 시간 뒤에도 안 올라가 있으면 다시 올리거나 선점을 되돌린다.
 private let inAppPresentationRefusalCheckSeconds: TimeInterval = 0.5
+
+/// present 가 거절됐을 때 다시 올려 보는 횟수. 닫히는 중인 화면 위에 올리려다 거절된 경우를 살린다.
+private let inAppPresentationRetryCount = 1
 
 /// 다른 화면에 덮인 팝업을 닫으려고 위 화면이 내려갔는지 다시 확인하는 간격(초).
 private let inAppPopupUncoverCheckSeconds: TimeInterval = 0.3
@@ -333,31 +336,45 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
             self.displayLock.unlock()
             self.campaignViewController.campaign = campaign
             self.campaignViewController.view.isHidden = false
-            guard let topViewController = self.getTopViewController() else {
-                MarketapLogger.warn("failed to find topViewController: \(campaign.id)")
-                self.releasePresentedDisplay(ifClaim: claim)
+            self.attemptPresent(campaign: campaign, claim: claim, retriesLeft: inAppPresentationRetryCount)
+        }
+    }
+
+    /// 맨 위 화면에 팝업을 올리고, 거절되면 `retriesLeft` 만큼 맨 위 화면을 다시 골라 올린다.
+    /// 메인 스레드에서, 이 번호로 `beginPresenting` 을 통과한 뒤에만 부른다.
+    private func attemptPresent(campaign: InAppCampaign, claim: Int, retriesLeft: Int) {
+        guard let topViewController = getTopViewController() else {
+            MarketapLogger.warn("failed to find topViewController: \(campaign.id)")
+            if releasePresentedDisplay(ifClaim: claim) {
+                floatingPresenter.setSuspended(false)
+            }
+            return
+        }
+
+        MarketapLogger.verbose("presenting campaign: \(campaign.id)")
+        floatingPresenter.setSuspended(true)
+        topViewController.present(campaignViewController, animated: false) {
+            MarketapLogger.verbose("presented campaign: \(campaign.id)")
+            self.markPopupShown(claim: claim)
+            // 화면에 실제로 올라간 뒤에 기록한다. present 가 거절되면 이 블록은 안 불리고,
+            // 그러면 빈도수도 소진되지 않아야 한다(안 본 캠페인이 막히면 안 된다).
+            self.logImpression(campaignId: campaign.id)
+        }
+
+        // UIKit 은 present 를 조용히 거절할 수 있다(이미 present 중, 전환 중, 뷰가 아직
+        // 윈도우에 없음). 그때는 completion 도 viewDidDisappear 도 안 불려서, 선점이
+        // 영구히 남고 이후 인앱이 하나도 안 뜬다. 실제로 올라갔는지 확인해 다시 올리거나 되돌린다.
+        DispatchQueue.main.asyncAfter(deadline: .now() + inAppPresentationRefusalCheckSeconds) {
+            guard self.campaignViewController.presentingViewController == nil,
+                  self.isPresented(claim: claim) else { return }
+            if retriesLeft > 0 {
+                MarketapLogger.verbose("presentation was refused, retrying: \(campaign.id)")
+                self.attemptPresent(campaign: campaign, claim: claim, retriesLeft: retriesLeft - 1)
                 return
             }
-
-            MarketapLogger.verbose("presenting campaign: \(campaign.id)")
-            self.floatingPresenter.setSuspended(true)
-            topViewController.present(self.campaignViewController, animated: false) {
-                MarketapLogger.verbose("presented campaign: \(campaign.id)")
-                self.markPopupShown(claim: claim)
-                // 화면에 실제로 올라간 뒤에 기록한다. present 가 거절되면 이 블록은 안 불리고,
-                // 그러면 빈도수도 소진되지 않아야 한다(안 본 캠페인이 막히면 안 된다).
-                self.logImpression(campaignId: campaign.id)
-            }
-
-            // UIKit 은 present 를 조용히 거절할 수 있다(이미 present 중, 전환 중, 뷰가 아직
-            // 윈도우에 없음). 그때는 completion 도 viewDidDisappear 도 안 불려서, 선점이
-            // 영구히 남고 이후 인앱이 하나도 안 뜬다. 실제로 올라갔는지 확인해 되돌린다.
-            DispatchQueue.main.asyncAfter(deadline: .now() + inAppPresentationRefusalCheckSeconds) {
-                guard self.campaignViewController.presentingViewController == nil,
-                      self.releasePresentedDisplay(ifClaim: claim) else { return }
-                MarketapLogger.warn("presentation was refused: \(campaign.id)")
-                self.floatingPresenter.setSuspended(false)
-            }
+            guard self.releasePresentedDisplay(ifClaim: claim) else { return }
+            MarketapLogger.warn("presentation was refused: \(campaign.id)")
+            self.floatingPresenter.setSuspended(false)
         }
     }
 
