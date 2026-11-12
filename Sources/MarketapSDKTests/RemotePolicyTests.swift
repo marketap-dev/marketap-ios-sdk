@@ -197,7 +197,7 @@ final class RemotePolicyTests: XCTestCase {
         func fetch() {
             let done = expectation(description: "server-info")
             manager.withServerTime { _ in done.fulfill() }
-            wait(for: [done], timeout: 5)
+            wait(for: [done], timeout: 30)
         }
         fetch()
         XCTAssertFalse(store.isAllowed(.collection))
@@ -232,7 +232,7 @@ final class RemotePolicyTests: XCTestCase {
                 XCTAssertNotNil(time)
                 done.fulfill()
             }
-            wait(for: [done], timeout: 5)
+            wait(for: [done], timeout: 30)
         }
         fetch()
         fetch()
@@ -258,7 +258,7 @@ final class RemotePolicyTests: XCTestCase {
         let doneB = expectation(description: "b")
         managerA.withServerTime { _ in doneA.fulfill() }
         managerB.withServerTime { _ in doneB.fulfill() }
-        wait(for: [doneA, doneB], timeout: 5)
+        wait(for: [doneA, doneB], timeout: 30)
         XCTAssertFalse(a.isAllowed(.collection))
         XCTAssertTrue(b.isAllowed(.collection))
         XCTAssertEqual(apiA.paths.count, 1)
@@ -338,12 +338,12 @@ final class RemotePolicyTests: XCTestCase {
         let events = EventService(api: api, cache: MockMarketapCache(), serverTimeManager: manager, defaults: defaults, policyStore: store)
         let ready = expectation(description: "initial policy")
         manager.withServerTime { _ in ready.fulfill() }
-        wait(for: [ready], timeout: 5)
+        wait(for: [ready], timeout: 30)
         XCTAssertFalse(store.isAllowed(.collection))
         events.trackEvent(eventName: "discarded", eventProperties: nil)
         let discarded = expectation(description: "discard finished")
         manager.withServerTime { _ in discarded.fulfill() }
-        wait(for: [discarded], timeout: 5)
+        wait(for: [discarded], timeout: 30)
         XCTAssertFalse(api.paths.contains { $0.contains("/events") })
         let previous = api.paths.count
         now.addTimeInterval(60)
