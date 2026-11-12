@@ -60,15 +60,16 @@ jobs:
             echo "::warning::CocoaPods trunk 가 2026-12-02 부터 읽기 전용이라 SPM tag 로만 배포합니다"
             exit 0
           fi
+          on_trunk() {
+            DATA=$(curl -fsS -m 30 "https://trunk.cocoapods.org/api/v1/pods/$1/versions/$VERSION" 2>/dev/null | jq -r '.data_url // empty') &&
+              [ -n "$DATA" ] && curl -fsS -m 30 -o /dev/null "$DATA"
+          }
           for spec in MarketapSDK MarketapSDKNotificationServiceExtension; do
-            URL="https://trunk.cocoapods.org/api/v1/pods/$spec/versions/$VERSION"
-            curl -fsS -o /dev/null "$URL" && continue
-            if ! pod trunk push "$spec.podspec" --allow-warnings; then
-              for _ in $(seq 60); do
-                DATA=$(curl -fsS "$URL" 2>/dev/null | jq -r '.data_url // empty') && [ -n "$DATA" ] && curl -fsS -o /dev/null "$DATA" && continue 2
-                sleep 10
-              done
-              echo "::error::$spec $VERSION 이 10분 안에 CocoaPods 에 보이지 않습니다"
-              exit 1
-            fi
+            on_trunk "$spec" && continue
+            for attempt in 1 2 3; do
+              pod trunk push "$spec.podspec" --allow-warnings && break
+              sleep $((attempt * 60))
+              on_trunk "$spec" && break
+              [ "$attempt" -lt 3 ] || { echo "::error::$spec $VERSION 을 3번 push 했지만 CocoaPods 에 없습니다"; exit 1; }
+            done
           done
