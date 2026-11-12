@@ -63,5 +63,12 @@ jobs:
           for spec in MarketapSDK MarketapSDKNotificationServiceExtension; do
             URL="https://trunk.cocoapods.org/api/v1/pods/$spec/versions/$VERSION"
             curl -fsS -o /dev/null "$URL" && continue
-            pod trunk push "$spec.podspec" --allow-warnings || curl -fsS -o /dev/null "$(curl -fsS "$URL" | jq -r .data_url)"
+            if ! pod trunk push "$spec.podspec" --allow-warnings; then
+              for _ in $(seq 60); do
+                DATA=$(curl -fsS "$URL" 2>/dev/null | jq -r '.data_url // empty') && [ -n "$DATA" ] && curl -fsS -o /dev/null "$DATA" && continue 2
+                sleep 10
+              done
+              echo "::error::$spec $VERSION 이 10분 안에 CocoaPods 에 보이지 않습니다"
+              exit 1
+            fi
           done
