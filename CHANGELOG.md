@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.6.1-beta.2 (2026-11-12)
+
+배포 경로 점검용 베타 (trunk 반영 대기 확인)
+
+## What's Changed
+* release: 1.6.1-beta.1 by @marketap-sdk-release[bot] in https://github.com/marketap-dev/marketap-ios-sdk/pull/31
+* fix: CocoaPods trunk 타임아웃 후 반영 대기 by @jiwon-marketap in https://github.com/marketap-dev/marketap-ios-sdk/pull/32
+
+
+**Full Changelog**: https://github.com/marketap-dev/marketap-ios-sdk/compare/1.6.1-beta.1...1.6.1-beta.2
+
+
 ## 1.6.1-beta.1 (2026-11-12)
 
 배포 경로 점검용 베타
