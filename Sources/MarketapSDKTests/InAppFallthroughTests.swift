@@ -500,7 +500,7 @@ class InAppFallthroughTests: XCTestCase {
     func testFetchBudgetCapsAtFive() {
         // 7개 후보가 전부 빈 응답 → 요청 증폭을 막는 상한(5)에서 멈춘다.
         let candidates = (1...7).map { campaign("c\($0)") }
-        runFallthrough(candidates)
+        runFallthrough(candidates, budgetSeconds: 30)
 
         XCTAssertEqual(api.fetchedCampaignIds.count, 5)
         XCTAssertEqual(api.fetchedCampaignIds, ["c1", "c2", "c3", "c4", "c5"])
