@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.6.1-beta.1 (2026-11-12)
+
+배포 경로 점검용 베타
+
+## What's Changed
+* release: 1.6.0 by @marketap-sdk-release[bot] in https://github.com/marketap-dev/marketap-ios-sdk/pull/29
+* [NT-1046] 느린 CI 에서 흔들리던 테스트 2개 수정 by @jiwon-marketap in https://github.com/marketap-dev/marketap-ios-sdk/pull/30
+
+
+**Full Changelog**: https://github.com/marketap-dev/marketap-ios-sdk/compare/1.6.0...1.6.1-beta.1
+
+
 ## 1.6.0 (2026-11-12)
 
 ## What's Changed
