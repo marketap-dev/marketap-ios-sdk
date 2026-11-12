@@ -142,6 +142,12 @@ final class InAppMessageService: NSObject, InAppMessageServiceProtocol {
 
     var floatingPresenter: FloatingPresenter = .shared
 
+    /// 화면에 떠 있는 팝업. 메인 스레드 전용.
+    var popupPresentation: InAppPopupPresentation?
+
+    /// 팝업을 띄울 앱 창·scene·팝업 창을 고른다. 없으면 팝업을 띄우지 않는다.
+    var makePopupTarget: () -> InAppPopupPresentation.Target? = InAppPopupPresentation.sceneTarget
+
     var clickRoutingSettings: () -> (customized: Bool, useWebClickRouting: Bool) = {
         (Marketap.customHandlerStore.customized, ServerTimeManager.useWebClickRouting)
     }
@@ -158,8 +164,8 @@ final class InAppMessageService: NSObject, InAppMessageServiceProtocol {
     /// 화면에 올린 팝업의 표시 권리 번호. 올린 적이 없거나 내려갔으면 nil. `displayLock` 으로 지킨다.
     var presentedClaim: Int?
 
-    /// 화면에 올린 팝업의 캠페인 ID. `displayLock` 으로 지킨다.
-    var presentedCampaignId: String?
+    /// `shutdown()` 이 불린 뒤면 true. 새 표시 권리를 내주지 않는다. `displayLock` 으로 지킨다.
+    var isShutDown = false
 
     var monotonicNow: () -> TimeInterval = { ProcessInfo.processInfo.systemUptime }
 

@@ -125,23 +125,4 @@ final class FloatingPresenterTests: XCTestCase {
         XCTAssertEqual(recorder.closeReasons, [.hidden(until: 0)])
         XCTAssertNotNil(show())
     }
-
-    func testSuspendHidesWhilePopupIsShownAndKeepsSession() {
-        _ = show()
-        presenter.setSuspended(true)
-        XCTAssertFalse(presenter.isWindowVisible)
-        XCTAssertTrue(presenter.isShowing)
-
-        presenter.setSuspended(false)
-        XCTAssertTrue(presenter.isWindowVisible)
-    }
-
-    func testFloatingShownDuringPopupStaysHiddenUntilResume() {
-        presenter.setSuspended(true)
-        _ = show()
-        XCTAssertFalse(presenter.isWindowVisible)
-
-        presenter.setSuspended(false)
-        XCTAssertTrue(presenter.isWindowVisible)
-    }
 }

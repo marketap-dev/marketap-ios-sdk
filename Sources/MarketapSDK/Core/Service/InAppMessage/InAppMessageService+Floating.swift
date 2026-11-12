@@ -32,7 +32,7 @@ final class FloatingCampaignSession: FloatingSessionDelegate {
     }
 
     func floatingDidClick(locationId: String, url: String?) {
-        service?.onClick(campaign: campaign, locationId: locationId, messageId: messageId, url: url, origin: origin, closingPopup: false)
+        service?.onClick(campaign: campaign, locationId: locationId, messageId: messageId, url: url, origin: origin, closingPopup: nil)
     }
 
     func floatingDidTrack(eventName: String, properties: [String: Any]?) {

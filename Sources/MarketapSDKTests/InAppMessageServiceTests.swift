@@ -6,6 +6,7 @@
 //
 
 import XCTest
+import UIKit
 @testable import MarketapSDK
 
 class MockMarketapAPIForIAM: MarketapAPIProtocol {
@@ -60,6 +61,16 @@ let sharedTestWebViewController: InAppMessageWebViewController = {
     controller.loadViewIfNeeded()
     return controller
 }()
+
+/// scene 없이 화면 크기 창으로 만든 팝업 자리.
+func makeTestPopupTarget() -> InAppPopupPresentation.Target {
+    let bounds = CGRect(x: 0, y: 0, width: 390, height: 844)
+    return InAppPopupPresentation.Target(
+        appWindow: UIWindow(frame: bounds),
+        scene: nil,
+        window: InAppPopupWindow(frame: bounds)
+    )
+}
 
 class InAppMessageServiceTests: XCTestCase {
     var service: InAppMessageService!

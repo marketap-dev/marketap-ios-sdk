@@ -78,6 +78,7 @@ public class Marketap: NSObject {
         let core = MarketapCore(customHandlerStore: self.customHandlerStore, eventService: eventService, inAppMessageService: inAppMessageService)
         eventService.delegate = core
         inAppMessageService.delegate = core
+        (_client as? MarketapCore)?.inAppMessageService.shutdown()
         client = core
         _currentConfig = config
         SdkIntegrationState.isClickHandlerCustomized = customHandlerStore.customized

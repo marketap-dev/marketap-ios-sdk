@@ -92,6 +92,7 @@ class MockInAppMessageService: InAppMessageServiceProtocol {
     func originDidLeavePage(_ originId: ObjectIdentifier) {}
     func originDidDisappear(_ originId: ObjectIdentifier) {}
     func screenChanged(at signalTime: TimeInterval) {}
+    func shutdown() {}
 }
 
 // 예전엔 "0.5초 자고 한 번 단언" + wait(timeout: 1.0) 이었다. 여유가 0.5초뿐이라

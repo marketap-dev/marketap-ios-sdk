@@ -435,7 +435,10 @@ final class InAppWebOriginServiceTests: XCTestCase {
 
     private func popupClick(origin: InAppWebOrigin?) {
         run([makeCampaign("p", slot: .popup)], origin: origin)
-        service.onClick(campaign: makeCampaign("p", slot: .popup), locationId: "loc", messageId: "m", url: "https://shop.example.com/a")
+        service.onClick(
+            campaign: makeCampaign("p", slot: .popup), locationId: "loc", messageId: "m",
+            url: "https://shop.example.com/a", claim: service.displayClaim
+        )
     }
 
     func testREG25_PopupFromWebViewOpensInOrigin() {

@@ -34,14 +34,13 @@ final class FloatingScreenFinderTests: XCTestCase {
         XCTAssertNil(FloatingScreenFinder.topMostViewController(from: nil))
     }
 
-    func testOwnPopupAndAlertsAreTransient() {
-        XCTAssertTrue(FloatingScreenFinder.isTransientPresentation(InAppMessageWebViewController()))
+    func testAlertsAreTransient() {
         XCTAssertTrue(FloatingScreenFinder.isTransientPresentation(UIAlertController(title: nil, message: nil, preferredStyle: .alert)))
         XCTAssertFalse(FloatingScreenFinder.isTransientPresentation(UIViewController()))
         XCTAssertFalse(FloatingScreenFinder.isTransientPresentation(UINavigationController()))
     }
 
-    func testPresentedScreenIsTopButOwnPopupIsSkipped() {
+    func testPresentedScreenIsTop() {
         let window = UIWindow(frame: UIScreen.main.bounds)
         let root = UIViewController()
         window.rootViewController = root
@@ -52,12 +51,8 @@ final class FloatingScreenFinderTests: XCTestCase {
         sheet.modalPresentationStyle = .fullScreen
         root.present(sheet, animated: false)
         XCTAssertTrue(FloatingScreenFinder.topMostViewController(from: root) === sheet)
+        XCTAssertTrue(FloatingScreenFinder.topMostViewController(in: window) === sheet)
 
-        let popup = InAppMessageWebViewController()
-        sheet.present(popup, animated: false)
-        XCTAssertTrue(FloatingScreenFinder.topMostViewController(from: root) === sheet)
-
-        popup.dismiss(animated: false)
         sheet.dismiss(animated: false)
     }
 }

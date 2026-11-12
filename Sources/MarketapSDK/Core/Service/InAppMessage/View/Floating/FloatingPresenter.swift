@@ -7,7 +7,6 @@ final class FloatingPresenter {
     private let makeWindow: (FloatingContainerView) -> FloatingWindow?
     private(set) var session: FloatingSession?
     private var window: FloatingWindow?
-    private var isSuspended = false
 
     init(makeWindow: @escaping (FloatingContainerView) -> FloatingWindow? = FloatingPresenter.makeSceneWindow) {
         self.makeWindow = makeWindow
@@ -34,7 +33,7 @@ final class FloatingPresenter {
             self.window?.isHidden = true
             self.window = nil
         }
-        newWindow.isHidden = isSuspended
+        newWindow.isHidden = false
         session = newSession
         window = newWindow
         newSession.load(campaignHTML: html, timerStartAt: impressionAt)
@@ -44,11 +43,5 @@ final class FloatingPresenter {
 
     func dismiss() {
         session?.close(reason: .dismissed)
-    }
-
-    /// 팝업이 떠 있는 동안 플로팅 창을 숨긴다. 팝업은 앱 창에 present 되므로 숨기지 않으면 바가 팝업을 덮는다.
-    func setSuspended(_ suspended: Bool) {
-        isSuspended = suspended
-        window?.isHidden = suspended
     }
 }
