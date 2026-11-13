@@ -37,6 +37,7 @@ final class EventService: EventServiceProtocol {
     let failedEventsStorage: DataStorageManager<BulkEvent>
     let serverTimeManager: ServerTimeManagerProtocol
     let policyStore: RemotePolicyStore
+    private let sessionUtmStore: SessionUtmStore
 
     init(
         api: MarketapAPIProtocol,
@@ -47,6 +48,7 @@ final class EventService: EventServiceProtocol {
     ) {
         self.api = api
         self.cache = cache
+        self.sessionUtmStore = SessionUtmStore(cache: cache)
         self.defaults = defaults
         let policyStore = policyStore ?? RemotePolicyStore(projectId: cache.projectId, defaults: defaults)
         self.policyStore = policyStore
@@ -142,20 +144,25 @@ final class EventService: EventServiceProtocol {
             cache.sessionId = newSessionId
             MarketapLogger.debug("session start: \(newSessionId)")
 
+            // 세션을 여는 이벤트의 UTM은 세션 시작 이벤트에도 실어야 세션 유입 집계에 잡힌다.
+            var sessionStartProperties: [String: Any] = SessionUtmStore.pickUtm(properties)
+            sessionStartProperties["mkt_session_id"] = newSessionId
+            sessionStartProperties = sessionUtmStore.apply(sessionStartProperties, sessionId: newSessionId)
+            sessionStartProperties["sdk_integration_state"] = sdkIntegrationState
+
             let event = IngestEventRequest(
                 id: UUID().uuidString,
                 name: "mkt_session_start",
                 userId: userId ?? cache.userId,
                 device: device.makeRequest(),
-                properties: [
-                    "mkt_session_id": AnyCodable(newSessionId),
-                    "sdk_integration_state": AnyCodable(sdkIntegrationState)
-                ]
+                properties: sessionStartProperties.toAnyCodable()
             )
             track(request: event)
         }
 
-        properties["mkt_session_id"] = cache.sessionId
+        let sessionId = cache.sessionId
+        properties["mkt_session_id"] = sessionId
+        properties = sessionUtmStore.apply(properties, sessionId: sessionId)
         properties["sdk_integration_state"] = sdkIntegrationState
         let eventTimestamp = timestamp ?? Date()
 
