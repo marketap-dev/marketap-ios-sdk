@@ -8,41 +8,28 @@
 import UIKit
 import WebKit
 
+/// 팝업 콜백의 `claim` 은 그 팝업을 띄울 때 받은 표시 권리 번호다.
 protocol InAppMessageWebViewControllerDelegate: AnyObject, WKNavigationDelegate {
-    func onClick(campaign: InAppCampaign, locationId: String, messageId: String, url: String?)
-    func hideCampaign(campaignId: String, until: TimeInterval)
-    func onImpression(campaign: InAppCampaign, messageId: String)
+    func onClick(campaign: InAppCampaign, locationId: String, messageId: String, url: String?, claim: Int)
+    func hideCampaign(campaignId: String, until: TimeInterval, claim: Int)
     func onTrack(campaign: InAppCampaign, eventName: String, properties: [String: Any]?)
     func onSetUserProperties(properties: [String: Any])
-    /// 모달이 화면에서 내려갔다. JS 의 hide 메시지 말고도 내려가는 경로가 있어서
-    /// (호스트 앱이 상위 VC 를 dismiss, 윈도우 rootViewController 교체 등) 표시 권리를
-    /// 되돌릴 신뢰 가능한 신호가 필요하다.
-    func onDismissed()
 }
 
-final class InAppMessageWebViewController: UIViewController {
-    var campaign: InAppCampaign? {
-        didSet {
-            impressionReported = false
-            if let campaign = campaign, let html = campaign.html {
-                self.updateCampaignContent(campaignHTML: html)
-            }
-        }
-    }
+final class InAppMessageWebViewController: AppFollowingViewController {
+    private(set) var campaign: InAppCampaign?
+    private(set) var documentGate = InAppDocumentGate()
     var webView: WKWebView!
 
+    /// 웹뷰에 마지막으로 올린 팝업 문서의 표시 권리 번호.
+    var claim: Int? { documentGate.loadedClaim }
+
     weak var delegate: InAppMessageWebViewControllerDelegate?
-    private let messageId = UUID().uuidString
-    private var impressionReported = false
-    private var coverWatchToken = 0
+    let messageId = UUID().uuidString
+    private weak var appWindow: UIWindow?
 
-    init() {
-        super.init(nibName: nil, bundle: nil)
-        modalPresentationStyle = .overFullScreen
-    }
-
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
+    override var followedAppScreen: UIViewController? {
+        appWindow.flatMap { FloatingScreenFinder.topMostViewController(in: $0) }
     }
 
     override func viewDidLoad() {
@@ -54,15 +41,24 @@ final class InAppMessageWebViewController: UIViewController {
         view.addSubview(webView)
     }
 
-    func updateCampaignContent(campaignHTML: String) {
-        let keyWindow = UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-            .flatMap { $0.windows }
-            .first { $0.isKeyWindow }
+    /// 표시 권리 `claim` 으로 `appWindow` 위에 띄울 캠페인을 올린다. safe area 는 `appWindow` 에서 읽는다.
+    func load(campaign: InAppCampaign, claim: Int, appWindow: UIWindow) {
+        self.campaign = campaign
+        self.appWindow = appWindow
+        loadViewIfNeeded()
+        guard let html = campaign.html else {
+            documentGate.didStartLoadingNonCampaign()
+            return
+        }
+        let navigation = updateCampaignContent(campaignHTML: html, safeArea: appWindow.safeAreaInsets)
+        documentGate.didStartLoading(claim: claim, navigation: navigation)
+    }
 
-        let topSafeArea = keyWindow?.safeAreaInsets.top ?? 0
-        let bottomSafeArea = keyWindow?.safeAreaInsets.bottom ?? 0
+    func documentDidCommit(_ navigation: WKNavigation?) {
+        documentGate.didCommit(navigation: navigation)
+    }
 
+    private func updateCampaignContent(campaignHTML: String, safeArea: UIEdgeInsets) -> WKNavigation? {
         let eventHandlers = MarketapJSMessage.allCases.map { $0.jsFunctionDefinition }.joined(separator: ",\n  ")
         let htmlContent = """
         <!DOCTYPE html>
@@ -72,8 +68,8 @@ final class InAppMessageWebViewController: UIViewController {
             <script>
                 window._marketap_native = {
                     \(eventHandlers),
-                    topSafeArea: \(topSafeArea),
-                    bottomSafeArea: \(bottomSafeArea)
+                    topSafeArea: \(safeArea.top),
+                    bottomSafeArea: \(safeArea.bottom)
                 };
             </script>
         </head>
@@ -83,41 +79,12 @@ final class InAppMessageWebViewController: UIViewController {
         </html>
         """
 
-        webView.loadHTMLString(htmlContent, baseURL: nil)
+        return webView.loadHTMLString(htmlContent, baseURL: nil)
     }
 
-
-    override func viewDidDisappear(_ animated: Bool) {
-        super.viewDidDisappear(animated)
-        coverWatchToken += 1
-        // 앱이 팝업 위에 다른 화면을 올리면 가려질 뿐 팝업은 남아 있다. 내려간 경우에만 닫힘으로 본다.
-        guard presentedViewController == nil else {
-            watchWhileCovered(token: coverWatchToken)
-            return
-        }
-        delegate?.onDismissed()
-    }
-
-    /// 가려진 채로 앱이 팝업까지 함께 내리면 닫힘 신호가 안 올 수 있어, 내려갔는지 확인한다.
-    private func watchWhileCovered(token: Int) {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
-            guard let self, self.coverWatchToken == token else { return }
-            guard self.presentingViewController == nil else {
-                self.watchWhileCovered(token: token)
-                return
-            }
-            self.coverWatchToken += 1
-            self.delegate?.onDismissed()
-        }
-    }
-
-    override func viewDidAppear(_ animated: Bool) {
-        super.viewDidAppear(animated)
-        coverWatchToken += 1
-        if let campaign = campaign, !impressionReported {
-            impressionReported = true
-            delegate?.onImpression(campaign: campaign, messageId: messageId)
-        }
+    func blank() {
+        documentGate.didStartLoadingNonCampaign()
+        webView?.load(URLRequest(url: URL(string: "about:blank")!))
     }
 
     /// 캠페인 html 이 붙기 전에 올려두는 빈 껍데기.
@@ -135,6 +102,7 @@ final class InAppMessageWebViewController: UIViewController {
     /// 껍데기를 다시 올린다. 콘텐츠 프로세스가 죽은 뒤 웹뷰를 되살리는 용도
     /// (loadHTMLString 이 프로세스를 다시 띄운다).
     func reloadShell() {
+        documentGate.didStartLoadingNonCampaign()
         guard let webView = webView else { return }
         webView.loadHTMLString(Self.shellHTML, baseURL: nil)
     }
@@ -182,39 +150,40 @@ extension InAppMessageWebViewController: WKScriptMessageHandler {
     }
 
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
-        MarketapLogger.verbose("receive message: \(campaign?.id ?? "null"), name: \(message.name), body: \(message.body)")
-        guard let campaign = campaign, let jsEvent = MarketapJSMessage(rawValue: message.name) else {
+        handleScriptMessage(name: message.name, body: message.body)
+    }
+
+    /// 커밋된 팝업 문서가 없으면 메시지를 버린다.
+    func handleScriptMessage(name: String, body: Any) {
+        MarketapLogger.verbose("receive message: \(campaign?.id ?? "null"), name: \(name), body: \(body)")
+        guard let claim = documentGate.committedClaim else {
+            MarketapLogger.verbose("dropping message from a document that is not the current popup's: \(name)")
+            return
+        }
+        guard let campaign = campaign, let jsEvent = MarketapJSMessage(rawValue: name) else {
             return
         }
 
         switch jsEvent {
         case .click:
-            if let body = message.body as? [String], let locationId = body.first {
-                delegate?.onClick(campaign: campaign, locationId: locationId, messageId: messageId, url: body.last)
+            if let body = body as? [String], let locationId = body.first {
+                delegate?.onClick(campaign: campaign, locationId: locationId, messageId: messageId, url: body.last, claim: claim)
             }
         case .hide:
             let hideUntil: TimeInterval
-            if let body = message.body as? [String],
+            if let body = body as? [String],
                let hideTypeString = body.first,
                let hideType = CampaignHideType(rawValue: hideTypeString) {
                 hideUntil = hideType.hideDuration
             } else {
                 hideUntil = 0
             }
-            let finish = { [weak self] in
-                self?.webView.load(URLRequest(url: URL(string: "about:blank")!))
-                self?.delegate?.hideCampaign(campaignId: campaign.id, until: hideUntil)
-            }
-            if presentingViewController == nil {
-                finish()
-            } else {
-                dismiss(animated: false, completion: finish)
-            }
+            delegate?.hideCampaign(campaignId: campaign.id, until: hideUntil, claim: claim)
         case .track:
-            guard let body = message.body as? [Any],
+            guard let body = body as? [Any],
                   let eventName = body.first as? String
             else {
-                MarketapLogger.error("Invalid track message body: \(message.body)")
+                MarketapLogger.error("Invalid track message body: \(body)")
                 return
             }
             var properties: [String: Any]?
@@ -229,7 +198,7 @@ extension InAppMessageWebViewController: WKScriptMessageHandler {
             
             delegate?.onTrack(campaign: campaign,eventName: eventName, properties: properties)
         case .setUserProperties:
-            if let body = message.body as? [String],
+            if let body = body as? [String],
                let propertiesJson = body.first {
                 do {
                     let properties = try parseJSON(propertiesJson)
@@ -238,7 +207,7 @@ extension InAppMessageWebViewController: WKScriptMessageHandler {
                     MarketapLogger.error("Error parsing user properties JSON: \(propertiesJson)")
                 }
             } else {
-                MarketapLogger.warn("Invalid setUserProperties message body: \(message.body)")
+                MarketapLogger.warn("Invalid setUserProperties message body: \(body)")
             }
         }
     }

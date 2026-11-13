@@ -23,6 +23,8 @@ protocol InAppMessageServiceProtocol {
     func originDidDisappear(_ originId: ObjectIdentifier)
     /// 앱 화면이 바뀌었다. `signalTime` 은 앱이 신호를 보낸 시각(`ProcessInfo.systemUptime`).
     func screenChanged(at signalTime: TimeInterval)
+    /// 서비스를 버리기 전에 화면에 떠 있는 팝업을 내린다.
+    func shutdown()
 }
 
 extension InAppMessageServiceProtocol {

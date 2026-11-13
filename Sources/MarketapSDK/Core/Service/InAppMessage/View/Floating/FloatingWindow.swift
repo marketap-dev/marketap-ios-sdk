@@ -39,22 +39,12 @@ final class FloatingWindow: UIWindow {
     }
 }
 
-/// 상태 바·회전 설정은 앱의 최상위 화면을 따른다.
-private final class FloatingRootViewController: UIViewController {
-    private var appTop: UIViewController? {
-        let top = FloatingScreenFinder.topMostViewController()
-        return top === self ? nil : top
-    }
+private final class FloatingRootViewController: AppFollowingViewController {
+    override var followedAppScreen: UIViewController? { FloatingScreenFinder.topMostViewController() }
 
     override func loadView() {
         let view = UIView()
         view.backgroundColor = .clear
         self.view = view
-    }
-
-    override var preferredStatusBarStyle: UIStatusBarStyle { appTop?.preferredStatusBarStyle ?? .default }
-    override var prefersStatusBarHidden: Bool { appTop?.prefersStatusBarHidden ?? false }
-    override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
-        appTop?.supportedInterfaceOrientations ?? .all
     }
 }
