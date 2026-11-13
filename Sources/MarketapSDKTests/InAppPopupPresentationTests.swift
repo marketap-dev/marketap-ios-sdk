@@ -574,10 +574,11 @@ final class InAppPopupServiceTests: XCTestCase {
         showPopup()
         let service = self.service!
         let called = expectation(description: "shutdown called")
-        DispatchQueue.global().async {
+        // global 큐는 다른 테스트가 막아 둔 스레드 때문에 코어가 적은 CI 에서 차례를 못 받을 수 있다.
+        Thread {
             service.shutdown()
             called.fulfill()
-        }
+        }.start()
         wait(for: [called], timeout: 5)
         drainMain()
 
