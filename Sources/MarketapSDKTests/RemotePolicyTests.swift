@@ -458,7 +458,7 @@ final class RemotePolicyTests: XCTestCase {
         XCTAssertTrue(api.paths.isEmpty)
         store.received(payload("{\"version\":1,\"revision\":2}"))
         service.fetchCampaigns(force: true)
-        XCTAssertEqual(api.paths, ["/api/v2/campaigns"])
+        XCTAssertEqual(api.paths, ["/api/v3/campaigns"])
     }
 
     func test_NSE는_저장된_정책만_읽고_만료되면_추적을_허용한다() {

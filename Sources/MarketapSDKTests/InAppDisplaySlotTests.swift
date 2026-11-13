@@ -9,7 +9,7 @@ private final class SlotAPI: MarketapAPIProtocol {
 
     var fetchedCampaignIds: [String] {
         lock.lock(); defer { lock.unlock() }
-        return paths.compactMap { $0.hasPrefix("/api/v2/campaigns/") ? $0.components(separatedBy: "/").last : nil }
+        return paths.compactMap { $0.hasPrefix("/api/v3/campaigns/") ? $0.components(separatedBy: "/").last : nil }
     }
 
     func get<T: Decodable>(
