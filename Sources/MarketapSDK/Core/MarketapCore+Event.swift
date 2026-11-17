@@ -61,6 +61,13 @@ extension MarketapCore {
         }
     }
 
+    func setUtm(_ utm: [String: String]) {
+        queue.async {
+            MarketapLogger.debug("setUtm: \(utm)")
+            self.eventService.setPendingUtm(utm)
+        }
+    }
+
     func trackFromWebBridge(eventName: String, eventProperties: [String : Any]?) {
         trackFromWebBridge(eventName: eventName, eventProperties: eventProperties, origin: MarketapWebBridge.consumeExternalOrigin())
     }

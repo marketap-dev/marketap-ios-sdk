@@ -17,9 +17,12 @@ protocol EventServiceProtocol {
     func flushUser()
     func trackEvent(eventName: String, eventProperties: [String: Any]?, userId: String?, id: String?, timestamp: Date?, origin: InAppWebOrigin?)
     func updateDevice(pushToken: String?, optIn: Bool?, removeUserId: Bool, clearOptIn: Bool)
+    func setPendingUtm(_ utm: [String: String])
 }
 
 extension EventServiceProtocol {
+    func setPendingUtm(_ utm: [String: String]) {}
+
     func trackEvent(eventName: String, eventProperties: [String: Any]?, userId: String? = nil) {
         trackEvent(eventName: eventName, eventProperties: eventProperties, userId: userId, id: nil, timestamp: nil, origin: nil)
     }

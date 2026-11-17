@@ -71,6 +71,43 @@ extension Marketap {
         client?.trackPageView(eventProperties: eventProperties)
     }
 
+    /// 광고·메시지 링크의 UTM을 세션 UTM(`mkt_session_utm_*`)으로 넘깁니다. 링크를 받는 곳에서 호출합니다.
+    /// 이벤트를 보내지 않고, 다음 이벤트부터 같은 세션의 이벤트에 붙습니다. 30분 안에 이벤트가 없으면 버립니다.
+    /// SDK 초기화 전에 호출해도 됩니다.
+    /// - Parameter url: `utm_source`, `utm_medium`, `utm_campaign`, `utm_term`, `utm_content` 쿼리 파라미터가 있는 링크
+    @objc public static func setUtm(fromUrl url: String) {
+        setUtmValues(SessionUtmStore.utm(fromUrl: url))
+    }
+
+    /// UTM 값을 세션 UTM(`mkt_session_utm_*`)으로 넘깁니다. MMP(AppsFlyer 등) 콜백처럼 링크 없이 값만 받을 때 씁니다.
+    /// 동작은 `setUtm(fromUrl:)` 과 같습니다. 빈 값과 nil 은 없는 것으로 봅니다.
+    @objc public static func setUtm(source: String?, medium: String? = nil, campaign: String? = nil, term: String? = nil, content: String? = nil) {
+        var utm: [String: String] = [:]
+        for (key, value) in zip(SessionUtmStore.utmKeys, [source, medium, campaign, term, content]) {
+            if let value = value, !value.isEmpty { utm[key] = value }
+        }
+        setUtmValues(utm)
+    }
+
+    private static let utmLock = NSLock()
+    private static var utmBeforeInit: [String: String]?
+
+    private static func setUtmValues(_ utm: [String: String]) {
+        guard !utm.isEmpty else { return }
+        if let core = _client as? MarketapCore {
+            core.setUtm(utm)
+        } else {
+            utmLock.lock(); utmBeforeInit = utm; utmLock.unlock()
+        }
+    }
+
+    static func takeUtmBeforeInit() -> [String: String]? {
+        utmLock.lock(); defer { utmLock.unlock() }
+        let utm = utmBeforeInit
+        utmBeforeInit = nil
+        return utm
+    }
+
     /// 앱 화면이 바뀔 때마다 호출합니다. 탭 전환, 전체 화면·모달을 닫고 돌아올 때도 포함합니다.
     /// 서버로 이벤트를 보내지 않으며, "이 페이지에서만" 플로팅과 팝업을 닫는 데 씁니다.
     @objc public static func screenChanged() {
