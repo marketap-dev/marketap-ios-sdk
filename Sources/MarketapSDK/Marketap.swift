@@ -74,6 +74,9 @@ public class Marketap: NSObject {
         let policyStore = RemotePolicyStore(projectId: config.projectId, sdkType: config.sdkType)
         let serverTimeManager = ServerTimeManager(api: api, projectId: config.projectId, policyStore: policyStore)
         let eventService = EventService(api: api, cache: cache, serverTimeManager: serverTimeManager, policyStore: policyStore)
+        if let utm = takeUtmBeforeInit() {
+            eventService.setPendingUtm(utm)
+        }
         let inAppMessageService = InAppMessageService(customHandlerStore: self.customHandlerStore, api: api, cache: cache, policyStore: policyStore)
         let core = MarketapCore(customHandlerStore: self.customHandlerStore, eventService: eventService, inAppMessageService: inAppMessageService)
         eventService.delegate = core

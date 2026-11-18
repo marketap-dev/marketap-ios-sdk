@@ -37,6 +37,7 @@ final class EventService: EventServiceProtocol {
     let failedEventsStorage: DataStorageManager<BulkEvent>
     let serverTimeManager: ServerTimeManagerProtocol
     let policyStore: RemotePolicyStore
+    private let sessionUtmStore: SessionUtmStore
 
     init(
         api: MarketapAPIProtocol,
@@ -50,6 +51,7 @@ final class EventService: EventServiceProtocol {
         self.defaults = defaults
         let policyStore = policyStore ?? RemotePolicyStore(projectId: cache.projectId, defaults: defaults)
         self.policyStore = policyStore
+        self.sessionUtmStore = SessionUtmStore(cache: cache, isEnabled: { policyStore.isAllowed(.sessionUtm) })
         self.serverTimeManager = serverTimeManager ?? ServerTimeManager(api: api, projectId: cache.projectId, policyStore: policyStore)
 
         self.failedEventsStorage = DataStorageManager<BulkEvent>(
@@ -121,6 +123,10 @@ final class EventService: EventServiceProtocol {
         }
     }
 
+    func setPendingUtm(_ utm: [String: String]) {
+        sessionUtmStore.setPending(utm)
+    }
+
     func trackEvent(
         eventName: String,
         eventProperties: [String: Any]?,
@@ -142,20 +148,24 @@ final class EventService: EventServiceProtocol {
             cache.sessionId = newSessionId
             MarketapLogger.debug("session start: \(newSessionId)")
 
+            // 세션을 여는 이벤트의 UTM은 세션 시작 이벤트에도 세션 UTM으로 실어야 세션 단위 조건에 잡힌다.
+            var sessionStartProperties: [String: Any] = sessionUtmStore.openingSessionUtm(properties)
+            sessionStartProperties["mkt_session_id"] = newSessionId
+            sessionStartProperties["sdk_integration_state"] = sdkIntegrationState
+
             let event = IngestEventRequest(
                 id: UUID().uuidString,
                 name: "mkt_session_start",
                 userId: userId ?? cache.userId,
                 device: device.makeRequest(),
-                properties: [
-                    "mkt_session_id": AnyCodable(newSessionId),
-                    "sdk_integration_state": AnyCodable(sdkIntegrationState)
-                ]
+                properties: sessionStartProperties.toAnyCodable()
             )
             track(request: event)
         }
 
-        properties["mkt_session_id"] = cache.sessionId
+        let sessionId = cache.sessionId
+        properties["mkt_session_id"] = sessionId
+        properties = sessionUtmStore.apply(properties, sessionId: sessionId)
         properties["sdk_integration_state"] = sdkIntegrationState
         let eventTimestamp = timestamp ?? Date()
 

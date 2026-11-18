@@ -2,7 +2,7 @@ import Foundation
 
 final class RemotePolicyStore {
     enum Block: String, CaseIterable {
-        case collection, inApp, pushTracking
+        case collection, inApp, pushTracking, sessionUtm
     }
 
     struct Rule: Codable {
@@ -32,12 +32,14 @@ final class RemotePolicyStore {
         let pushTracking: Rule?
         var sdkVersion: String? = nil
         var sdkType: String? = nil
+        var sessionUtm: Rule? = nil
 
         func rule(_ block: Block) -> Rule? {
             switch block {
             case .collection: return collection
             case .inApp: return inApp
             case .pushTracking: return pushTracking
+            case .sessionUtm: return sessionUtm
             }
         }
     }
@@ -128,7 +130,7 @@ final class RemotePolicyStore {
         }
         let policy = Policy(revision: revision, refreshAfterSec: refresh,
                             collection: rule(.collection), inApp: rule(.inApp), pushTracking: rule(.pushTracking),
-                            sdkVersion: sdkVersion, sdkType: sdkType)
+                            sdkVersion: sdkVersion, sdkType: sdkType, sessionUtm: rule(.sessionUtm))
         stored = policy
         if let data = try? JSONEncoder().encode(policy) { defaults.set(data, forKey: Self.keyPrefix + projectId) }
         updateTransitions()
