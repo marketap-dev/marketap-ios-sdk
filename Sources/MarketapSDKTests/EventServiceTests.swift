@@ -86,12 +86,14 @@ private class MockMarketapAPI: MarketapAPIProtocol {
 
 class MockEventServiceDelegate: EventServiceDelegate {
     var handleUserIdChangedCalled = false
+    var lastFromAnonymous: Bool?
     var lastEventRequest: IngestEventRequest?
     var lastDevice: Device?
     private let queue = DispatchQueue(label: "com.marketap.core")
 
-    func handleUserIdChanged() {
+    func handleUserIdChanged(fromAnonymous: Bool) {
         handleUserIdChangedCalled = true
+        lastFromAnonymous = fromAnonymous
     }
 
     func onEvent(eventRequest: IngestEventRequest, device: Device, origin: InAppWebOrigin?) {
@@ -183,6 +185,18 @@ class EventServiceTests: XCTestCase {
 
         XCTAssertEqual(self.mockAPI.lastRequestPath, "/v1/client/events/bulk?project_id=mock_project")
         XCTAssertEqual(self.mockAPI.lastBulkEvents?.count, 5, "벌크 이벤트가 정상적으로 전송되지 않음")
+    }
+
+    func testIdentifyReportsWhetherPreviousUserWasAnonymous() {
+        mockCache.saveUserId(nil)
+        eventService.identify(userId: "u1", userProperties: nil)
+        XCTAssertEqual(mockDelegate.lastFromAnonymous, true)
+
+        eventService.identify(userId: "u2", userProperties: nil)
+        XCTAssertEqual(mockDelegate.lastFromAnonymous, false)
+
+        eventService.flushUser()
+        XCTAssertEqual(mockDelegate.lastFromAnonymous, false)
     }
 
     func testIdentifyFails() {

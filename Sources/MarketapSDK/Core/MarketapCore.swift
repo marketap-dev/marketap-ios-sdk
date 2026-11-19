@@ -14,14 +14,16 @@ final class MarketapCore: MarketapClientProtocol, MarketapNotificationHandlerPro
     private let defaults: UserDefaults
     let eventService: EventServiceProtocol
     let inAppMessageService: InAppMessageServiceProtocol
-    let queue = DispatchQueue(label: "com.marketap.core")
+    let queue: DispatchQueue
 
     init(
         customHandlerStore: MarketapCustomHandlerStoreProtocol,
         eventService: EventServiceProtocol,
         inAppMessageService: InAppMessageServiceProtocol,
-        defaults: UserDefaults = .standard
+        defaults: UserDefaults = .standard,
+        queue: DispatchQueue = DispatchQueue(label: "com.marketap.core")
     ) {
+        self.queue = queue
         self.customHandlerStore = customHandlerStore
         self.inAppMessageService = inAppMessageService
         self.eventService = eventService
@@ -49,12 +51,15 @@ final class MarketapCore: MarketapClientProtocol, MarketapNotificationHandlerPro
 
 
 extension MarketapCore: EventServiceDelegate {
-    func handleUserIdChanged() {
+    func handleUserIdChanged(fromAnonymous: Bool) {
         queue.async {
             // 캠페인 목록만 다시 받으면 안 된다. 이전 신원으로 골라 적재해 둔 후보가
             // 표시 권리를 쥔 채 남아 있으면, 로그인 전 캠페인이 로그인 후에 뜨고
             // 그동안 올바른 후보는 하나도 못 뜬다.
             self.inAppMessageService.discardPendingCampaign()
+            if !fromAnonymous {
+                self.inAppMessageService.discardDelayedState()
+            }
             self.inAppMessageService.fetchCampaigns(force: true)
         }
     }

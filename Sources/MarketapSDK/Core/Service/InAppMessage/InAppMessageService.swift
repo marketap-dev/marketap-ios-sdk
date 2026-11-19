@@ -5,6 +5,7 @@
 //  Created by 이동현 on 2/14/25.
 //
 
+import UIKit
 import WebKit
 
 protocol InAppMessageServiceDelegate: AnyObject {
@@ -89,6 +90,7 @@ final class InAppMessageService: NSObject, InAppMessageServiceProtocol {
     static let campaignCacheKey = "InAppMessageService_campaigns_v3"
     static let lastFetchKey = "InAppMessageService_lastFetch_v3"
     static let checksumKey = "InAppMessageService_checksum_v3"
+    static let globalFrequencyCapsKey = "InAppMessageService_globalFrequencyCaps_v3"
 
     let customHandlerStore: MarketapCustomHandlerStoreProtocol
     private let api: MarketapAPIProtocol
@@ -169,6 +171,24 @@ final class InAppMessageService: NSObject, InAppMessageServiceProtocol {
 
     var monotonicNow: () -> TimeInterval = { ProcessInfo.processInfo.systemUptime }
 
+    /// 팝업 표시 권리에 붙은 지연 예약의 확인·결과 통로. 권리를 선점할 때 함께 바뀐다. `displayLock` 으로 지킨다.
+    var displayHooks: InAppDisplayHooks?
+    /// 지연 예약 실행·후보 판정을 직렬로 처리하는 큐. 운영에서는 코어 큐를 쓴다.
+    let workQueue: DispatchQueue
+    let now: () -> Date
+    let delayedInAppCoordinator: DelayedInAppCoordinator
+    let occurrenceEvaluator: OccurrenceConditionEvaluator
+    let globalImpressionLog: GlobalImpressionLog
+    let timerStore: InAppTimerStore
+    var windowChecker = InAppWindowChecker()
+    private var lifecycleObservers: [NSObjectProtocol] = []
+
+    let flowLock = NSLock()
+    var identityEpoch = 0
+    var abortEpochs: [String: Int] = [:]
+    /// 메인 스레드에서 앱이 활성 상태인지. 테스트만 바꾼다.
+    var isAppActiveOnMain: () -> Bool = { UIApplication.shared.applicationState == .active }
+
     private var projectId: String {
         cache.projectId
     }
@@ -198,15 +218,34 @@ final class InAppMessageService: NSObject, InAppMessageServiceProtocol {
         api: MarketapAPIProtocol,
         cache: MarketapCacheProtocol,
         defaults: UserDefaults = .standard,
-        policyStore: RemotePolicyStore? = nil
+        policyStore: RemotePolicyStore? = nil,
+        workQueue: DispatchQueue = DispatchQueue(label: "com.marketap.inapp"),
+        now: @escaping () -> Date = Date.init,
+        delayScheduler: InAppDelayScheduler? = nil,
+        observesAppLifecycle: Bool = true
     ) {
         self.customHandlerStore = customHandlerStore
         self.cache = cache
         self.api = api
         self.defaults = defaults
         self.policyStore = policyStore
+        self.workQueue = workQueue
+        self.now = now
+        self.delayedInAppCoordinator = DelayedInAppCoordinator(
+            defaults: defaults,
+            now: now,
+            scheduler: delayScheduler ?? DispatchInAppDelayScheduler(queue: workQueue)
+        )
+        self.occurrenceEvaluator = OccurrenceConditionEvaluator(defaults: defaults, now: now)
+        self.globalImpressionLog = GlobalImpressionLog(defaults: defaults)
+        self.timerStore = InAppTimerStore(defaults: defaults)
 
         super.init()
+
+        bindDelayedInAppCoordinator()
+        if observesAppLifecycle {
+            observeAppLifecycle()
+        }
 
         self.lastFetch = cache.loadCodableObject(forKey: Self.lastFetchKey)
         fetchCampaigns()
@@ -303,6 +342,9 @@ final class InAppMessageService: NSObject, InAppMessageServiceProtocol {
                     campaigns = self.campaigns ?? self.cache.loadCodableObject(forKey: Self.campaignCacheKey) ?? []
                 }
                 self.cache.saveCodableObject(response.checksum, key: Self.checksumKey)
+                if let caps = response.globalFrequencyCaps {
+                    self.cache.saveCodableObject(caps, key: Self.globalFrequencyCapsKey)
+                }
                 self.cache.saveCodableObject(Date(), key: Self.lastFetchKey)
                 self.lastFetch = Date()
                 if didCompleteWithinTimeout {
@@ -310,12 +352,52 @@ final class InAppMessageService: NSObject, InAppMessageServiceProtocol {
                 }
                 completion?(campaigns)
             case .failure(_):
-                let cachedCampaigns = self.campaigns ?? []
+                let cachedCampaigns = self.knownCampaigns ?? []
                 if didCompleteWithinTimeout {
                     inTimeout?(cachedCampaigns)
                 }
                 completion?(cachedCampaigns)
             }
+        }
+    }
+
+    deinit {
+        lifecycleObservers.forEach(NotificationCenter.default.removeObserver)
+    }
+
+    var globalFrequencyCaps: [GlobalFrequencyCapRule] {
+        cache.loadCodableObject(forKey: Self.globalFrequencyCapsKey) ?? []
+    }
+
+    var sessionId: String { cache.sessionId }
+
+    var knownCampaigns: [InAppCampaign]? {
+        campaigns ?? cache.loadCodableObject(forKey: Self.campaignCacheKey)
+    }
+
+    var isInAppAllowed: Bool {
+        policyStore?.isAllowed(.inApp) != false
+    }
+
+    var hasKnownCampaignList: Bool {
+        knownCampaigns != nil
+    }
+
+    private func observeAppLifecycle() {
+        let center = NotificationCenter.default
+        let coordinator = delayedInAppCoordinator
+        let queue = workQueue
+        lifecycleObservers = [
+            center.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: nil) { _ in
+                queue.async { coordinator.setForeground(true) }
+            },
+            center.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: nil) { _ in
+                queue.async { coordinator.setForeground(false) }
+            }
+        ]
+        DispatchQueue.main.async {
+            let foreground = UIApplication.shared.applicationState != .background
+            queue.async { coordinator.setForeground(foreground) }
         }
     }
 

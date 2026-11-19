@@ -10,6 +10,7 @@
 
 import Foundation
 import XCTest
+@testable import MarketapSDK
 
 /// 테스트마다 고유한 빈 UserDefaults 를 만들고, 끝나면 통째로 지운다.
 func makeIsolatedDefaults(_ testCase: XCTestCase, function: String = #function) -> UserDefaults {
@@ -21,6 +22,11 @@ func makeIsolatedDefaults(_ testCase: XCTestCase, function: String = #function) 
         defaults.removePersistentDomain(forName: suiteName)
     }
     return defaults
+}
+
+/// 폴스루는 상세 fetch 응답마다 작업 큐로 돌아와 다음 후보를 본다. 동기 mock 응답이 이어 거는 작업까지 비운다.
+func drainWorkQueue(_ service: InAppMessageService, rounds: Int = 20) {
+    for _ in 0..<rounds { service.workQueue.sync {} }
 }
 
 /// 조건이 참이 될 때까지 폴링한다.

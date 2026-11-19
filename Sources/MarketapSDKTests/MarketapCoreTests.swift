@@ -45,7 +45,7 @@ class MockEventService: EventServiceProtocol {
 
     func identify(userId: String, userProperties: [String : Any]?) {
         sync { _identifiedUserId = userId }
-        delegate?.handleUserIdChanged()
+        delegate?.handleUserIdChanged(fromAnonymous: false)
     }
 
     func setUserProperties(userProperties: [String: Any], userId: String?) { }
@@ -93,6 +93,12 @@ class MockInAppMessageService: InAppMessageServiceProtocol {
     func originDidDisappear(_ originId: ObjectIdentifier) {}
     func screenChanged(at signalTime: TimeInterval) {}
     func shutdown() {}
+
+    private var _discardDelayedCalled = false
+    var discardDelayedCalled: Bool { sync { _discardDelayedCalled } }
+    func discardDelayedState() {
+        sync { _discardDelayedCalled = true }
+    }
 }
 
 // 예전엔 "0.5초 자고 한 번 단언" + wait(timeout: 1.0) 이었다. 여유가 0.5초뿐이라
@@ -190,13 +196,22 @@ class MarketapCoreTests: XCTestCase {
     }
 
     func testHandleUserIdChanged() {
-        core.handleUserIdChanged()
+        core.handleUserIdChanged(fromAnonymous: false)
 
         let inApp = mockInAppService!
         waitUntil(self, "유저 변경이 캠페인 재조회를 부른다") { inApp.fetchCampaignsCalled }
         // 목록만 다시 받으면 부족하다. 이전 신원으로 적재해 둔 후보가 표시 권리를 쥔 채
         // 남아 있으면, 로그인 전 캠페인이 로그인 후에 뜨고 그동안 올바른 후보가 다 막힌다.
         XCTAssertTrue(inApp.discardPendingCalled, "유저가 바뀌면 적재된 후보를 버려야 한다")
+        XCTAssertTrue(inApp.discardDelayedCalled)
+    }
+
+    func testLoginFromAnonymousKeepsDelayedState() {
+        core.handleUserIdChanged(fromAnonymous: true)
+
+        let inApp = mockInAppService!
+        waitUntil(self, "로그인이 캠페인 재조회를 부른다") { inApp.fetchCampaignsCalled }
+        XCTAssertFalse(inApp.discardDelayedCalled, "익명 → 로그인은 지연 예약·누적 횟수를 유지한다")
     }
 
     func testHideInAppMessageReachesTheService() {
