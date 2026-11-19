@@ -1142,4 +1142,49 @@ class InAppMessageServiceOperatorTests: XCTestCase {
                        "WITHIN_REMAINING should not match past date")
     }
 
+
+    private func orEvent(_ name: String) -> IngestEventRequest {
+        IngestEventRequest(id: "1", name: name, userId: "u", device: MockDevice().toDevice().makeRequest(), properties: nil, timestamp: Date())
+    }
+
+    private func orTrigger(_ names: [String]?, primary: String) -> EventTriggerCondition {
+        EventTriggerCondition(
+            condition: Condition(eventFilter: EventFilter(eventName: primary), propertyConditions: nil),
+            conditions: names?.map { Condition(eventFilter: EventFilter(eventName: $0), propertyConditions: nil) },
+            frequencyCap: nil,
+            delayMinutes: nil
+        )
+    }
+
+    func testTriggeredBySecondCondition() {
+        let trigger = orTrigger(["a", "b"], primary: "a")
+        XCTAssertTrue(inAppMessageService.isEventTriggered(condition: trigger, event: orEvent("b")))
+    }
+
+    func testNotTriggeredWhenNoConditionMatches() {
+        let trigger = orTrigger(["a", "b"], primary: "a")
+        XCTAssertFalse(inAppMessageService.isEventTriggered(condition: trigger, event: orEvent("c")))
+    }
+
+    func testFallsBackToConditionWhenConditionsMissing() {
+        let trigger = orTrigger(nil, primary: "a")
+        XCTAssertTrue(inAppMessageService.isEventTriggered(condition: trigger, event: orEvent("a")))
+        XCTAssertFalse(inAppMessageService.isEventTriggered(condition: trigger, event: orEvent("b")))
+    }
+
+    func testDecodesV3TriggerConditions() throws {
+        let json = """
+        {"condition":{"eventFilter":{"eventName":"a"}},
+         "conditions":[{"eventFilter":{"eventName":"a"}},{"eventFilter":{"eventName":"b"}}]}
+        """.data(using: .utf8)!
+        let decoded = try JSONDecoder().decode(EventTriggerCondition.self, from: json)
+        XCTAssertEqual(decoded.conditions?.count, 2)
+        XCTAssertEqual(decoded.conditions?[1].eventFilter.eventName, "b")
+
+        let legacy = """
+        {"condition":{"eventFilter":{"eventName":"a"}}}
+        """.data(using: .utf8)!
+        let legacyDecoded = try JSONDecoder().decode(EventTriggerCondition.self, from: legacy)
+        XCTAssertNil(legacyDecoded.conditions)
+    }
 }

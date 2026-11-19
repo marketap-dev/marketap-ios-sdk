@@ -9,11 +9,15 @@ import Foundation
 
 extension InAppMessageService {
     func isEventTriggered(condition: EventTriggerCondition, event: IngestEventRequest) -> Bool {
-        guard condition.condition.eventFilter.eventName == event.name else {
+        condition.effectiveConditions.contains { isConditionMatched($0, event: event) }
+    }
+
+    private func isConditionMatched(_ condition: Condition, event: IngestEventRequest) -> Bool {
+        guard condition.eventFilter.eventName == event.name else {
             return false
         }
 
-        guard let propertyConditions = condition.condition.propertyConditions, !propertyConditions.isEmpty else {
+        guard let propertyConditions = condition.propertyConditions, !propertyConditions.isEmpty else {
             return true
         }
 

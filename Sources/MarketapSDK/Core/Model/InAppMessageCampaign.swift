@@ -126,8 +126,22 @@ struct EventFilter: Codable, Equatable {
 
 struct EventTriggerCondition: Codable, Equatable {
     let condition: Condition
+    /// 하나라도 이벤트에 맞으면 트리거된다. 없으면 `condition` 하나로 판정한다.
+    let conditions: [Condition]?
     let frequencyCap: FrequencyCap?
     let delayMinutes: Int?
+
+    init(condition: Condition, conditions: [Condition]? = nil, frequencyCap: FrequencyCap?, delayMinutes: Int?) {
+        self.condition = condition
+        self.conditions = conditions
+        self.frequencyCap = frequencyCap
+        self.delayMinutes = delayMinutes
+    }
+
+    var effectiveConditions: [Condition] {
+        if let conditions = conditions, !conditions.isEmpty { return conditions }
+        return [condition]
+    }
 }
 
 struct Condition: Codable, Equatable {

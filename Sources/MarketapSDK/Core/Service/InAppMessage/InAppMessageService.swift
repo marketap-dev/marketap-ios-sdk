@@ -86,9 +86,9 @@ private final class InAppMessageTimeoutController {
 
 final class InAppMessageService: NSObject, InAppMessageServiceProtocol {
     static let cacheExpiration = Double(60 * 5)
-    static let campaignCacheKey = "InAppMessageService_campaigns"
-    static let lastFetchKey = "InAppMessageService_lastFetch"
-    static let checksumKey = "InAppMessageService_checksum"
+    static let campaignCacheKey = "InAppMessageService_campaigns_v3"
+    static let lastFetchKey = "InAppMessageService_lastFetch_v3"
+    static let checksumKey = "InAppMessageService_checksum_v3"
 
     let customHandlerStore: MarketapCustomHandlerStoreProtocol
     private let api: MarketapAPIProtocol
@@ -279,7 +279,7 @@ final class InAppMessageService: NSObject, InAppMessageServiceProtocol {
 
         api.request(
             baseURL: .crm,
-            path: "/api/v2/campaigns",
+            path: "/api/v3/campaigns",
             body: FetchCampaignsRequest(projectId: projectId, userId: userId, device: device.makeRequest(), checksum: cachedChecksum),
             responseType: InAppCampaignFetchResponse.self
         ) { [weak self] result in
@@ -353,7 +353,7 @@ final class InAppMessageService: NSObject, InAppMessageServiceProtocol {
 
         api.request(
             baseURL: .crm,
-            path: "/api/v2/campaigns/\(campaignId)",
+            path: "/api/v3/campaigns/\(campaignId)",
             body: request,
             responseType: InAppCampaignSingleFetchResponse.self
         ) { [weak self] result in

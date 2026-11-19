@@ -24,11 +24,11 @@ private class RecordingAPIForFallthrough: MarketapAPIProtocol {
     private let lock = NSLock()
     private var requestedPaths: [String] = []
 
-    /// "/api/v2/campaigns/{id}" 경로에서 실제로 단건 fetch 를 탄 campaignId 만 추린다.
+    /// "/api/v3/campaigns/{id}" 경로에서 실제로 단건 fetch 를 탄 campaignId 만 추린다.
     var fetchedCampaignIds: [String] {
         lock.lock(); defer { lock.unlock() }
         return requestedPaths.compactMap { path in
-            guard path.hasPrefix("/api/v2/campaigns/") else { return nil }
+            guard path.hasPrefix("/api/v3/campaigns/") else { return nil }
             return path.components(separatedBy: "/").last
         }
     }
@@ -202,7 +202,7 @@ class InAppFallthroughTests: XCTestCase {
     }
 
     func testCampaignListTimeoutStillStartsFallthrough() {
-        // 단건 fetch 뿐 아니라 목록(/api/v2/campaigns) 요청이 느릴 때도 체인이 시작돼야 한다.
+        // 단건 fetch 뿐 아니라 목록(/api/v3/campaigns) 요청이 느릴 때도 체인이 시작돼야 한다.
         // 예전엔 목록 타임아웃이면 inTimeout 이 영영 안 불려 이벤트가 통째로 버려졌다.
         let cached = campaign("cached", html: "<div>cached</div>")
         service.campaigns = [cached]      // 캐시는 있지만 lastFetch 는 nil → 네트워크 경로를 탄다
