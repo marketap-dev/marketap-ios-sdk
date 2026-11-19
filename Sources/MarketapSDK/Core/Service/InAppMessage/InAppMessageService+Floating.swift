@@ -56,7 +56,7 @@ final class FloatingCampaignSession: FloatingSessionDelegate {
 extension InAppMessageService {
 
     /// 플로팅 자리를 선점하고 메인 스레드에서 붙인다. 자리가 이미 차 있으면 false.
-    /// - Parameter hooks: 지연 예약 플로팅만 넘긴다. 자리가 이미 차 있으면 불리지 않는다.
+    /// - Parameter hooks: 지연 예약·이벤트 플로우 플로팅만 넘긴다. 자리가 이미 차 있으면 불리지 않는다.
     func presentFloating(campaign: InAppCampaign, origin: InAppWebOrigin? = nil, hooks: InAppDisplayHooks? = nil) -> Bool {
         guard let html = campaign.html else { return false }
         let floating = FloatingCampaignSession(campaign: campaign, service: self, origin: origin)

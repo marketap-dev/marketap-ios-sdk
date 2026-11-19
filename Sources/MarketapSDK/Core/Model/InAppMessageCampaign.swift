@@ -134,6 +134,8 @@ struct EventTriggerCondition: Codable, Equatable {
     var delaySeconds: Int? = nil
     var occurrenceCondition: OccurrenceCondition? = nil
     var abortConditions: [Condition]? = nil
+    /// 도달(트리거 조건) 전에 차례로 일어나야 하는 이벤트 단계. 없으면 트리거 조건만으로 판정한다.
+    var flow: EventFlow? = nil
 
     init(condition: Condition, conditions: [Condition]? = nil, frequencyCap: FrequencyCap?, delayMinutes: Int?) {
         self.condition = condition
@@ -147,10 +149,27 @@ struct EventTriggerCondition: Codable, Equatable {
         return [condition]
     }
 
+    var hasEventFlow: Bool {
+        flow?.precedingSteps.isEmpty == false
+    }
+
     var delayInterval: TimeInterval? {
         guard let delaySeconds = delaySeconds, delaySeconds > 0 else { return nil }
         return TimeInterval(delaySeconds)
     }
+}
+
+/// 이벤트 플로우. `precedingSteps` 를 차례로 거친 뒤 트리거 조건(도달)에 맞는 이벤트가 오면 트리거된다.
+/// `reentryBlockSeconds` 가 있으면 진행 중 취소 이벤트가 일어난 뒤 그 시간 동안 다시 진입하지 않는다.
+struct EventFlow: Codable, Equatable {
+    let precedingSteps: [EventFlowStep]
+    var reentryBlockSeconds: Int? = nil
+}
+
+/// 플로우 단계. `conditions` 중 하나에 맞는 이벤트가 직전 단계 뒤 `withinSeconds` 초 안에 일어나야 한다.
+struct EventFlowStep: Codable, Equatable {
+    let conditions: [Condition]
+    let withinSeconds: Int
 }
 
 /// 트리거 이벤트가 `count`번 쌓여야 노출한다. `durationMinutes`가 있으면 그 기간 안의 횟수만 센다.

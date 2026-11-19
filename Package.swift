@@ -31,7 +31,8 @@ let package = Package(
         .testTarget(
             name: "MarketapSDKTests",
             dependencies: ["MarketapSDK", "MarketapSDKNotificationServiceExtension"],
-            path: "Sources/MarketapSDKTests"
+            path: "Sources/MarketapSDKTests",
+            resources: [.copy("Fixtures/event-flow-cases.json")]
         )
     ]
 )
