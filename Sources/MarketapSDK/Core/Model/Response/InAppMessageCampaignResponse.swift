@@ -10,6 +10,7 @@ import Foundation
 struct InAppCampaignFetchResponse: Decodable, Equatable {
     let checksum: String
     let campaigns: [InAppCampaign]?
+    var globalFrequencyCaps: [GlobalFrequencyCapRule]? = nil
 }
 
 struct InAppCampaignSingleFetchResponse: Decodable, Equatable {

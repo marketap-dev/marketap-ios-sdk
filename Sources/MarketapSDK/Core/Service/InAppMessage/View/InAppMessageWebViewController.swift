@@ -42,7 +42,8 @@ final class InAppMessageWebViewController: AppFollowingViewController {
     }
 
     /// 표시 권리 `claim` 으로 `appWindow` 위에 띄울 캠페인을 올린다. safe area 는 `appWindow` 에서 읽는다.
-    func load(campaign: InAppCampaign, claim: Int, appWindow: UIWindow) {
+    /// - Parameter timerStartAt: 템플릿 N분 타이머의 시작 시각. nil 이면 넘기지 않는다.
+    func load(campaign: InAppCampaign, claim: Int, appWindow: UIWindow, timerStartAt: Date? = nil) {
         self.campaign = campaign
         self.appWindow = appWindow
         loadViewIfNeeded()
@@ -50,7 +51,7 @@ final class InAppMessageWebViewController: AppFollowingViewController {
             documentGate.didStartLoadingNonCampaign()
             return
         }
-        let navigation = updateCampaignContent(campaignHTML: html, safeArea: appWindow.safeAreaInsets)
+        let navigation = updateCampaignContent(campaignHTML: html, safeArea: appWindow.safeAreaInsets, timerStartAt: timerStartAt)
         documentGate.didStartLoading(claim: claim, navigation: navigation)
     }
 
@@ -58,9 +59,17 @@ final class InAppMessageWebViewController: AppFollowingViewController {
         documentGate.didCommit(navigation: navigation)
     }
 
-    private func updateCampaignContent(campaignHTML: String, safeArea: UIEdgeInsets) -> WKNavigation? {
+    private func updateCampaignContent(campaignHTML: String, safeArea: UIEdgeInsets, timerStartAt: Date?) -> WKNavigation? {
+        let htmlContent = Self.campaignDocument(campaignHTML: campaignHTML, safeArea: safeArea, timerStartAt: timerStartAt)
+        return webView.loadHTMLString(htmlContent, baseURL: nil)
+    }
+
+    static func campaignDocument(campaignHTML: String, safeArea: UIEdgeInsets, timerStartAt: Date?) -> String {
         let eventHandlers = MarketapJSMessage.allCases.map { $0.jsFunctionDefinition }.joined(separator: ",\n  ")
-        let htmlContent = """
+        let timerField = timerStartAt.map {
+            ",\n                    timerStartAt: " + String(format: "%.0f", $0.timeIntervalSince1970 * 1000)
+        } ?? ""
+        return """
         <!DOCTYPE html>
         <html>
         <head>
@@ -69,7 +78,7 @@ final class InAppMessageWebViewController: AppFollowingViewController {
                 window._marketap_native = {
                     \(eventHandlers),
                     topSafeArea: \(safeArea.top),
-                    bottomSafeArea: \(safeArea.bottom)
+                    bottomSafeArea: \(safeArea.bottom)\(timerField)
                 };
             </script>
         </head>
@@ -78,8 +87,6 @@ final class InAppMessageWebViewController: AppFollowingViewController {
         </body>
         </html>
         """
-
-        return webView.loadHTMLString(htmlContent, baseURL: nil)
     }
 
     func blank() {

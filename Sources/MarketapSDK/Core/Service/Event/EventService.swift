@@ -84,7 +84,8 @@ final class EventService: EventServiceProtocol {
     }
 
     func identify(userId: String, userProperties: [String: Any]?) {
-        let userIdChanged = cache.userId != userId
+        let previousUserId = cache.userId
+        let userIdChanged = previousUserId != userId
         cache.saveUserId(userId)
 
         let request = UpdateProfileRequest(
@@ -95,7 +96,7 @@ final class EventService: EventServiceProtocol {
         updateProfile(request: request)
 
         if userIdChanged {
-            delegate?.handleUserIdChanged()
+            delegate?.handleUserIdChanged(fromAnonymous: previousUserId == nil)
         }
     }
 
@@ -119,7 +120,7 @@ final class EventService: EventServiceProtocol {
         updateDevice(removeUserId: true)
 
         if userIdChanged {
-            delegate?.handleUserIdChanged()
+            delegate?.handleUserIdChanged(fromAnonymous: false)
         }
     }
 

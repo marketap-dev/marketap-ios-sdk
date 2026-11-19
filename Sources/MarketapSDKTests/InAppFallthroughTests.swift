@@ -119,6 +119,7 @@ class InAppFallthroughTests: XCTestCase {
             eventProperties: nil,
             origin: nil
         )
+        drainWorkQueue(service)
     }
 
     func testFirstEmptyThenNext() {

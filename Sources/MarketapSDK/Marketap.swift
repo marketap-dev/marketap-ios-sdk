@@ -77,8 +77,16 @@ public class Marketap: NSObject {
         if let utm = takeUtmBeforeInit() {
             eventService.setPendingUtm(utm)
         }
-        let inAppMessageService = InAppMessageService(customHandlerStore: self.customHandlerStore, api: api, cache: cache, policyStore: policyStore)
-        let core = MarketapCore(customHandlerStore: self.customHandlerStore, eventService: eventService, inAppMessageService: inAppMessageService)
+        let coreQueue = DispatchQueue(label: "com.marketap.core")
+        let inAppMessageService = InAppMessageService(
+            customHandlerStore: self.customHandlerStore, api: api, cache: cache, policyStore: policyStore, workQueue: coreQueue
+        )
+        let core = MarketapCore(
+            customHandlerStore: self.customHandlerStore,
+            eventService: eventService,
+            inAppMessageService: inAppMessageService,
+            queue: coreQueue
+        )
         eventService.delegate = core
         inAppMessageService.delegate = core
         (_client as? MarketapCore)?.inAppMessageService.shutdown()

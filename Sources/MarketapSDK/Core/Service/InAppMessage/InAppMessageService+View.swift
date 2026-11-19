@@ -25,6 +25,27 @@ private func inAppMonotonicNow() -> TimeInterval {
     ProcessInfo.processInfo.systemUptime
 }
 
+enum ModalPresentation {
+    case presenting
+    /// 웹뷰 준비 대기로 적재됐다. 승격·시한 만료·폐기 중 하나로 `onResult` 가 한 번 불린다.
+    case pending
+    case occupied
+}
+
+/// 지연 예약 팝업의 표시 직전 확인과 결과 통로.
+struct InAppDisplayHooks {
+    /// 메인 스레드에서 화면에 올리기 직전에 부른다. false 면 올리지 않고 권리를 반납한다.
+    let isStillValid: () -> Bool
+    /// 화면에 올라갔으면 true, 올리지 못하고 권리를 놓았으면 false. 한 번만 불린다.
+    let onResult: (Bool) -> Void
+}
+
+private enum PopupClaim {
+    case presenting(Int)
+    case pending
+    case occupied
+}
+
 extension InAppMessageService: InAppMessageWebViewControllerDelegate {
 
     func isCampaignHiden(campaign: InAppCampaign) -> Bool {
@@ -92,7 +113,8 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
         eventName: String,
         eventProperties: [String: Any]?,
         origin: InAppWebOrigin?,
-        filledSlots: Set<InAppDisplaySlot> = []
+        filledSlots: Set<InAppDisplaySlot> = [],
+        flow: InAppEventFlow? = nil
     ) {
         let occupied = filledSlots.union(occupiedSlots())
         if occupied.isSuperset(of: [.popup, .floating]) { return }
@@ -103,12 +125,29 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
             self.tryShowCampaigns(
                 candidates: candidates, index: index + 1, fetches: fetches, deadline: deadline,
                 eventName: eventName, eventProperties: eventProperties, origin: origin,
-                filledSlots: filled
+                filledSlots: filled, flow: flow
             )
+        }
+
+        switch flow.map({ validity(of: $0, campaignId: campaign.id) }) ?? .valid {
+        case .identityChanged:
+            return
+        case .campaignAborted:
+            next(fetches, filledSlots)
+            return
+        case .valid:
+            break
         }
 
         if occupied.contains(campaign.slot) || isCampaignHiden(campaign: campaign) {
             next(fetches, filledSlots)
+            return
+        }
+
+        // 예약도 그 자리의 처리로 본다. 다른 자리 후보는 계속 본다.
+        if campaign.triggerEventCondition.delayInterval != nil {
+            _ = scheduleDelayed(campaign: campaign, eventName: eventName, eventProperties: eventProperties, origin: origin)
+            next(fetches, filledSlots.union([campaign.slot]))
             return
         }
 
@@ -135,19 +174,30 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
             eventProperties: eventProperties
         ) { [weak self] fetchedCampaign in
             guard let self = self else { return }
-            if let fetchedCampaign = fetchedCampaign?.inheritingSlot(from: campaign), fetchedCampaign.html != nil {
-                self.show(campaign: fetchedCampaign, origin: origin)
-                next(fetches + 1, filledSlots.union([fetchedCampaign.slot]))
-            } else {
-                MarketapLogger.warn("failed to fetch campaign html: \(campaign.id), trying next")
-                next(fetches + 1, filledSlots)
+            self.workQueue.async {
+                switch flow.map({ self.validity(of: $0, campaignId: campaign.id) }) ?? .valid {
+                case .identityChanged:
+                    return
+                case .campaignAborted:
+                    next(fetches + 1, filledSlots)
+                    return
+                case .valid:
+                    break
+                }
+                if let fetchedCampaign = fetchedCampaign?.inheritingSlot(from: campaign), fetchedCampaign.html != nil {
+                    self.show(campaign: fetchedCampaign, origin: origin)
+                    next(fetches + 1, filledSlots.union([fetchedCampaign.slot]))
+                } else {
+                    MarketapLogger.warn("failed to fetch campaign html: \(campaign.id), trying next")
+                    next(fetches + 1, filledSlots)
+                }
             }
         }
     }
 
     /// 다른 체인이 이미 차지한 자리. 팝업은 실제로 표시 단계일 때만 찬 것으로 본다.
     /// 적재가 덮어써지지 않는 건 claimDisplay 가 지킨다.
-    private func occupiedSlots() -> Set<InAppDisplaySlot> {
+    func occupiedSlots() -> Set<InAppDisplaySlot> {
         displayLock.lock()
         defer { displayLock.unlock() }
         var slots: Set<InAppDisplaySlot> = []
@@ -167,7 +217,7 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
 
     /// 이 캠페인을 띄울 권리를 원자적으로 선점한다. 권리 번호를 받은 쪽만 present 로 간다.
     ///
-    /// 아직 웹뷰가 준비되기 전이면 pendingCampaign 에 적재하고 nil 을 준다(준비되면
+    /// 아직 웹뷰가 준비되기 전이면 pendingCampaign 에 적재하고 `.pending` 을 준다(준비되면
     /// `markWebViewReady()` 가 노출로 승격시킨다). **적재도 선점이다** — isModalShown 을
     /// 세워 뒤 이벤트가 앞 후보를 덮어쓰지 못하게 한다. 예전엔 적재 경로가 권리를 안 잡아서,
     /// 앱 시작 직후처럼 웹뷰 초기화가 느릴 때 뒤 이벤트마다 같은 분기를 타며 먼저 도착한
@@ -175,26 +225,27 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
     ///
     /// 적재 선점은 `pendingClaimTimeoutSeconds` 시한을 함께 건다. 시한이 없으면 웹뷰가
     /// 영영 준비되지 않을 때 권리가 잠긴 채로 남아 인앱이 하나도 못 뜬다.
-    private func claimDisplay(campaign: InAppCampaign, origin: InAppWebOrigin?) -> Int? {
+    private func claimDisplay(campaign: InAppCampaign, origin: InAppWebOrigin?, hooks: InAppDisplayHooks?) -> PopupClaim {
         displayLock.lock()
         defer { displayLock.unlock() }
 
-        if isShutDown || isModalShown { return nil }
+        if isShutDown || isModalShown { return .occupied }
 
         // 아래 두 갈래 모두 "이 캠페인이 표시 권리를 가져갔다"는 뜻이다.
         isModalShown = true
         displayOrigin = origin
         popupShownAt = nil
         displayClaim &+= 1
+        displayHooks = hooks
 
         guard didFinishLoad else {
             MarketapLogger.verbose("webView not ready, claiming for pending campaign: \(campaign.id)")
             pendingCampaign = campaign
             pendingGeneration &+= 1
             schedulePendingExpiry(generation: pendingGeneration, campaignId: campaign.id)
-            return nil
+            return .pending
         }
-        return displayClaim
+        return .presenting(displayClaim)
     }
 
     /// 적재 선점에 시한을 건다. 시한이 지나도 여전히 같은 적재가 남아 있으면 권리를 반납해
@@ -244,6 +295,10 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
         displayOrigin = nil
         popupShownAt = nil
         pendingGeneration &+= 1
+        if let hooks = displayHooks {
+            displayHooks = nil
+            workQueue.async { hooks.onResult(false) }
+        }
         return true
     }
 
@@ -257,9 +312,22 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
         return releaseDisplayLocked(claim: claim)
     }
 
-    private func presentCampaignModal(campaign: InAppCampaign, origin: InAppWebOrigin?) {
-        guard let claim = claimDisplay(campaign: campaign, origin: origin) else { return }
-        presentClaimed(campaign: campaign, claim: claim)
+    /// - Parameter hooks: 지연 예약 팝업만 넘긴다. `.occupied` 면 불리지 않는다.
+    @discardableResult
+    func presentCampaignModal(
+        campaign: InAppCampaign,
+        origin: InAppWebOrigin?,
+        hooks: InAppDisplayHooks? = nil
+    ) -> ModalPresentation {
+        switch claimDisplay(campaign: campaign, origin: origin, hooks: hooks) {
+        case .occupied:
+            return .occupied
+        case .pending:
+            return .pending
+        case .presenting(let claim):
+            presentClaimed(campaign: campaign, claim: claim)
+            return .presenting
+        }
     }
 
     /// 표시 권리를 쥔 팝업이 조건에 맞으면 닫는다. 아직 화면에 나타나기 전이면 권리를 반납하고, 떠 있으면 내린다.
@@ -287,6 +355,11 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
     /// 이미 표시 권리를 쥔 상태에서 팝업 창을 띄운다. 선점 없이 호출하면 안 된다.
     private func presentClaimed(campaign: InAppCampaign, claim: Int) {
         DispatchQueue.main.async {
+            if self.isTimerExpired(campaign) || !self.displayHooksStillValid(claim: claim) {
+                MarketapLogger.verbose("campaign is no longer valid before present: \(campaign.id)")
+                self.releaseDisplay(claim: claim)
+                return
+            }
             guard self.beginPresenting(claim: claim) else {
                 MarketapLogger.verbose("display claim was released before popup was presented: \(campaign.id)")
                 return
@@ -304,8 +377,12 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
                 return
             }
 
+            let mountAt = self.now()
             let controller = self.campaignViewController
-            controller.load(campaign: campaign, claim: claim, appWindow: target.appWindow)
+            controller.load(
+                campaign: campaign, claim: claim, appWindow: target.appWindow,
+                timerStartAt: self.timerStart(for: campaign, mountAt: mountAt)
+            )
             let popup = InAppPopupPresentation(
                 claim: claim,
                 campaignId: campaign.id,
@@ -320,9 +397,10 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
             }
             self.popupPresentation = popup
             popup.show()
+            self.recordTimerStart(campaign, at: mountAt)
             MarketapLogger.verbose("presented campaign: \(campaign.id)")
             self.markPopupShown(claim: claim)
-            self.logImpression(campaignId: campaign.id)
+            self.recordExposure(campaign: campaign)
             self.onImpression(campaign: campaign, messageId: controller.messageId)
         }
     }
@@ -334,6 +412,7 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
 
     /// 서비스를 버리기 전에 떠 있는 팝업을 내리고, 아직 화면에 오르지 않은 팝업과 이후 표시 요청은 버린다. 어느 스레드에서 불러도 된다.
     func shutdown() {
+        delayedInAppCoordinator.stop()
         displayLock.lock()
         isShutDown = true
         if isModalShown, presentedClaim == nil {
@@ -362,22 +441,47 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
 
     private func markPopupShown(claim: Int) {
         displayLock.lock()
+        var hooks: InAppDisplayHooks?
         if isModalShown, displayClaim == claim {
             popupShownAt = monotonicNow()
+            hooks = displayHooks
+            displayHooks = nil
         }
         displayLock.unlock()
+        if let hooks = hooks {
+            workQueue.async { hooks.onResult(true) }
+        }
+    }
+
+    /// 메인 스레드에서만 부른다.
+    private func displayHooksStillValid(claim: Int) -> Bool {
+        displayLock.lock()
+        let hooks = displayClaim == claim ? displayHooks : nil
+        displayLock.unlock()
+        return hooks?.isStillValid() ?? true
     }
 
     func onEvent(eventRequest: IngestEventRequest, origin: InAppWebOrigin?) {
         if let origin = origin, PageFloatingPolicy.eventLeavesPage(eventName: eventRequest.name) {
             originDidLeavePage(ObjectIdentifier(origin))
         }
+        delayedInAppCoordinator.cancelMatching { self.matchesAbortCondition($0, event: eventRequest) }
+        let known = knownCampaigns ?? []
+        abortMatching(campaigns: known, event: eventRequest)
+        let arrivalFlow = currentEventFlow()
+        let evaluatedOnArrival = Set(known.map(\.id))
         let eventProperties = eventRequest.properties?.compactMapValues { $0.value }
         fetchCampaigns(inTimeout: { [weak self] campaigns in
-                guard let self = self else { return }
-                // 이벤트 조건을 만족하는 후보 전체를 우선순위 순으로 넘긴다.
-                let candidates = campaigns.filter {
-                    self.isEventTriggered(condition: $0.triggerEventCondition, event: eventRequest)
+            guard let self = self else { return }
+            self.workQueue.async {
+                guard let (candidates, flow) = self.selectCandidates(
+                    campaigns: campaigns,
+                    event: eventRequest,
+                    flow: arrivalFlow,
+                    evaluatedOnArrival: evaluatedOnArrival
+                ) else {
+                    MarketapLogger.verbose("user changed while fetching campaigns, dropping event: \(eventRequest.name)")
+                    return
                 }
                 self.tryShowCampaigns(
                     candidates: candidates,
@@ -386,9 +490,11 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
                     deadline: inAppMonotonicNow() + inAppFallthroughBudgetSeconds,
                     eventName: eventRequest.name,
                     eventProperties: eventProperties,
-                    origin: origin
+                    origin: origin,
+                    flow: flow
                 )
-            })
+            }
+        })
     }
 
     func onImpression(campaign: InAppCampaign, messageId: String) {

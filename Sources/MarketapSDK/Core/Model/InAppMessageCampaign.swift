@@ -130,6 +130,10 @@ struct EventTriggerCondition: Codable, Equatable {
     let conditions: [Condition]?
     let frequencyCap: FrequencyCap?
     let delayMinutes: Int?
+    var sendableTimeWindow: SendableTimeWindow? = nil
+    var delaySeconds: Int? = nil
+    var occurrenceCondition: OccurrenceCondition? = nil
+    var abortConditions: [Condition]? = nil
 
     init(condition: Condition, conditions: [Condition]? = nil, frequencyCap: FrequencyCap?, delayMinutes: Int?) {
         self.condition = condition
@@ -142,6 +146,51 @@ struct EventTriggerCondition: Codable, Equatable {
         if let conditions = conditions, !conditions.isEmpty { return conditions }
         return [condition]
     }
+
+    var delayInterval: TimeInterval? {
+        guard let delaySeconds = delaySeconds, delaySeconds > 0 else { return nil }
+        return TimeInterval(delaySeconds)
+    }
+}
+
+/// 트리거 이벤트가 `count`번 쌓여야 노출한다. `durationMinutes`가 있으면 그 기간 안의 횟수만 센다.
+struct OccurrenceCondition: Codable, Equatable {
+    let count: Int
+    var durationMinutes: Int? = nil
+    var sessionScoped: Bool? = nil
+}
+
+/// 노출 가능 시간대. 단말의 현지 시각으로 판정한다(`timezone`은 쓰지 않는다).
+struct SendableTimeWindow: Codable, Equatable {
+    let weeklyTimeRules: [WeeklyTimeRule]
+    var sendableTimePolicy: String? = nil
+    var timezone: String? = nil
+}
+
+struct WeeklyTimeRule: Codable, Equatable {
+    /// `MONDAY` ~ `SUNDAY`
+    let dayOfWeek: String
+    let timeRanges: [SendableTimeRange]
+}
+
+/// 하루 중 분(0~1439), 양 끝 포함.
+struct SendableTimeRange: Codable, Equatable {
+    let startMinuteOfDay: Int
+    let endMinuteOfDay: Int
+}
+
+/// 첫 노출 후 `minutes` 분 동안만 보이는 타이머. `revision` 이 바뀌면 시작 시각을 새로 잡는다.
+struct InAppCampaignTimer: Codable, Equatable {
+    let minutes: Int
+    let revision: String
+}
+
+/// 채널 단위 전체 빈도 제한. `tagIds`가 비어 있으면 모든 캠페인에 적용한다.
+struct GlobalFrequencyCapRule: Codable, Equatable {
+    var channelType: String? = nil
+    let limit: Int
+    let durationMinutes: Int
+    let tagIds: [String]
 }
 
 struct Condition: Codable, Equatable {
@@ -181,15 +230,25 @@ struct InAppCampaign: Codable, Equatable {
     var displaySlot: InAppDisplaySlot? = nil
     /// 플로팅의 화면 이동 값. `PAGE` 면 "이 페이지에서만", 그 밖의 값과 값 없음은 "닫을 때까지 유지".
     var floatingScope: String? = nil
+    /// 트리거·횟수 조건이 바뀌면 달라진다. 누적 횟수의 유효성 키.
+    var triggerConditionVersion: String? = nil
+    var tagIds: [String]? = nil
+    var disableGlobalFrequencyCap: Bool? = nil
+    var timer: InAppCampaignTimer? = nil
+    /// 테스트 발송 캠페인. 타이머 시작 시각을 기록하지 않고 만료도 판정하지 않는다.
+    var isTest: Bool? = nil
 
     var slot: InAppDisplaySlot { displaySlot ?? .popup }
 
-    /// 상세 응답에 자리 정보가 없으면 목록 응답의 값을 쓴다.
+    /// 상세 응답에 자리·타이머·테스트 정보가 없으면 목록 응답의 값을 쓴다.
     func inheritingSlot(from listed: InAppCampaign) -> InAppCampaign {
-        guard displaySlot == nil else { return self }
         var resolved = self
-        resolved.displaySlot = listed.displaySlot
-        resolved.floatingScope = floatingScope ?? listed.floatingScope
+        if displaySlot == nil {
+            resolved.displaySlot = listed.displaySlot
+            resolved.floatingScope = floatingScope ?? listed.floatingScope
+        }
+        resolved.timer = timer ?? listed.timer
+        resolved.isTest = isTest ?? listed.isTest
         return resolved
     }
 

@@ -56,7 +56,8 @@ final class FloatingCampaignSession: FloatingSessionDelegate {
 extension InAppMessageService {
 
     /// 플로팅 자리를 선점하고 메인 스레드에서 붙인다. 자리가 이미 차 있으면 false.
-    func presentFloating(campaign: InAppCampaign, origin: InAppWebOrigin? = nil) -> Bool {
+    /// - Parameter hooks: 지연 예약 플로팅만 넘긴다. 자리가 이미 차 있으면 불리지 않는다.
+    func presentFloating(campaign: InAppCampaign, origin: InAppWebOrigin? = nil, hooks: InAppDisplayHooks? = nil) -> Bool {
         guard let html = campaign.html else { return false }
         let floating = FloatingCampaignSession(campaign: campaign, service: self, origin: origin)
 
@@ -69,31 +70,49 @@ extension InAppMessageService {
         displayLock.unlock()
 
         DispatchQueue.main.async {
-            guard self.isActiveFloating(floating) else { return }
+            guard self.isActiveFloating(floating) else {
+                hooks?.onResult(false)
+                return
+            }
+            if self.isTimerExpired(campaign) {
+                MarketapLogger.verbose("floating campaign timer expired before attach: \(campaign.id)")
+                self.releaseFloating(floating)
+                hooks?.onResult(false)
+                return
+            }
+            if let hooks = hooks, !hooks.isStillValid() {
+                MarketapLogger.verbose("floating campaign is no longer valid before attach: \(campaign.id)")
+                self.releaseFloating(floating)
+                hooks.onResult(false)
+                return
+            }
             if floating.isBoundToOrigin, !self.watchOrigin(of: floating) {
                 MarketapLogger.verbose("origin web view left before floating was attached: \(campaign.id)")
                 self.displayLock.lock()
                 floating.forgetOrigin()
                 self.displayLock.unlock()
             }
-            let impressionAt = Date()
+            let impressionAt = self.now()
             guard let view = self.floatingPresenter.show(
                 html: html,
-                impressionAt: impressionAt,
+                impressionAt: self.timerStart(for: campaign, mountAt: impressionAt) ?? impressionAt,
                 delegate: floating
             ) else {
                 MarketapLogger.warn("failed to attach floating campaign: \(campaign.id)")
                 floating.origin?.endWatchingWindow(owner: floating)
                 self.releaseFloating(floating)
+                hooks?.onResult(false)
                 return
             }
             floating.view = view
+            self.recordTimerStart(campaign, at: impressionAt)
             self.displayLock.lock()
             floating.shownAt = self.monotonicNow()
             self.displayLock.unlock()
             MarketapLogger.verbose("presented floating campaign: \(campaign.id)")
-            self.logImpression(campaignId: campaign.id, at: impressionAt)
+            self.recordExposure(campaign: campaign, at: impressionAt)
             self.onImpression(campaign: campaign, messageId: floating.messageId)
+            hooks?.onResult(true)
         }
         return true
     }

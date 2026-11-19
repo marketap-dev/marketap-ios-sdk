@@ -114,6 +114,7 @@ final class InAppDisplaySlotTests: XCTestCase {
             deadline: ProcessInfo.processInfo.systemUptime + 30,
             eventName: "mkt_home_view", eventProperties: nil, origin: nil
         )
+        drainWorkQueue(service)
     }
 
     private func waitForFloating(_ id: String) {
@@ -227,6 +228,18 @@ final class InAppDisplaySlotTests: XCTestCase {
 
         XCTAssertNil(service.pendingCampaign)
         waitForFloating("f")
+    }
+
+    func testFetchedCampaignKeepsListedTimerAndTestFlag() {
+        var listed = floating("t", html: nil)
+        listed.timer = InAppCampaignTimer(minutes: 10, revision: "r1")
+        listed.isTest = true
+        let merged = campaign("t", html: "<div>t</div>").inheritingSlot(from: listed)
+
+        XCTAssertEqual(merged.timer?.minutes, 10)
+        XCTAssertEqual(merged.timer?.revision, "r1")
+        XCTAssertEqual(merged.isTest, true)
+        XCTAssertEqual(merged.slot, .floating)
     }
 
     func testFloatingWithoutWindowReleasesClaim() {

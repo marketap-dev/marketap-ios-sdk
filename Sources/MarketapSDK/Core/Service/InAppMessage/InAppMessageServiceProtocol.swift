@@ -25,6 +25,8 @@ protocol InAppMessageServiceProtocol {
     func screenChanged(at signalTime: TimeInterval)
     /// 서비스를 버리기 전에 화면에 떠 있는 팝업을 내린다.
     func shutdown()
+    /// 신원이 바뀌면 지연 예약과 이벤트 누적 횟수를 모두 버린다.
+    func discardDelayedState()
 }
 
 extension InAppMessageServiceProtocol {
