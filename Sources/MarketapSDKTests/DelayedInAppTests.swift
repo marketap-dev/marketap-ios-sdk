@@ -901,7 +901,7 @@ extension InAppTriggerFlowTests {
     }
 }
 
-private final class NoopAPIForTriggerFlow: MarketapAPIProtocol {
+final class NoopAPIForTriggerFlow: MarketapAPIProtocol {
     var singleResponses: [String: InAppCampaign] = [:]
     var holdSingleFetch = false
     var listResponse: [InAppCampaign]?

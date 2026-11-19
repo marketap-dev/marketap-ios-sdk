@@ -72,12 +72,14 @@ extension InAppMessageService {
     /// - Parameters:
     ///   - flow: 이벤트 도착 시점에 캡처한 흐름.
     ///   - evaluatedOnArrival: 도착 시점에 이미 취소 조건을 판정한 캠페인 ID. 여기서는 나머지만 판정한다.
+    ///   - eventFlowFired: 이 이벤트로 이벤트 플로우가 도달한 캠페인 ID. 플로우 캠페인은 트리거 조건 대신 이것으로 판정한다.
     /// - Returns: 도착 이후 사용자가 바뀌었으면 nil.
     func selectCandidates(
         campaigns: [InAppCampaign],
         event: IngestEventRequest,
         flow: InAppEventFlow,
-        evaluatedOnArrival: Set<String>
+        evaluatedOnArrival: Set<String>,
+        eventFlowFired: Set<String> = []
     ) -> (candidates: [InAppCampaign], flow: InAppEventFlow)? {
         if isIdentityChanged(since: flow) { return nil }
         let unevaluated = campaigns.filter { !evaluatedOnArrival.contains($0.id) }
@@ -87,7 +89,9 @@ extension InAppMessageService {
         let caps = globalFrequencyCaps
         let countable = campaigns.filter { campaign in
             validity(of: flow, campaignId: campaign.id) == .valid
-                && isEventTriggered(condition: campaign.triggerEventCondition, event: event)
+                && (campaign.triggerEventCondition.hasEventFlow
+                    ? eventFlowFired.contains(campaign.id)
+                    : isEventTriggered(condition: campaign.triggerEventCondition, event: event))
                 && windowChecker.check(campaign.triggerEventCondition.sendableTimeWindow, now: current)
                 && !isCampaignHiden(campaign: campaign)
                 && !isTimerExpired(campaign)
@@ -100,6 +104,47 @@ extension InAppMessageService {
             occurrenceEvaluator.recordAndEvaluate(campaign: $0, sessionId: sessionId)
         }
         return (candidates, flow)
+    }
+
+    /// 이벤트 플로우 캠페인의 진행을 이 이벤트로 갱신한다. 진입·취소로 진행이 새로 시작되면 누적 횟수를 지운다.
+    ///
+    /// - Parameters:
+    ///   - occurredAt: 이벤트를 받은 시각.
+    ///   - occurredUserId: 이벤트를 받을 때의 userId. 그 뒤 다른 회원으로 바뀌었으면 진행하지 않는다. 비회원에서 로그인은 이어 준다.
+    ///   - occurredFlowClears: 이벤트를 받을 때의 [eventFlowClears]. 비회원 이벤트라도 그 뒤 진행이 지워졌으면 진행하지 않는다.
+    ///   - listOwner: [campaigns] 를 요청한 회원. 모르거나 지금 회원과 다르면 진행하지 않는다. 비회원 목록은 로그인 뒤에도 쓴다.
+    /// - Returns: 이 이벤트로 도달한 캠페인 ID.
+    func advanceEventFlows(
+        campaigns: [InAppCampaign],
+        event: IngestEventRequest,
+        occurredAt: Date,
+        occurredUserId: String?,
+        occurredFlowClears: Int,
+        listOwner: CampaignListOwner?
+    ) -> Set<String> {
+        if let occurredUserId = occurredUserId, occurredUserId != currentUserId { return [] }
+        flowLock.lock()
+        let flowsCleared = occurredFlowClears != eventFlowClears
+        flowLock.unlock()
+        if occurredUserId == nil && flowsCleared { return [] }
+        guard let listOwner = listOwner else { return [] }
+        if let ownerUserId = listOwner.userId, ownerUserId != currentUserId { return [] }
+        var evaluatedVersions: [String: String] = [:]
+        var fired = Set<String>()
+        for campaign in campaigns where campaign.triggerEventCondition.hasEventFlow {
+            let version = campaign.triggerConditionVersion ?? ""
+            if evaluatedVersions[campaign.id] == version { continue }
+            evaluatedVersions[campaign.id] = version
+            let evaluation = eventFlowStore.evaluate(
+                campaign: campaign,
+                arrivalMatched: isEventTriggered(condition: campaign.triggerEventCondition, event: event),
+                occurredAt: occurredAt,
+                matches: { self.isConditionMatched($0, event: event) }
+            )
+            if evaluation.fired { fired.insert(campaign.id) }
+            if evaluation.restarted { occurrenceEvaluator.reset(campaignId: campaign.id) }
+        }
+        return fired
     }
 
     func isIdentityChanged(since flow: InAppEventFlow) -> Bool {
@@ -128,7 +173,7 @@ extension InAppMessageService {
         return scheduled
     }
 
-    /// 노출로 기록한다: 캠페인 빈도·전체 빈도 기록, 누적 횟수 초기화.
+    /// 노출로 기록한다: 캠페인 빈도·전체 빈도 기록, 누적 횟수·이벤트 플로우 진행 초기화.
     func recordExposure(campaign: InAppCampaign, at date: Date = Date()) {
         logImpression(campaignId: campaign.id, at: date)
         let longestRule = globalFrequencyCaps.map { TimeInterval($0.durationMinutes * 60) }.max() ?? 0
@@ -138,6 +183,7 @@ extension InAppMessageService {
             retention: max(longestRule, GlobalImpressionLog.minimumRetention)
         )
         occurrenceEvaluator.reset(campaignId: campaign.id)
+        eventFlowStore.clear(campaignId: campaign.id)
     }
 
     func isTimerExpired(_ campaign: InAppCampaign) -> Bool {
@@ -163,9 +209,11 @@ extension InAppMessageService {
     func discardDelayedState() {
         flowLock.lock()
         identityEpoch &+= 1
+        eventFlowClears &+= 1
         flowLock.unlock()
         delayedInAppCoordinator.removeAll()
         occurrenceEvaluator.resetAll()
+        eventFlowStore.clearAll()
     }
 
     /// 예약이 아직 유효한지 보고, 유효하지 않으면 어떻게 끝낼지 알려 준다.
@@ -177,7 +225,7 @@ extension InAppMessageService {
         }
     }
 
-    /// 예약한 캠페인을 지금 띄우면 안 되는 이유. 예약이 무효이거나 숨김·캠페인 빈도·전체 빈도에 걸리면 결과를 준다.
+    /// 예약한 캠페인을 지금 띄우면 안 되는 이유. 예약이 무효이거나 숨김·캠페인 빈도·전체 빈도·이벤트 플로우 취소에 걸리면 결과를 준다.
     private func delayedOutcomeIfBlocked(
         _ ticket: DelayedInAppTicket,
         campaign: InAppCampaign
@@ -185,7 +233,8 @@ extension InAppMessageService {
         if let outcome = ticketOutcomeIfStale(ticket) { return outcome }
         if isCampaignHiden(campaign: campaign)
             || isTimerExpired(campaign)
-            || globalImpressionLog.isCapped(campaign: campaign, rules: globalFrequencyCaps, now: now()) {
+            || globalImpressionLog.isCapped(campaign: campaign, rules: globalFrequencyCaps, now: now())
+            || !eventFlowStore.canShow(campaign: campaign) {
             return .finished
         }
         return nil

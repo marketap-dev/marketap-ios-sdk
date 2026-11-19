@@ -91,6 +91,7 @@ final class InAppMessageService: NSObject, InAppMessageServiceProtocol {
     static let lastFetchKey = "InAppMessageService_lastFetch_v3"
     static let checksumKey = "InAppMessageService_checksum_v3"
     static let globalFrequencyCapsKey = "InAppMessageService_globalFrequencyCaps_v3"
+    static let campaignsOwnerKey = "InAppMessageService_campaignsOwner_v3"
 
     let customHandlerStore: MarketapCustomHandlerStoreProtocol
     private let api: MarketapAPIProtocol
@@ -178,6 +179,7 @@ final class InAppMessageService: NSObject, InAppMessageServiceProtocol {
     let now: () -> Date
     let delayedInAppCoordinator: DelayedInAppCoordinator
     let occurrenceEvaluator: OccurrenceConditionEvaluator
+    let eventFlowStore: EventFlowStore
     let globalImpressionLog: GlobalImpressionLog
     let timerStore: InAppTimerStore
     var windowChecker = InAppWindowChecker()
@@ -185,6 +187,10 @@ final class InAppMessageService: NSObject, InAppMessageServiceProtocol {
 
     let flowLock = NSLock()
     var identityEpoch = 0
+    /// 이벤트 플로우 진행을 지운 횟수. 비회원 이벤트는 그 사이 진행이 지워졌으면 플로우에 쓰지 않는다.
+    var eventFlowClears = 0
+    /// 지금 들고 있는 캠페인 목록을 요청한 회원. 목록과 함께 저장하며, 없으면 누구의 목록인지 모른다.
+    var campaignsOwner: CampaignListOwner?
     var abortEpochs: [String: Int] = [:]
     /// 메인 스레드에서 앱이 활성 상태인지. 테스트만 바꾼다.
     var isAppActiveOnMain: () -> Bool = { UIApplication.shared.applicationState == .active }
@@ -237,6 +243,7 @@ final class InAppMessageService: NSObject, InAppMessageServiceProtocol {
             scheduler: delayScheduler ?? DispatchInAppDelayScheduler(queue: workQueue)
         )
         self.occurrenceEvaluator = OccurrenceConditionEvaluator(defaults: defaults, now: now)
+        self.eventFlowStore = EventFlowStore(defaults: defaults, now: now)
         self.globalImpressionLog = GlobalImpressionLog(defaults: defaults)
         self.timerStore = InAppTimerStore(defaults: defaults)
 
@@ -248,6 +255,7 @@ final class InAppMessageService: NSObject, InAppMessageServiceProtocol {
         }
 
         self.lastFetch = cache.loadCodableObject(forKey: Self.lastFetchKey)
+        self.campaignsOwner = cache.loadCodableObject(forKey: Self.campaignsOwnerKey)
         fetchCampaigns()
 
         DispatchQueue.main.async {
@@ -268,6 +276,10 @@ final class InAppMessageService: NSObject, InAppMessageServiceProtocol {
                 cache.clearObject(forKey: Self.campaignCacheKey)
                 cache.clearObject(forKey: Self.checksumKey)
                 cache.clearObject(forKey: Self.lastFetchKey)
+                cache.clearObject(forKey: Self.campaignsOwnerKey)
+                flowLock.lock()
+                campaignsOwner = nil
+                flowLock.unlock()
             }
             discardPendingCampaign()
             inTimeout?([])
@@ -347,6 +359,11 @@ final class InAppMessageService: NSObject, InAppMessageServiceProtocol {
                 }
                 self.cache.saveCodableObject(Date(), key: Self.lastFetchKey)
                 self.lastFetch = Date()
+                let owner = CampaignListOwner(userId: userId)
+                self.cache.saveCodableObject(owner, key: Self.campaignsOwnerKey)
+                self.flowLock.lock()
+                self.campaignsOwner = owner
+                self.flowLock.unlock()
                 if didCompleteWithinTimeout {
                     inTimeout?(campaigns)
                 }
@@ -370,6 +387,8 @@ final class InAppMessageService: NSObject, InAppMessageServiceProtocol {
     }
 
     var sessionId: String { cache.sessionId }
+
+    var currentUserId: String? { cache.userId }
 
     var knownCampaigns: [InAppCampaign]? {
         campaigns ?? cache.loadCodableObject(forKey: Self.campaignCacheKey)
@@ -458,4 +477,9 @@ final class InAppMessageService: NSObject, InAppMessageServiceProtocol {
     }
 
     
+}
+
+/// 캠페인 목록을 요청한 회원. 비회원이면 [userId] 가 nil 이다.
+struct CampaignListOwner: Codable, Equatable {
+    let userId: String?
 }

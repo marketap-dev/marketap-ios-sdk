@@ -32,7 +32,7 @@ enum ModalPresentation {
     case occupied
 }
 
-/// 지연 예약 팝업의 표시 직전 확인과 결과 통로.
+/// 지연 예약·이벤트 플로우 인앱의 표시 직전 확인과 결과 통로.
 struct InAppDisplayHooks {
     /// 메인 스레드에서 화면에 올리기 직전에 부른다. false 면 올리지 않고 권리를 반납한다.
     let isStillValid: () -> Bool
@@ -152,7 +152,11 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
         }
 
         if campaign.html != nil {
-            show(campaign: campaign, origin: origin)
+            guard eventFlowStore.canShow(campaign: campaign) else {
+                next(fetches, filledSlots)
+                return
+            }
+            show(campaign: campaign, listed: campaign, origin: origin)
             next(fetches, filledSlots.union([campaign.slot]))
             return
         }
@@ -184,8 +188,12 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
                 case .valid:
                     break
                 }
+                guard self.eventFlowStore.canShow(campaign: campaign) else {
+                    next(fetches + 1, filledSlots)
+                    return
+                }
                 if let fetchedCampaign = fetchedCampaign?.inheritingSlot(from: campaign), fetchedCampaign.html != nil {
-                    self.show(campaign: fetchedCampaign, origin: origin)
+                    self.show(campaign: fetchedCampaign, listed: campaign, origin: origin)
                     next(fetches + 1, filledSlots.union([fetchedCampaign.slot]))
                 } else {
                     MarketapLogger.warn("failed to fetch campaign html: \(campaign.id), trying next")
@@ -206,12 +214,19 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
         return slots
     }
 
-    private func show(campaign: InAppCampaign, origin: InAppWebOrigin?) {
+    /// - Parameter listed: 목록에서 찾은 캠페인. 이벤트 플로우 정보는 이쪽에 있다.
+    private func show(campaign: InAppCampaign, listed: InAppCampaign, origin: InAppWebOrigin?) {
+        let hooks = listed.triggerEventCondition.hasEventFlow
+            ? InAppDisplayHooks(
+                isStillValid: { [weak self] in self?.eventFlowStore.canShow(campaign: listed) ?? false },
+                onResult: { _ in }
+            )
+            : nil
         switch campaign.slot {
         case .floating:
-            _ = presentFloating(campaign: campaign, origin: origin)
+            _ = presentFloating(campaign: campaign, origin: origin, hooks: hooks)
         case .popup:
-            presentCampaignModal(campaign: campaign, origin: origin)
+            presentCampaignModal(campaign: campaign, origin: origin, hooks: hooks)
         }
     }
 
@@ -312,7 +327,7 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
         return releaseDisplayLocked(claim: claim)
     }
 
-    /// - Parameter hooks: 지연 예약 팝업만 넘긴다. `.occupied` 면 불리지 않는다.
+    /// - Parameter hooks: 지연 예약·이벤트 플로우 팝업만 넘긴다. `.occupied` 면 불리지 않는다.
     @discardableResult
     func presentCampaignModal(
         campaign: InAppCampaign,
@@ -465,6 +480,11 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
         if let origin = origin, PageFloatingPolicy.eventLeavesPage(eventName: eventRequest.name) {
             originDidLeavePage(ObjectIdentifier(origin))
         }
+        let occurredAt = now()
+        let occurredUserId = currentUserId
+        flowLock.lock()
+        let occurredFlowClears = eventFlowClears
+        flowLock.unlock()
         delayedInAppCoordinator.cancelMatching { self.matchesAbortCondition($0, event: eventRequest) }
         let known = knownCampaigns ?? []
         abortMatching(campaigns: known, event: eventRequest)
@@ -473,12 +493,24 @@ extension InAppMessageService: InAppMessageWebViewControllerDelegate {
         let eventProperties = eventRequest.properties?.compactMapValues { $0.value }
         fetchCampaigns(inTimeout: { [weak self] campaigns in
             guard let self = self else { return }
+            self.flowLock.lock()
+            let listOwner = self.campaignsOwner
+            self.flowLock.unlock()
             self.workQueue.async {
+                let eventFlowFired = self.advanceEventFlows(
+                    campaigns: campaigns,
+                    event: eventRequest,
+                    occurredAt: occurredAt,
+                    occurredUserId: occurredUserId,
+                    occurredFlowClears: occurredFlowClears,
+                    listOwner: listOwner
+                )
                 guard let (candidates, flow) = self.selectCandidates(
                     campaigns: campaigns,
                     event: eventRequest,
                     flow: arrivalFlow,
-                    evaluatedOnArrival: evaluatedOnArrival
+                    evaluatedOnArrival: evaluatedOnArrival,
+                    eventFlowFired: eventFlowFired
                 ) else {
                     MarketapLogger.verbose("user changed while fetching campaigns, dropping event: \(eventRequest.name)")
                     return
