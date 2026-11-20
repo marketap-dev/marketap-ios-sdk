@@ -90,7 +90,7 @@ final class EventService: EventServiceProtocol {
 
         let request = UpdateProfileRequest(
             userId: userId,
-            properties: userProperties?.toAnyCodable(),
+            properties: userProperties.map(supportedUserProperties)?.toAnyCodable(),
             device: cache.device.makeRequest()
         )
         updateProfile(request: request)
@@ -107,10 +107,17 @@ final class EventService: EventServiceProtocol {
         guard let currentUserId = userId ?? cache.userId else { return }
         let request = UpdateProfileRequest(
             userId: currentUserId,
-            properties: userProperties.toAnyCodable(),
+            properties: supportedUserProperties(userProperties).toAnyCodable(),
             device: cache.device.makeRequest()
         )
         updateProfile(request: request)
+    }
+
+    /// 유저 속성은 보낼 수 없는 값을 가진 속성만 빼고 나머지를 보낸다.
+    private func supportedUserProperties(_ properties: [String: Any]) -> [String: Any] {
+        return PropertyValidation.supportedProperties(properties) { name in
+            MarketapLogger.error("user property \"\(name)\" is not sent: unsupported value")
+        }
     }
 
     func flushUser() {
@@ -136,6 +143,12 @@ final class EventService: EventServiceProtocol {
         timestamp: Date? = nil,
         origin: InAppWebOrigin? = nil
     ) {
+        if let unsupported = PropertyValidation.unsupportedPropertyName(in: eventProperties) {
+            MarketapLogger.error(
+                "event \"\(eventName)\" is not sent: property \"\(unsupported)\" has an unsupported value"
+            )
+            return
+        }
         let device = cache.device
         var properties = eventProperties ?? [:]
         let sdkIntegrationState = SdkIntegrationState.toJsonString()
