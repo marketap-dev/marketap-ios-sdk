@@ -152,6 +152,52 @@ class EventServiceTests: XCTestCase {
         XCTAssertEqual(mockDelegate.lastDevice?.makeRequest(), mockCache.device.makeRequest(), "Device 정보가 올바르지 않음")
     }
 
+    func testTrackEventWithUnsupportedPropertyIsNotSent() {
+        struct Custom {}
+        let cases: [(String, Any)] = [
+            ("date", Date()),
+            ("url", URL(string: "https://example.com")!),
+            ("custom", Custom()),
+            ("nan", Double.nan),
+            ("nested", ["items": [["at": Date()]]]),
+        ]
+
+        for (name, value) in cases {
+            mockAPI.lastRequestPath = nil
+            mockDelegate.lastEventRequest = nil
+
+            eventService.trackEvent(eventName: "bad_event", eventProperties: ["ok": 1, name: value])
+
+            XCTAssertNil(mockAPI.lastRequestPath, "\(name) 값이 있는데 이벤트가 전송됨")
+            XCTAssertNil(mockDelegate.lastEventRequest, "\(name) 값이 있는데 인앱 판정이 진행됨")
+        }
+    }
+
+    func testTrackEventWithSupportedPropertiesIsSent() {
+        let properties: [String: Any] = [
+            "s": "a", "i": 1, "d": 1.5, "b": true, "null": NSNull(),
+            "list": ["x", 1, ["k": "v"]], "at": "2026-01-01T00:00:00.000Z",
+        ]
+
+        eventService.trackEvent(eventName: "good_event", eventProperties: properties)
+
+        XCTAssertEqual(mockDelegate.lastEventRequest?.name, "good_event")
+        XCTAssertNotNil(mockAPI.lastRequestBody)
+    }
+
+    func testIdentifyDropsOnlyUnsupportedUserProperties() throws {
+        eventService.identify(userId: "member-1", userProperties: ["name": "kim", "joined": Date(), "age": 3])
+        eventService.userQueue.sync {}
+
+        XCTAssertEqual(mockCache.userId, "member-1")
+        let body = try XCTUnwrap(mockAPI.lastRequestBody)
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
+        let properties = try XCTUnwrap(json["properties"] as? [String: Any])
+        XCTAssertEqual(properties["name"] as? String, "kim")
+        XCTAssertEqual(properties["age"] as? Int, 3)
+        XCTAssertNil(properties["joined"])
+    }
+
     func testUpdateDevice() {
         let testToken = "test_push_token"
         eventService.updateDevice(pushToken: testToken)
