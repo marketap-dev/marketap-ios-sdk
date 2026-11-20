@@ -89,6 +89,25 @@ enum DataType: String, Codable {
     case object = "OBJECT"
     case arrayString = "ARRAY_STRING"
     case date = "DATE"
+
+    /// 서버가 보내는 문자열 배열 타입 이름. 캐시에는 이전 버전도 읽는 이름으로 저장한다.
+    private static let serverArrayString = "STRING_ARRAY"
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        if raw == Self.serverArrayString {
+            self = .arrayString
+            return
+        }
+        guard let value = DataType(rawValue: raw) else {
+            throw DecodingError.dataCorruptedError(
+                in: container,
+                debugDescription: "Cannot initialize DataType from invalid String value \(raw)"
+            )
+        }
+        self = value
+    }
 }
 
 enum Path: String, Codable {
