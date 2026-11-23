@@ -1,5 +1,26 @@
 # Changelog
 
+## 1.6.1 (2026-11-23)
+
+## What's Changed
+* release: 1.6.0 by @marketap-sdk-release[bot] in https://github.com/marketap-dev/marketap-ios-sdk/pull/29
+* [NT-1046] 느린 CI 에서 흔들리던 테스트 2개 수정 by @jiwon-marketap in https://github.com/marketap-dev/marketap-ios-sdk/pull/30
+* release: 1.6.1-beta.1 by @marketap-sdk-release[bot] in https://github.com/marketap-dev/marketap-ios-sdk/pull/31
+* fix: CocoaPods trunk 타임아웃 후 반영 대기 by @jiwon-marketap in https://github.com/marketap-dev/marketap-ios-sdk/pull/32
+* release: 1.6.1-beta.2 by @marketap-sdk-release[bot] in https://github.com/marketap-dev/marketap-ios-sdk/pull/33
+* fix: CocoaPods trunk push 재시도 by @jiwon-marketap in https://github.com/marketap-dev/marketap-ios-sdk/pull/34
+* [NT-1111] 인앱 팝업을 전용 창에 띄우는 Braze 방식으로 전환 by @yumin-marketap in https://github.com/marketap-dev/marketap-ios-sdk/pull/35
+* [NT-1111] 백그라운드 shutdown 테스트를 전용 스레드에서 호출 by @yumin-marketap in https://github.com/marketap-dev/marketap-ios-sdk/pull/36
+* [NT-1151] 세션 UTM 자동 처리 by @yumin-marketap in https://github.com/marketap-dev/marketap-ios-sdk/pull/37
+* [NT-1152] 인앱 트리거 "또는" 조건 지원 및 캠페인 API v3 전환 by @yumin-marketap in https://github.com/marketap-dev/marketap-ios-sdk/pull/38
+* [NT-1111] 앱 인앱 지연 노출·이벤트 횟수 조건·N분 타이머 by @yumin-marketap in https://github.com/marketap-dev/marketap-ios-sdk/pull/39
+* [NT-1139] 앱 인앱 이벤트 플로우 by @yumin-marketap in https://github.com/marketap-dev/marketap-ios-sdk/pull/40
+* [NT-1144] iOS SDK 안정성 점검 후속 수정 by @yumin-marketap in https://github.com/marketap-dev/marketap-ios-sdk/pull/41
+
+
+**Full Changelog**: https://github.com/marketap-dev/marketap-ios-sdk/compare/1.6.0...1.6.1
+
+
 ## 1.6.1-beta.2 (2026-11-12)
 
 배포 경로 점검용 베타 (trunk 반영 대기 확인)
