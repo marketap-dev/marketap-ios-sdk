@@ -126,6 +126,54 @@ final class OccurrenceConditionEvaluatorTests: XCTestCase {
         XCTAssertFalse(evaluator.recordAndEvaluate(campaign: a, sessionId: "s1"))
         XCTAssertFalse(evaluator.recordAndEvaluate(campaign: b, sessionId: "s1"))
     }
+
+    func testHasCountedIsFalseWithoutCondition() {
+        let campaign = triggerCampaign("a")
+        _ = evaluator.recordAndEvaluate(campaign: campaign, sessionId: "s1")
+        XCTAssertFalse(evaluator.hasCounted(campaign: campaign, sessionId: "s1"))
+    }
+
+    func testHasCountedTotalDoesNotRecord() {
+        let campaign = triggerCampaign("a", occurrence: OccurrenceCondition(count: 2))
+        XCTAssertFalse(evaluator.hasCounted(campaign: campaign, sessionId: "s1"))
+        _ = evaluator.recordAndEvaluate(campaign: campaign, sessionId: "s1")
+        XCTAssertTrue(evaluator.hasCounted(campaign: campaign, sessionId: "s2"))
+        XCTAssertTrue(evaluator.hasCounted(campaign: campaign, sessionId: "s2"))
+        XCTAssertTrue(evaluator.recordAndEvaluate(campaign: campaign, sessionId: "s2"))
+    }
+
+    func testHasCountedSessionScopedLooksAtSameSession() {
+        let campaign = triggerCampaign("a", occurrence: OccurrenceCondition(count: 2, sessionScoped: true))
+        _ = evaluator.recordAndEvaluate(campaign: campaign, sessionId: "s1")
+        XCTAssertTrue(evaluator.hasCounted(campaign: campaign, sessionId: "s1"))
+        XCTAssertFalse(evaluator.hasCounted(campaign: campaign, sessionId: "s2"))
+    }
+
+    func testHasCountedWindowLooksAtRecordsInWindow() {
+        let campaign = triggerCampaign("a", occurrence: OccurrenceCondition(count: 2, durationMinutes: 10))
+        _ = evaluator.recordAndEvaluate(campaign: campaign, sessionId: "s1")
+        clock.advance(10 * 60)
+        XCTAssertTrue(evaluator.hasCounted(campaign: campaign, sessionId: "s1"))
+        clock.advance(1)
+        XCTAssertFalse(evaluator.hasCounted(campaign: campaign, sessionId: "s1"))
+    }
+
+    func testHasCountedWindowedSessionScoped() {
+        let campaign = triggerCampaign("a", occurrence: OccurrenceCondition(count: 2, durationMinutes: 10, sessionScoped: true))
+        _ = evaluator.recordAndEvaluate(campaign: campaign, sessionId: "s1")
+        XCTAssertTrue(evaluator.hasCounted(campaign: campaign, sessionId: "s1"))
+        XCTAssertFalse(evaluator.hasCounted(campaign: campaign, sessionId: "s2"))
+    }
+
+    func testHasCountedIgnoresOtherVersionAndReset() {
+        let v1 = triggerCampaign("a", occurrence: OccurrenceCondition(count: 2), version: "v1")
+        let v2 = triggerCampaign("a", occurrence: OccurrenceCondition(count: 2), version: "v2")
+        _ = evaluator.recordAndEvaluate(campaign: v1, sessionId: "s1")
+        XCTAssertFalse(evaluator.hasCounted(campaign: v2, sessionId: "s1"))
+        XCTAssertTrue(evaluator.hasCounted(campaign: v1, sessionId: "s1"))
+        evaluator.reset(campaignId: "a")
+        XCTAssertFalse(evaluator.hasCounted(campaign: v1, sessionId: "s1"))
+    }
 }
 
 final class InAppWindowCheckerTests: XCTestCase {

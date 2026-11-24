@@ -58,6 +58,27 @@ final class OccurrenceConditionEvaluator {
         return recordNonWindowed(campaign.id, condition, validityKey, sessionId)
     }
 
+    /// 횟수 조건이 있고, 이번 이벤트를 세기 전에 이미 센 횟수가 1회 이상이면 true 다. 기록하지 않는다.
+    func hasCounted(campaign: InAppCampaign, sessionId: String?) -> Bool {
+        guard let condition = campaign.triggerEventCondition.occurrenceCondition else { return false }
+        let validityKey = campaign.triggerConditionVersion ?? ""
+        lock.lock()
+        defer { lock.unlock() }
+        if let durationMinutes = condition.durationMinutes {
+            guard let state: WindowedState = load(Self.windowedKeyPrefix + campaign.id),
+                  state.validityKey == validityKey else { return false }
+            let cutoff = now().timeIntervalSince1970 - TimeInterval(durationMinutes * 60)
+            return state.occurrences.contains {
+                $0.timestamp >= cutoff && (condition.sessionScoped != true || $0.sessionId == sessionId)
+            }
+        }
+        guard let state: NonWindowedState = load(Self.nonWindowedKeyPrefix + campaign.id),
+              state.validityKey == validityKey else { return false }
+        return condition.sessionScoped == true
+            ? state.lastSessionId == sessionId && state.sessionCount > 0
+            : state.totalCount > 0
+    }
+
     func reset(campaignId: String) {
         lock.lock()
         defaults.removeObject(forKey: Self.nonWindowedKeyPrefix + campaignId)
