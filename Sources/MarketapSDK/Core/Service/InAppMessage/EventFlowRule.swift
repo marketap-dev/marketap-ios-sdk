@@ -22,12 +22,15 @@ struct EventFlowTransition: Equatable {
 /// 같은 사례 파일(`event-flow-cases.json`)로 검증한다.
 ///
 /// `arrivalMatched` 는 이 이벤트가 캠페인의 트리거 조건(도달)에 맞는지다. `cancelConditions` 는 트리거의 취소 이벤트다.
+/// `arrivalCounted` 는 트리거 횟수 조건이 있고 지금 진행에서 도달을 1회 이상 셌는지다. 횟수는 호출하는 쪽이 센다.
 /// 인앱이 실제로 노출되면 호출하는 쪽이 상태를 지운다. 도달했지만 노출되지 않았으면 상태를 유지한다.
+/// 진입 직후 단계에서 진입 이벤트가 다시 오면 시각만 갱신하고, 그보다 더 진행했거나 도달을 1회 이상 셌으면 진입 이벤트를 무시한다.
 enum EventFlowRule {
     static func next(
         state: EventFlowState?,
         flow: EventFlow,
         arrivalMatched: Bool,
+        arrivalCounted: Bool,
         cancelConditions: [Condition],
         eventAt: Int64,
         matches: (Condition) -> Bool
@@ -73,7 +76,7 @@ enum EventFlowRule {
             }
         }
 
-        let progressedBeyondEntry = (alive?.nextStep ?? 0) > 1
+        let progressedBeyondEntry = alive.map { $0.nextStep > 1 || arrivalCounted } ?? false
         if !progressedBeyondEntry && steps[0].conditions.contains(where: matches) {
             return EventFlowTransition(state: EventFlowState(nextStep: 1, lastStepAt: eventAt), fired: false, restarted: true)
         }

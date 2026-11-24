@@ -62,6 +62,7 @@ final class EventFlowStoreTests: XCTestCase {
         store.evaluate(
             campaign: campaign,
             arrivalMatched: campaign.triggerEventCondition.effectiveConditions.contains { $0.eventFilter.eventName == eventName },
+            arrivalCounted: false,
             occurredAt: clock.now,
             matches: { $0.eventFilter.eventName == eventName }
         )
@@ -236,15 +237,26 @@ final class EventFlowInAppTests: XCTestCase {
         XCTAssertTrue(service.isModalShown)
     }
 
-    func testRestartResetsOccurrenceCount() {
+    func testEntryAfterCountedArrivalKeepsOccurrenceCount() {
+        setCampaigns([flowCampaign("a", occurrence: OccurrenceCondition(count: 3))])
+        send("signup")
+        send("view_product")
+        send("view_product")
+        send("signup")
+        XCTAssertFalse(service.isModalShown)
+
+        send("view_product")
+        XCTAssertTrue(service.isModalShown, "도달을 센 뒤의 진입 이벤트는 무시하고 횟수를 이어 센다")
+    }
+
+    func testCancelAfterCountedArrivalResetsOccurrenceCount() {
         setCampaigns([flowCampaign("a", occurrence: OccurrenceCondition(count: 2))])
         send("signup")
         send("view_product")
-        XCTAssertFalse(service.isModalShown)
-
+        send("purchase")
         send("signup")
         send("view_product")
-        XCTAssertFalse(service.isModalShown, "다시 진입하면 도달 횟수를 처음부터 센다")
+        XCTAssertFalse(service.isModalShown, "취소 뒤 다시 진입하면 도달 횟수를 처음부터 센다")
         send("view_product")
         XCTAssertTrue(service.isModalShown)
     }

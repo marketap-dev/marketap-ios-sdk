@@ -131,6 +131,7 @@ extension InAppMessageService {
         if let ownerUserId = listOwner.userId, ownerUserId != currentUserId { return [] }
         var evaluatedVersions: [String: String] = [:]
         var fired = Set<String>()
+        let sessionId = event.properties?["mkt_session_id"]?.value as? String ?? sessionId
         for campaign in campaigns where campaign.triggerEventCondition.hasEventFlow {
             let version = campaign.triggerConditionVersion ?? ""
             if evaluatedVersions[campaign.id] == version { continue }
@@ -138,6 +139,7 @@ extension InAppMessageService {
             let evaluation = eventFlowStore.evaluate(
                 campaign: campaign,
                 arrivalMatched: isEventTriggered(condition: campaign.triggerEventCondition, event: event),
+                arrivalCounted: occurrenceEvaluator.hasCounted(campaign: campaign, sessionId: sessionId),
                 occurredAt: occurredAt,
                 matches: { self.isConditionMatched($0, event: event) }
             )
