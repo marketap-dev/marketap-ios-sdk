@@ -26,6 +26,7 @@ private struct EventFlowCases: Decodable {
         let event: String?
         let at: Int64?
         let impression: Bool?
+        let arrivalCounted: Bool?
         let expect: Expect?
     }
     struct Case: Decodable {
@@ -47,7 +48,7 @@ final class EventFlowRuleContractTests: XCTestCase {
     }
 
     func testCaseCountMatchesSharedContract() throws {
-        XCTAssertEqual(try loadCases().count, 26)
+        XCTAssertEqual(try loadCases().count, 30)
     }
 
     func testAllSharedCases() throws {
@@ -72,6 +73,7 @@ final class EventFlowRuleContractTests: XCTestCase {
                     state: state,
                     flow: flow,
                     arrivalMatched: flowCase.flow.arrival.contains(eventName),
+                    arrivalCounted: input.arrivalCounted ?? false,
                     cancelConditions: cancelConditions,
                     eventAt: try XCTUnwrap(input.at) * 1000,
                     matches: { $0.eventFilter.eventName == eventName }

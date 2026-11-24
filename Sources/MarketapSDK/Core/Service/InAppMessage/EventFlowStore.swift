@@ -41,6 +41,7 @@ final class EventFlowStore {
     func evaluate(
         campaign: InAppCampaign,
         arrivalMatched: Bool,
+        arrivalCounted: Bool,
         occurredAt: Date,
         matches: (Condition) -> Bool
     ) -> EventFlowEvaluation {
@@ -58,6 +59,7 @@ final class EventFlowStore {
             state: current,
             flow: flow,
             arrivalMatched: arrivalMatched,
+            arrivalCounted: arrivalCounted,
             cancelConditions: campaign.triggerEventCondition.abortConditions ?? [],
             eventAt: Self.millis(occurredAt),
             matches: matches
